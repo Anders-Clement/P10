@@ -1,0 +1,6 @@
+[submodule "src/linorobot2"]
+	path = src/linorobot2
+	url = https://github.com/AAUSmartProductionLab/linorobot2
+[submodule "src/linorobot2_hardware"]
+	path = src/linorobot2_hardware
+	url = https://github.com/AAUSmartProductionLab/linorobot2_hardware
