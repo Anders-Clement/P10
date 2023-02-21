@@ -9,18 +9,18 @@ import pigpio
 
 class gpio():
     def __init__(self) -> None:
-        self.ledPins = {'r': 13,
-                        'g': 19,
-                        'b': 26}
+        self.ledPins = {'r': 26,
+                        'g': 13,
+                        'b': 19}
         self.pi = pigpio.pi()
         for pin in self.ledPins.values():
-            self.pi.set_PWM_frequency(8000)
+            self.pi.set_PWM_frequency(pin, 8000)
             self.pi.set_PWM_dutycycle(pin, 0)
 
     def set_rgb(self, output: LedOutput):
-        self.pi.set_PWM_dutycycle(self.ledPins['r'], output.red*10)
-        self.pi.set_PWM_dutycycle(self.ledPins['r'], output.green*10)
-        self.pi.set_PWM_dutycycle(self.ledPins['r'], output.blue*10)
+        self.pi.set_PWM_dutycycle(self.ledPins['r'], output.red*25)
+        self.pi.set_PWM_dutycycle(self.ledPins['g'], output.green*25)
+        self.pi.set_PWM_dutycycle(self.ledPins['b'], output.blue*25)
 
 class MinimalPublisher(Node):
 
