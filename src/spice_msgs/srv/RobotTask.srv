@@ -1,3 +1,4 @@
 geometry_msgs/PoseStamped goal_pose
+float32 process_time
 ---
 bool job_accepted
