@@ -221,6 +221,15 @@ function install_zed2i {
 #         fi
 # fi
 
+echo "Make sure you have not run this script before. Proceed?"
+echo -n "Yes [y] or No [n]: " 
+read reply
+if [[ "$reply" == "n" || "$reply" == "N" ]]
+    then
+        echo "Exiting..."
+        exit 0
+fi
+
 echo
 echo "INSTALLING NOW...."
 echo
