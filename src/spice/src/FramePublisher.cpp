@@ -15,7 +15,7 @@ class FramePublisher : public rclcpp::Node
 {
 public:
   FramePublisher()
-  : Node("tf_relay")
+  : Node("global_tf_relay")
   {
     //target_frame_ = this->declare_parameter<std::string>("target_frame", "odom");
 
@@ -27,10 +27,10 @@ public:
     prefix = getenv("ROBOT_NAMESPACE");
      
     subscription_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
-      prefix +"/tf", 100, std::bind(&FramePublisher::tf_callback, this, _1));
+      prefix+"/to_tf_global", 100, std::bind(&FramePublisher::tf_callback, this, _1));
     
     subscription_static_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
-      prefix +"/tf_static", 100, std::bind(&FramePublisher::tf_static_callback, this, _1));
+      prefix+"/to_tf_static_global", 100, std::bind(&FramePublisher::tf_static_callback, this, _1));
 
     publisher_ =
       this->create_publisher<tf2_msgs::msg::TFMessage>("/tf", 100);
@@ -38,6 +38,7 @@ public:
     publisher_static_ =
       this->create_publisher<tf2_msgs::msg::TFMessage>("/tf_static", 100);
 
+    
       
       //call on_timer at 10hz
       /*timer_ = this->create_wall_timer(
