@@ -28,9 +28,26 @@ ament_target_dependencies(
     tf2_msgs
 )
 
+add_executable(robot_tf_pose src/TFRelay.cpp)
+ament_target_dependencies(
+    robot_tf_pose
+    geometry_msgs
+    rclcpp
+    tf2
+    tf2_ros
+    tf2_msgs
+)
+
 install(TARGETS
     robot_tf_relay
     DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS
+    robot_tf_pose
+    DESTINATION lib/${PROJECT_NAME})
+
+install(DIRECTORY launch 
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
 
