@@ -14,7 +14,9 @@ def generate_launch_description():
             package='spice',
             executable='robot_tf_pose',
             name='robot_pose_relayer',
-            remappings=[("to_tf_global", "/tf"),("/tf", "tf")]
+            remappings=[("to_tf_global", "/tf"),
+                        ("/tf", "tf"),
+                        ("/tf_static", "tf_static")]
         )
 
     ])

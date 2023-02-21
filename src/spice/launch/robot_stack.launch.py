@@ -16,9 +16,15 @@ from ament_index_python import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.actions import GroupAction
+from launch_ros.actions import PushRosNamespace
 
 def generate_launch_description():
-
+    namespace = os.environ.get('ROBOT_NAMESPACE')
+    if namespace is None:
+        print('Failed to find ROBOT_NAMESPACE in environment, please add it!')
+        return
+    
     return LaunchDescription([
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -32,10 +38,14 @@ def generate_launch_description():
                   'launch/navigation.launch.py')
                 )
         ),
-        IncludeLaunchDescription(
+        GroupAction(actions=[
+          PushRosNamespace(namespace),
+          IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('spice'),
                   'launch/tf_relay.launch.py')
                 )
-        )
-        ])
+          )
+        ]),
+        
+      ])
