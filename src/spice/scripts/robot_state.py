@@ -22,6 +22,9 @@ class RobotStateTemplate():
         pass
     def on_nav_done(self, msg):
         pass
+    def on_allocate_task(self, request: RobotTask.Request, response: RobotTask.Response) -> RobotTask.Response:
+        response.job_accepted = False
+        return response
     
 
 class StartUpState(RobotStateTemplate):
@@ -29,12 +32,16 @@ class StartUpState(RobotStateTemplate):
         self.sm = sm
         self.register_robot_client = self.sm.create_client(RegisterRobot, '/register_robot')
         self.navigation_is_active_client = self.sm.create_client(Trigger, 'lifecycle_manager_navigation/is_active')
+        self.register_future = None
+        self.nav_stack_is_active_future = None
 
     def init(self):
         # check that all robot state is good
+        self.sm.get_logger().info('init StartUpState')
         self.check_nav2_stack_status()
 
     def check_nav2_stack_status(self):
+        self.sm.get_logger().info('wait for service: lifecycle_manager_navigation/is_active')
         while not self.navigation_is_active_client.wait_for_service(5):
             self.sm.get_logger().info('timeout on wait for service: lifecycle_manager_navigation/is_active')
         
@@ -66,10 +73,10 @@ class StartUpState(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.ERROR)
 
     def deinit(self):
-        if self.register_future is not None:
+        if self.register_future:
             if not self.register_future.cancelled():
                 self.register_future.cancel()
-        if self.nav_stack_is_active_future is not None:
+        if self.nav_stack_is_active_future:
             if not self.nav_stack_is_active_future.cancelled():
                 self.nav_stack_is_active_future.cancel()
 
@@ -77,16 +84,20 @@ class StartUpState(RobotStateTemplate):
 class ReadyForJobState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
         self.sm = sm
-        self.allocate_task_server = self.sm.create_service(
-            RobotTask, 'allocate_task', self.allocate_task_cb)
+        self.nav_response_future = None
+        self.nav_goal_done_future = None
         
     def init(self):
-        if self.sm.heartbeat_timer.is_canceled():
-            self.sm.heartbeat_timer.reset()
-    def deinit(self):
-        pass
+        self.sm.heartbeat_timer.reset()
+        self.sm.heartbeat_future = None
 
-    def allocate_task_cb(self, request: RobotTask.Request, response: RobotTask.Response) -> RobotTask.Response:
+    def deinit(self):
+        if self.nav_goal_done_future:
+            self.nav_goal_done_future.cancel()
+        if self.nav_response_future:
+            self.nav_response_future.cancel()
+
+    def on_allocate_task(self, request: RobotTask.Request, response: RobotTask.Response) -> RobotTask.Response:
         if self.sm.current_task is not None:
             response.job_accepted = False
             return response
@@ -98,9 +109,9 @@ class ReadyForJobState(RobotStateTemplate):
         self.sm.current_task = request
         nav_goal = NavigateToPose.Goal()
         nav_goal.pose = request.goal_pose
-        nav_response_future = self.sm.navigation_client.send_goal_async(
+        self.nav_response_future = self.sm.navigation_client.send_goal_async(
             nav_goal, self.sm.on_nav_feedback)
-        nav_response_future.add_done_callback(self.nav_goal_response_cb)
+        self.nav_response_future.add_done_callback(self.nav_goal_response_cb)
 
         response.job_accepted = True
         return response
@@ -111,8 +122,8 @@ class ReadyForJobState(RobotStateTemplate):
             self.sm.get_logger().error('Nav 2 goal was rejected, aborting task')
             self.sm.change_state(ROBOT_STATE.ERROR)
         
-        nav_goal_done_future: Future = goal_handle.get_result_async()
-        nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
+        self.nav_goal_done_future: Future = goal_handle.get_result_async()
+        self.nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
         self.sm.change_state(ROBOT_STATE.MOVING)
             
 
@@ -130,6 +141,7 @@ class MovingState(RobotStateTemplate):
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.sm.change_state(ROBOT_STATE.PROCESSING)
         else:
+            self.sm.current_task = None
             self.sm.change_state(ROBOT_STATE.ERROR)
 
 class ProcessingState(RobotStateTemplate):
@@ -138,20 +150,27 @@ class ProcessingState(RobotStateTemplate):
 
     def init(self):
         if self.sm.current_task is None:
+            self.sm.get_logger().warn('Entered ProcessingState with no task available!')
             self.sm.change_state(ROBOT_STATE.ERROR)
         self.timer = self.sm.create_timer(self.sm.current_task.process_time, self.timer_cb)
 
     def deinit(self):
-        self.timer.cancel()
+        if self.timer:
+            self.timer.cancel()
     
     def timer_cb(self):
+        self.sm.current_task = None
         self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
 
 class ErrorState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
         self.sm = sm
-    def init(self):
         self.recovery_timer = self.sm.create_timer(10, self.recovery_cb)
+        self.recovery_timer.cancel()
+
+    def init(self):
+        self.recovery_timer.reset()
+        
     def deinit(self):
         self.recovery_timer.cancel()
 

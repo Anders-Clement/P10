@@ -72,12 +72,10 @@ public:
 
     for (const auto & robot : robots_) {
         
-        std::string robotName = "polybot"+robot.id;
-
-        allocTaskCli_ = this->create_client<spice_msgs::srv::RobotTask>(robotName + "/allocate_task");
+        allocTaskCli_ = this->create_client<spice_msgs::srv::RobotTask>(robot.id + "/allocate_task");
                 
         if(!allocTaskCli_->wait_for_service(1s)) {
-          RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "could not find %s task service ",robotName.c_str());
+          RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "could not find %s task service ",robot.id.c_str());
         continue;
         }
         
