@@ -35,12 +35,11 @@ class StartUpState(RobotStateTemplate):
         self.check_nav2_stack_status()
 
     def check_nav2_stack_status(self):
-        if not self.navigation_is_active_client.wait_for_service(1):
+        while not self.navigation_is_active_client.wait_for_service(5):
             self.sm.get_logger().info('timeout on wait for service: lifecycle_manager_navigation/is_active')
-            self.check_nav2_stack_status()
-        else:
-            self.nav_stack_is_active_future = self.navigation_is_active_client.call_async(Trigger.Request())
-            self.nav_stack_is_active_future.add_done_callback(self.nav_stack_is_active_cb)
+        
+        self.nav_stack_is_active_future = self.navigation_is_active_client.call_async(Trigger.Request())
+        self.nav_stack_is_active_future.add_done_callback(self.nav_stack_is_active_cb)
 
     def nav_stack_is_active_cb(self, future: Future):
         result: Trigger.Response = future.result()
@@ -52,12 +51,11 @@ class StartUpState(RobotStateTemplate):
     def register_robot(self):
         register_robot_request = RegisterRobot.Request()
         register_robot_request.id = Id(id=self.sm.id)
-        if not self.register_robot_client.wait_for_service(5):
+        while not self.register_robot_client.wait_for_service(5):
             self.sm.get_logger().info('Robot StartUpState timeout for /register_robot service')
-            self.register_robot()
-        else:
-            self.register_future = self.register_robot_client.call_async(register_robot_request)
-            self.register_future.add_done_callback(self.register_robot_done_callback)
+
+        self.register_future = self.register_robot_client.call_async(register_robot_request)
+        self.register_future.add_done_callback(self.register_robot_done_callback)
 
     def register_robot_done_callback(self, future: Future):
         response: RegisterRobot.Response = future.result()
