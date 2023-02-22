@@ -67,6 +67,7 @@ class RobotStateManager(Node):
             event_msg = RobotStateTransition()
             event_msg.old_state = RobotState(state=self.current_state)
             event_msg.new_state = RobotState(state=new_state)
+            event_msg.id = Id(id=self.id)
             self.state_transition_event_pub.publish(event_msg)
 
             self.states[self.current_state].deinit()
