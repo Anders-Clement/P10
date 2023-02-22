@@ -51,6 +51,11 @@ def generate_launch_description():
             package='spice',
             executable='led_node.py',
             name='led_node'
+          ),
+          Node(
+            package='spice',
+            executable='robot_state_manager_node.py',
+            name='robot_state_manager_node'
           )
         ]),
         
