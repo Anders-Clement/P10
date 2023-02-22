@@ -63,7 +63,7 @@ class RobotStateManager(Node):
 
     def change_state(self, new_state: ROBOT_STATE):
         if self.current_state == new_state:
-            self.get_logger().error(f'Tried tog to state transition to same state: {new_state}')
+            self.get_logger().error(f'Tried to transition to same state: {new_state}')
         else:
             self.get_logger().info(f'State transition from: {self.current_state.name} to {new_state.name}')
 
@@ -82,7 +82,7 @@ class RobotStateManager(Node):
             or self.current_state == ROBOT_STATE.MOVING \
             or self.current_state == ROBOT_STATE.PROCESSING \
             or self.current_state == ROBOT_STATE.ERROR:
-            
+
             if self.heartbeat_future is None:
                 heartbeat = Heartbeat.Request(id=Id(id=self.id))
                 self.heartbeat_future = self.heartbeat_client.call_async(heartbeat)
