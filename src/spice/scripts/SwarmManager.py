@@ -39,7 +39,7 @@ class SwarmManager(Node):
         topic = id+'/robot_state_transition_event'
         statesub = self.create_subscription(RobotStateTransition, topic, self.robot_state_transition_callback,10)
 
-        robot = RobotData(id, RobotState.STARTUP, datetime.now(),statesub)
+        robot = RobotData(id, RobotState(state=RobotState.STARTUP), datetime.now(),statesub)
         self.robots_dict[id] = robot
         return True
 
@@ -71,14 +71,14 @@ class SwarmManager(Node):
         for robot in self.robots_dict.values():
             robot_msg = Robot()
             robot_msg.id.id = robot.id
-            robot_msg.robot_state.state = robot.robot_state
+            robot_msg.robot_state = robot.robot_state
             response.robots.append(robot_msg)
 
         return response
     
     def get_ready_robots_callback(self, request:GetReadyRobots.Request, response:GetReadyRobots.Response) -> GetReadyRobots.Response:
         for robot in self.robots_dict.values():
-            if robot.robot_state == 1:
+            if robot.robot_state.state == RobotState.READY_FOR_JOB:
                 id_msg = Id()
                 id_msg.id = robot.id
                 response.robots.append(id_msg)
@@ -108,7 +108,8 @@ class SwarmManager(Node):
 
 
     def robot_state_transition_callback(self, msg:RobotStateTransition):
-        self.robots_dict[id].robot_state = msg.new_state
+        self.robots_dict[msg.id.id].robot_state = msg.new_state
+        self.robots_dict[msg.id.id].heartbeat_time = datetime.now()
 
 
 

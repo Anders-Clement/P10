@@ -7,9 +7,13 @@
 #include "spice_msgs/srv/get_ready_robots.hpp"
 #include "spice_msgs/msg/robot.hpp"
 #include "spice_msgs/srv/robot_task.hpp"
+#include "geometry_msgs/msg/pose_array.hpp"
 
 
 using namespace std::chrono_literals;
+using std::placeholders::_1;
+
+
 
 class TaskAllocator : public rclcpp::Node
 {
@@ -22,6 +26,9 @@ public:
 
     readyRobotsCli_ = this->create_client<spice_msgs::srv::GetReadyRobots>("get_ready_robots");
 
+    jobSubscription_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
+      "/job_locations", 1, std::bind(&TaskAllocator::JobLocation_callback, this, _1));
+    
     GetReadyRobot();
 
     timerReadyBots_ = this->create_wall_timer(
@@ -29,6 +36,10 @@ public:
   }
 
   
+
+
+
+
   void GetReadyRobot()
   {
     robotsRecieved = false;
@@ -39,7 +50,7 @@ public:
         RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for Swarm Manager service. Exiting.");
         return;
       }
-      RCLCPP_INFO(this->get_logger(), "Swarm Manager service not available");
+      RCLCPP_WARN(this->get_logger(), "Swarm Manager service not available");
       
     }
 
@@ -62,9 +73,10 @@ public:
       };
     
     auto futureResult = readyRobotsCli_->async_send_request(request, response_received_callback);
-
-
   }
+
+
+
 
   void AllocateTasks(){
 
@@ -73,15 +85,11 @@ public:
     }
 
     for (const auto & robot : robots_) {
-        
-        //change all to alloc task srv
 
-        std::string robotName = "polybot"+robot.id;
-
-        allocTaskCli_ = this->create_client<spice_msgs::srv::RobotTask>(robotName + "/allocate_task");
+        allocTaskCli_ = this->create_client<spice_msgs::srv::RobotTask>(robot.id + "/allocate_task");
                 
         if(!allocTaskCli_->wait_for_service(1s)) {
-          RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "could not find %s task service ",robotName);
+          RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "could not find %s task service ",robot.id.c_str());
         continue;
         }
         
@@ -91,12 +99,10 @@ public:
         
         jobRequest->process_time = rand()%20; 
         
-        RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "Allocating task to polybot%s ",robot.id);
-
-        //auto resultJob = allocTaskCli_->async_send_request(jobRequest);
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to polybot%s ",robot.id.c_str());
         
         using ServiceResponseFuture =
-      rclcpp::Client<spice_msgs::srv::RobotTask>::SharedFuture;
+        rclcpp::Client<spice_msgs::srv::RobotTask>::SharedFuture;
     
         auto response_received_callback = [this](ServiceResponseFuture future) {
         
@@ -109,17 +115,20 @@ public:
           else{
             tookJob = "did not take the job";
           }
-          RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "robot %s ",tookJob);
+          RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "robot %s ",tookJob);
 
         };
     
         auto futureResult = allocTaskCli_->async_send_request(jobRequest,response_received_callback);
      }
   } 
+
   
 
 
 
+
+  
 private:
 
   void PopulateLocations(){
@@ -173,23 +182,46 @@ private:
         
         location.header.stamp = this->get_clock()->now();
         location.header.frame_id = "map";
+        location.pose = i;
         
-
         locations.push_back(location);
         }
-     
-  } 
+  }
+
+
+
+
+
+  void JobLocation_callback(const geometry_msgs::msg::PoseArray msg){
+      
+      geometry_msgs::msg::PoseStamped location;
+      
+      for(auto i : msg.poses){
+
+        location.header = msg.header;
+        location.pose = i;
+        locations.push_back(location);
+      }
+  }
+
+
+
 
 
   std::vector<geometry_msgs::msg::PoseStamped, std::allocator<geometry_msgs::msg::PoseStamped>> locations;
   rclcpp::Client<spice_msgs::srv::GetReadyRobots>::SharedPtr readyRobotsCli_;
   rclcpp::Client<spice_msgs::srv::RobotTask>::SharedPtr allocTaskCli_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr jobSubscription_;
   bool robotsRecieved = false;
   rclcpp::TimerBase::SharedPtr timerReadyBots_{nullptr};
   std::shared_ptr<spice_msgs::srv::GetReadyRobots_Request> request;
   std::vector<spice_msgs::msg::Id, std::allocator<spice_msgs::msg::Id>> robots_;
   
 };
+
+
+
+
 
 int main(int argc, char * argv[])
 {
