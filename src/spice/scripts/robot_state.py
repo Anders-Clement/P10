@@ -62,7 +62,8 @@ class StartUpState(RobotStateTemplate):
         if response.success:
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
         else:
-            self.register_robot()
+            self.sm.get_logger().info('Failed to register robot, is it already registered?')
+            self.sm.change_state(ROBOT_STATE.ERROR)
 
     def deinit(self):
         if self.register_future is not None:
@@ -80,7 +81,8 @@ class ReadyForJobState(RobotStateTemplate):
             RobotTask, 'allocate_task', self.allocate_task_cb)
         
     def init(self):
-        pass
+        if self.sm.heartbeat_timer.is_canceled():
+            self.sm.heartbeat_timer.reset()
     def deinit(self):
         pass
 
