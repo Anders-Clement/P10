@@ -16,7 +16,9 @@ find_package(geometry_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
-find_package(tf2_msgs REQUIRED) 
+find_package(tf2_msgs REQUIRED)
+find_package(spice_msgs REQUIRED)
+
 
 add_executable(robot_tf_relay src/FramePublisher.cpp)
 ament_target_dependencies(
@@ -38,6 +40,14 @@ ament_target_dependencies(
     tf2_msgs
 )
 
+add_executable(task_allocator src/TaskAllocator.cpp)
+ament_target_dependencies(
+    task_allocator
+    geometry_msgs
+    rclcpp
+    spice_msgs
+)
+
 install(TARGETS
     robot_tf_relay
     DESTINATION lib/${PROJECT_NAME})
@@ -45,6 +55,11 @@ install(TARGETS
 install(TARGETS
     robot_tf_pose
     DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS
+    task_allocator
+    DESTINATION lib/${PROJECT_NAME})
+   
 
 install(DIRECTORY launch 
   DESTINATION share/${PROJECT_NAME})
