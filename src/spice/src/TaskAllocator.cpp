@@ -106,7 +106,7 @@ public:
         
         auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();
         
-        jobRequest->goal_pose = locations[rand()%5];
+        jobRequest->goal_pose = locations[rand()%locations.size()];
         
         jobRequest->process_time = rand()%20; 
         
