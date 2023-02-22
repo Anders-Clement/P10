@@ -108,8 +108,8 @@ class SwarmManager(Node):
 
 
     def robot_state_transition_callback(self, msg:RobotStateTransition):
-        self.robots_dict[id].robot_state = msg.new_state
-        self.robots_dict[id].heartbeat_time = datetime.now()
+        self.robots_dict[msg.id.id].robot_state = msg.new_state
+        self.robots_dict[msg.id.id].heartbeat_time = datetime.now()
 
 
 
