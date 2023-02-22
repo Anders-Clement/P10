@@ -62,8 +62,6 @@ public:
       };
     
     auto futureResult = readyRobotsCli_->async_send_request(request, response_received_callback);
-
-
   }
 
   void AllocateTasks(){
@@ -74,14 +72,12 @@ public:
 
     for (const auto & robot : robots_) {
         
-        //change all to alloc task srv
-
         std::string robotName = "polybot"+robot.id;
 
         allocTaskCli_ = this->create_client<spice_msgs::srv::RobotTask>(robotName + "/allocate_task");
                 
         if(!allocTaskCli_->wait_for_service(1s)) {
-          RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "could not find %s task service ",robotName);
+          RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "could not find %s task service ",robotName.c_str());
         continue;
         }
         
@@ -91,12 +87,10 @@ public:
         
         jobRequest->process_time = rand()%20; 
         
-        RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "Allocating task to polybot%s ",robot.id);
-
-        //auto resultJob = allocTaskCli_->async_send_request(jobRequest);
+        RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "Allocating task to polybot%s ",robot.id.c_str());
         
         using ServiceResponseFuture =
-      rclcpp::Client<spice_msgs::srv::RobotTask>::SharedFuture;
+        rclcpp::Client<spice_msgs::srv::RobotTask>::SharedFuture;
     
         auto response_received_callback = [this](ServiceResponseFuture future) {
         
@@ -117,9 +111,6 @@ public:
      }
   } 
   
-
-
-
 private:
 
   void PopulateLocations(){
@@ -173,8 +164,8 @@ private:
         
         location.header.stamp = this->get_clock()->now();
         location.header.frame_id = "map";
+        location.pose = i;
         
-
         locations.push_back(location);
         }
      
