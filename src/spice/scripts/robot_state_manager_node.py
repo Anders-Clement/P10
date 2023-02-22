@@ -36,6 +36,7 @@ class RobotStateManager(Node):
 
         self.heartbeat_client = self.create_client(Heartbeat, '/heartbeat')
         self.heartbeat_timer = self.create_timer(5, self.heartbeat_timer_cb)
+        self.heartbeat_timer.cancel()
         self.heartbeat_future = None
 
         self.navigation_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
@@ -73,13 +74,13 @@ class RobotStateManager(Node):
             self.states[self.current_state].init()
         
     def heartbeat_timer_cb(self):
-        if self.current_state is ROBOT_STATE.READY_FOR_JOB \
-            or self.current_state is ROBOT_STATE.MOVING \
-            or self.current_state is ROBOT_STATE.PROCESSING:
-
+        if self.current_state == ROBOT_STATE.READY_FOR_JOB \
+            or self.current_state == ROBOT_STATE.MOVING \
+            or self.current_state == ROBOT_STATE.PROCESSING:
             if self.heartbeat_future is None:
                 heartbeat = Heartbeat.Request(id=Id(id=self.id))
                 self.heartbeat_future = self.heartbeat_client.call_async(heartbeat)
+                self.heartbeat_future.add_done_callback(self.heartbeat_cb)
             else:
                 self.get_logger().error('Did not receive answer to heartbeat in time, resetting!')
                 self.change_state(ROBOT_STATE.STARTUP)
