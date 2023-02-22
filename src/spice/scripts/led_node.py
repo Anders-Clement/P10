@@ -22,7 +22,7 @@ class LedNode(Node):
         self.pi = pigpio.pi()
         for pin in self.ledPins.values():
             self.pi.set_PWM_frequency(pin, 8000)
-            self.pi.set_PWM_dutycycle(pin, 0)
+        self.led_cb(LedOutput(red=True, blue=False, green=False))
 
     def robot_state_transition_event_cb(self, msg: RobotStateTransition) -> None:
         if msg.new_state.state == RobotState.STARTUP:
