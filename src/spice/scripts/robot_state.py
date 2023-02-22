@@ -4,6 +4,7 @@ from rclpy.action.client import ClientGoalHandle
 from std_srvs.srv import Trigger
 from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
+from nav2_msgs.action._navigate_to_pose import NavigateToPose_FeedbackMessage, NavigateToPose_Feedback
 
 from spice_msgs.msg import Id
 from spice_msgs.srv import RegisterRobot, RobotTask
@@ -34,15 +35,27 @@ class StartUpState(RobotStateTemplate):
         self.navigation_is_active_client = self.sm.create_client(Trigger, 'lifecycle_manager_navigation/is_active')
         self.register_future = None
         self.nav_stack_is_active_future = None
+        self.timer = self.sm.create_timer(1, self.try_initialize)
+        self.timer.cancel()
 
     def init(self):
         # check that all robot state is good
         self.sm.get_logger().info('init StartUpState')
-        self.check_nav2_stack_status()
+        self.nav_stack_is_active = False
+        self.registered_robot = False
+        self.timer.reset()
+
+    def try_initialize(self):
+        if not self.nav_stack_is_active:
+            self.check_nav2_stack_status()
+        elif not self.registered_robot:
+            self.register_robot()
+        else: # nav_stack is good, and we are registered
+            self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
 
     def check_nav2_stack_status(self):
         self.sm.get_logger().info('wait for service: lifecycle_manager_navigation/is_active')
-        while not self.navigation_is_active_client.wait_for_service(5):
+        while not self.navigation_is_active_client.wait_for_service(1):
             self.sm.get_logger().info('timeout on wait for service: lifecycle_manager_navigation/is_active')
         
         self.nav_stack_is_active_future = self.navigation_is_active_client.call_async(Trigger.Request())
@@ -51,14 +64,12 @@ class StartUpState(RobotStateTemplate):
     def nav_stack_is_active_cb(self, future: Future):
         result: Trigger.Response = future.result()
         if result.success:
-            self.register_robot()
-        else:
-            self.check_nav2_stack_status()
+            self.nav_stack_is_active = True
 
     def register_robot(self):
         register_robot_request = RegisterRobot.Request()
         register_robot_request.id = Id(id=self.sm.id)
-        while not self.register_robot_client.wait_for_service(5):
+        while not self.register_robot_client.wait_for_service(1):
             self.sm.get_logger().info('Robot StartUpState timeout for /register_robot service')
 
         self.register_future = self.register_robot_client.call_async(register_robot_request)
@@ -67,10 +78,10 @@ class StartUpState(RobotStateTemplate):
     def register_robot_done_callback(self, future: Future):
         response: RegisterRobot.Response = future.result()
         if response.success:
-            self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
+            self.registered_robot = True
         else:
             self.sm.get_logger().info('Failed to register robot, is it already registered?')
-            self.sm.change_state(ROBOT_STATE.ERROR)
+            
 
     def deinit(self):
         if self.register_future:
@@ -79,6 +90,7 @@ class StartUpState(RobotStateTemplate):
         if self.nav_stack_is_active_future:
             if not self.nav_stack_is_active_future.cancelled():
                 self.nav_stack_is_active_future.cancel()
+        self.timer.cancel()
 
 
 class ReadyForJobState(RobotStateTemplate):
@@ -92,10 +104,7 @@ class ReadyForJobState(RobotStateTemplate):
         self.sm.heartbeat_future = None
 
     def deinit(self):
-        if self.nav_goal_done_future:
-            self.nav_goal_done_future.cancel()
-        if self.nav_response_future:
-            self.nav_response_future.cancel()
+        pass
 
     def on_allocate_task(self, request: RobotTask.Request, response: RobotTask.Response) -> RobotTask.Response:
         if self.sm.current_task is not None:
@@ -143,6 +152,10 @@ class MovingState(RobotStateTemplate):
         else:
             self.sm.current_task = None
             self.sm.change_state(ROBOT_STATE.ERROR)
+    def on_nav_feedback(self, msg: NavigateToPose_FeedbackMessage):
+        feedback: NavigateToPose_Feedback = msg.feedback
+        self.sm.get_logger().info(str(feedback))
+
 
 class ProcessingState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:

@@ -38,8 +38,7 @@ class SwarmManager(Node):
             
         topic = id+'/robot_state_transition_event'
         statesub = self.create_subscription(RobotStateTransition, topic, self.robot_state_transition_callback,10)
-
-        robot = RobotData(id, RobotState.STARTUP, datetime.now(), statesub)
+        robot = RobotData(id, RobotState(state=RobotState.STARTUP), datetime.now(),statesub)
         self.robots_dict[id] = robot
         self.get_logger().info(f"{id} has been registered")
         return True
