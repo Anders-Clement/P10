@@ -153,8 +153,9 @@ class MovingState(RobotStateTemplate):
             self.sm.current_task = None
             self.sm.change_state(ROBOT_STATE.ERROR)
     def on_nav_feedback(self, msg: NavigateToPose_FeedbackMessage):
-        feedback: NavigateToPose_Feedback = msg.feedback
-        self.sm.get_logger().info(str(feedback))
+        # feedback: NavigateToPose_Feedback = msg.feedback
+        # self.sm.get_logger().info(str(feedback))
+        pass
 
 
 class ProcessingState(RobotStateTemplate):
