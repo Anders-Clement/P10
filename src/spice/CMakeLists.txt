@@ -75,6 +75,7 @@ endif()
 install(PROGRAMS
   scripts/led_node.py
   scripts/SwarmManager.py
+  scripts/robot_state_manager_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
