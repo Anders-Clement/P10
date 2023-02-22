@@ -8,18 +8,28 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 set(msg_files
   "msg/LedOutput.msg"
+  "msg/Id.msg"
+  "msg/RobotState.msg"
+  "msg/Robot.msg"
+  "msg/RobotStateTransition.msg"
 )
 
-# set(srv_files
-
-# )
+set(srv_files
+  "srv/GetReadyRobots.srv"
+  "srv/GetRobots.srv"
+  "srv/Heartbeat.srv"
+  "srv/RegisterRobot.srv"
+  "srv/RobotTask.srv"
+)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}
-  # ${srv_files}  
+  ${srv_files}  
+  DEPENDENCIES geometry_msgs 
 )
 
 ament_export_dependencies(rosidl_default_runtime)
