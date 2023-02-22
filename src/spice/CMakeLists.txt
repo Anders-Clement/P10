@@ -17,6 +17,7 @@ find_package(rclcpp REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_msgs REQUIRED) 
+find_package(spice_msgs REQUIRED)
 
 add_executable(robot_tf_relay src/FramePublisher.cpp)
 ament_target_dependencies(
@@ -40,9 +41,6 @@ ament_target_dependencies(
 
 install(TARGETS
     robot_tf_relay
-    DESTINATION lib/${PROJECT_NAME})
-
-install(TARGETS
     robot_tf_pose
     DESTINATION lib/${PROJECT_NAME})
 
@@ -67,6 +65,7 @@ endif()
 # Install Python executables
 install(PROGRAMS
   scripts/led_node.py
+  scripts/SwarmManager.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
