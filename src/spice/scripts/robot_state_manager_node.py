@@ -51,7 +51,8 @@ class RobotStateManager(Node):
         self.current_state = ROBOT_STATE.STARTUP
         self.state_transition_event_pub.publish(
             RobotStateTransition(new_state=RobotState(state=self.current_state),
-                                 old_state=RobotState(state=ROBOT_STATE.STARTUP)))
+                                 old_state=RobotState(state=ROBOT_STATE.STARTUP),
+                                 id=Id(id=self.id)))
         self.states[self.current_state].init()
 
         self.get_logger().info('Finished intialization')
