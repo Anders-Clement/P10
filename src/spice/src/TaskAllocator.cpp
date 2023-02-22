@@ -85,7 +85,6 @@ public:
     }
 
     for (const auto & robot : robots_) {
-        
 
         allocTaskCli_ = this->create_client<spice_msgs::srv::RobotTask>(robot.id + "/allocate_task");
                 
@@ -124,7 +123,7 @@ public:
      }
   } 
 
-
+  
 
 
 

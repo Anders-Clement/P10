@@ -11,7 +11,7 @@ from rclpy.action import ActionClient
 from nav2_msgs.action import NavigateToPose
 
 from spice_msgs.msg import RobotState, RobotStateTransition, Id
-from spice_msgs.srv import Heartbeat
+from spice_msgs.srv import Heartbeat, RobotTask
 
 import robot_state
 
@@ -36,9 +36,13 @@ class RobotStateManager(Node):
 
         self.heartbeat_client = self.create_client(Heartbeat, '/heartbeat')
         self.heartbeat_timer = self.create_timer(5, self.heartbeat_timer_cb)
+        self.heartbeat_timer.cancel()
         self.heartbeat_future = None
 
         self.navigation_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+
+        self.allocate_task_server = self.create_service(
+            RobotTask, 'allocate_task', self.allocate_task_cb)
         
 
         self.states: "[RobotState]" = [
@@ -66,6 +70,7 @@ class RobotStateManager(Node):
             event_msg = RobotStateTransition()
             event_msg.old_state = RobotState(state=self.current_state)
             event_msg.new_state = RobotState(state=new_state)
+            event_msg.id = Id(id=self.id)
             self.state_transition_event_pub.publish(event_msg)
 
             self.states[self.current_state].deinit()
@@ -73,13 +78,15 @@ class RobotStateManager(Node):
             self.states[self.current_state].init()
         
     def heartbeat_timer_cb(self):
-        if self.current_state is ROBOT_STATE.READY_FOR_JOB \
-            or self.current_state is ROBOT_STATE.MOVING \
-            or self.current_state is ROBOT_STATE.PROCESSING:
-
+        if self.current_state == ROBOT_STATE.READY_FOR_JOB \
+            or self.current_state == ROBOT_STATE.MOVING \
+            or self.current_state == ROBOT_STATE.PROCESSING \
+            or self.current_state == ROBOT_STATE.ERROR:
+            
             if self.heartbeat_future is None:
                 heartbeat = Heartbeat.Request(id=Id(id=self.id))
                 self.heartbeat_future = self.heartbeat_client.call_async(heartbeat)
+                self.heartbeat_future.add_done_callback(self.heartbeat_cb)
             else:
                 self.get_logger().error('Did not receive answer to heartbeat in time, resetting!')
                 self.change_state(ROBOT_STATE.STARTUP)
@@ -95,6 +102,9 @@ class RobotStateManager(Node):
     
     def on_nav_done(self, msg):
         self.states[self.current_state].on_nav_done(msg)
+
+    def allocate_task_cb(self, request: RobotTask.Request, response: RobotTask.Response) -> RobotTask.Response:
+        return self.states[self.current_state].on_allocate_task(request, response)
 
 
 def main(args=None):
