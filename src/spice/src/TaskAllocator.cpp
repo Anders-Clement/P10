@@ -54,7 +54,7 @@ public:
         RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for Swarm Manager service. Exiting.");
         return;
       }
-      RCLCPP_WARN(this->get_logger(), "Swarm Manager service not available");
+      RCLCPP_WARN(this->get_logger(), "Swarm Manager service not available %d", locations.size());
       
     }
 
@@ -200,6 +200,8 @@ private:
 void JobLocation_callback(const geometry_msgs::msg::PoseArray msg){
       
       geometry_msgs::msg::PoseStamped location;
+      
+      locations.clear();
       
       for(auto i : msg.poses){
 
