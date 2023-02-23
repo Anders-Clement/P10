@@ -2,6 +2,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <time.h>
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "spice_msgs/srv/get_ready_robots.hpp"
@@ -14,7 +15,6 @@ using namespace std::chrono_literals;
 using std::placeholders::_1;
 
 
-
 class TaskAllocator : public rclcpp::Node
 {
 
@@ -22,7 +22,13 @@ public:
     TaskAllocator()
   : Node("task_allocator")
   {
+
+    this->declare_parameter("use_rviz", false);
+    rclcpp::Parameter use_rviz = this->get_parameter("use_rviz");
+
+    if(!use_rviz.as_bool()){ //use deafualt Job points;
     PopulateLocations();
+    }
 
     readyRobotsCli_ = this->create_client<spice_msgs::srv::GetReadyRobots>("get_ready_robots");
 
@@ -31,15 +37,13 @@ public:
     
     GetReadyRobot();
 
+   // srand(time(NULL)); introduce RANDOMNESS WOWOWOWOWOWOWOWWOWO
+
     timerReadyBots_ = this->create_wall_timer(
       10s, std::bind(&TaskAllocator::GetReadyRobot, this));
   }
 
   
-
-
-
-
   void GetReadyRobot()
   {
     robotsRecieved = false;
@@ -50,9 +54,10 @@ public:
         RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for Swarm Manager service. Exiting.");
         return;
       }
-      RCLCPP_WARN(this->get_logger(), "Swarm Manager service not available");
+      RCLCPP_WARN(this->get_logger(), "Swarm Manager service not available %d", locations.size());
       
     }
+
 
     auto request = std::make_shared<spice_msgs::srv::GetReadyRobots::Request>();
 
@@ -83,6 +88,12 @@ public:
     if(!robotsRecieved){
       return;
     }
+    else if (locations.size() <= 0)
+    {
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Run set_robot_task_poses and send poses from rviz");
+        return;
+    }
+    
 
     for (const auto & robot : robots_) {
 
@@ -95,11 +106,11 @@ public:
         
         auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();
         
-        jobRequest->goal_pose = locations[rand()%5];
+        jobRequest->goal_pose = locations[rand()%locations.size()];
         
         jobRequest->process_time = rand()%20; 
         
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to polybot%s ",robot.id.c_str());
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to %s",robot.id.c_str());
         
         using ServiceResponseFuture =
         rclcpp::Client<spice_msgs::srv::RobotTask>::SharedFuture;
@@ -125,10 +136,6 @@ public:
 
   
 
-
-
-
-  
 private:
 
   void PopulateLocations(){
@@ -190,11 +197,11 @@ private:
 
 
 
-
-
-  void JobLocation_callback(const geometry_msgs::msg::PoseArray msg){
+void JobLocation_callback(const geometry_msgs::msg::PoseArray msg){
       
       geometry_msgs::msg::PoseStamped location;
+      
+      locations.clear();
       
       for(auto i : msg.poses){
 
@@ -203,9 +210,6 @@ private:
         locations.push_back(location);
       }
   }
-
-
-
 
 
   std::vector<geometry_msgs::msg::PoseStamped, std::allocator<geometry_msgs::msg::PoseStamped>> locations;
@@ -218,8 +222,6 @@ private:
   std::vector<spice_msgs::msg::Id, std::allocator<spice_msgs::msg::Id>> robots_;
   
 };
-
-
 
 
 
