@@ -1,8 +1,6 @@
 <CycloneDDS>
   <Domain>
-    <Id>any</Id>
     <General>
-      <NetworkInterfaceAddress>auto</NetworkInterfaceAddress>
       <AllowMulticast>false</AllowMulticast>
       <EnableMulticastLoopback>true</EnableMulticastLoopback>
     </General>
