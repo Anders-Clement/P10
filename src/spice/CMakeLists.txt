@@ -18,6 +18,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_msgs REQUIRED) 
 find_package(spice_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 add_executable(robot_tf_relay src/FramePublisher.cpp)
 ament_target_dependencies(
@@ -47,10 +48,20 @@ ament_target_dependencies(
     spice_msgs
 )
 
+
+add_executable(set_robot_task_poses src/SetRobotTaskPoses.cpp)
+ament_target_dependencies(
+  set_robot_task_poses
+  geometry_msgs
+  rclcpp
+  visualization_msgs
+)
+
 install(TARGETS
     robot_tf_relay
     robot_tf_pose
     task_allocator
+    set_robot_task_poses
     DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch 
