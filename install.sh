@@ -62,7 +62,7 @@ function install_rplidar {
     git clone -b ros2 https://github.com/lopenguin/rplidar_ros2.git src/rplidar_ros2
     #sudo apt install -y ros-$ROS_DISTRO-rplidar-ros
     #cd /tmp
-    wget https://raw.githubusercontent.com/lopenguin/rplidar_ros/ros2/scripts/rplidar.rules
+    wget https://raw.githubusercontent.com/lopenguin/rplidar_ros2/master/scripts/rplidar.rules
     sudo cp rplidar.rules /etc/udev/rules.d/
     colcon build --symlink-install
 }
@@ -241,7 +241,7 @@ colcon build
 source $WORKSPACE/install/setup.bash
 
 #### 1.2/1.3 Install LIDAR/Depth Sensor ROS2 drivers:
-install_ldlidar
+install_rplidar
 # if (printf '%s\n' "${LASER_SENSOR_ARRAY[@]}" | grep -xq $LASER_SENSOR)
 #     then
 #         install_$LASER_SENSOR
