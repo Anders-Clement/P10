@@ -23,12 +23,11 @@ class DynamicObstacleAvoidance(Node):
     def __init__(self):
         super().__init__('dynamic_obstacle_avoidance')
         self.ns = os.getenv("ROBOT_NAMESPACE")
-        self.ns = 'polybot12' #debug
+        self.to_frame_rel = self.ns + '_base_link'
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.cli_getRobots= self.create_client(GetRobots,'get_robots')
-        #self.get_logger().info(f"{self.ns} : ns")
         topic = self.ns+'/scan'
         self.pub_obstacle = self.create_publisher(LaserScan,topic ,1)
 
@@ -42,49 +41,59 @@ class DynamicObstacleAvoidance(Node):
         cli_response = self.cli_getRobots.call_async(cli_request) # get list of active robots as type GetRobots.srv
         cli_response.add_done_callback(self.add_obstacle)
 
+        
 
-    
     def add_obstacle(self, cli_response: Future):
-        #rclpy.spin_until_future_complete(self, cli_response)#,timeout_sec=0.9)
-        to_frame_rel = self.ns + '_base_link'
+        
 
-        self.get_logger().info(f"responce: {cli_response.result().robots}")
+
+        #self.get_logger().info(f"responce: {cli_response.result().robots}")
+
 
         if cli_response.result().robots is None:
-            self.get_logger().info(f"responce: No robots found")
+            self.get_logger().info(f"No robots found")
             return
 
         for robot in cli_response.result().robots:
-            self.get_logger().info(f"responce: found: {robot.id.id}")
+            if robot.id.id == self.ns:
+                continue
+            self.get_logger().info(f"Doing: {robot.id.id}")
 
             from_frame_rel = robot.id.id+'_base_link'
 
 
             
             try:
-                t = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, rclpy.time.Time())
+                t = self.tf_buffer.lookup_transform(self.to_frame_rel, from_frame_rel, rclpy.time.Time())
 
             except TransformException as ex:
-                self.get_logger().info(f'Could not transform {to_frame_rel} to {from_frame_rel}: {ex}')
+                self.get_logger().info(f'Could not transform {self.to_frame_rel} to {from_frame_rel}: {ex}')
                 continue
         
             x = t.transform.translation.x
             y = t.transform.translation.y
             
-            deg = math.atan2(y,x)/math.pi*180
+            rad = math.atan2(y,x)
+
+            dist = math.sqrt(x ** 2 + y ** 2)
+            
+            deg1 = math.pi/180
 
             laser_msg = LaserScan()
-            laser_msg.header.frame_id = self.ns
+            frame_id = 'base_link'
+            laser_msg.header.frame_id = frame_id
             laser_msg.header.stamp = self.get_clock().now().to_msg()
-            laser_msg.angle_min = deg-1
-            laser_msg.angle_max = deg+1
-            laser_msg.angle_increment = 1
-            dist = math.sqrt(x ** 2 + y ** 2)
+            laser_msg.angle_min = rad-deg1
+            laser_msg.angle_max = rad+deg1
+            laser_msg.angle_increment = deg1
+            laser_msg.time_increment = 0.01
+            laser_msg.scan_time = 1.0
+            laser_msg.range_min = 0.0
+            laser_msg.range_max = 10.0
             laser_msg.ranges = [dist,dist,dist]
-            laser_msg.scan_time = 0
+            laser_msg.intensities = []
 
             self.pub_obstacle.publish(laser_msg)
-
     
 
 
