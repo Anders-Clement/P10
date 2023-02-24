@@ -87,6 +87,7 @@ install(PROGRAMS
   scripts/led_node.py
   scripts/SwarmManager.py
   scripts/robot_state_manager_node.py
+  scripts/dynamic_obstacle_avoidance.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
