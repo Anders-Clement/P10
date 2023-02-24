@@ -45,6 +45,7 @@ private:
           t = tf_buffer_->lookupTransform(
             toFrameRel, fromFrameRel,
             tf2::TimePointZero);
+            t.child_frame_id = prefix_ + '_' + t.child_frame_id; 
             output_msg.transforms.push_back(t);
 
             publisher_->publish(output_msg);
