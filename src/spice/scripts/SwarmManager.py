@@ -38,9 +38,9 @@ class SwarmManager(Node):
             
         topic = id+'/robot_state_transition_event'
         statesub = self.create_subscription(RobotStateTransition, topic, self.robot_state_transition_callback,10)
-
         robot = RobotData(id, RobotState(state=RobotState.STARTUP), datetime.now(),statesub)
         self.robots_dict[id] = robot
+        self.get_logger().info(f"{id} has been registered")
         return True
 
 
@@ -50,10 +50,11 @@ class SwarmManager(Node):
             if id == robot.id:
                 found = True
                 break
-        if found:
 
+        if found:
             self.destroy_subscription(self.robots_dict[id].state_subscriber)
             del self.robots_dict[id]
+            self.get_logger().info(f"{id} has been removed")
             return True
         return False
 
@@ -98,13 +99,13 @@ class SwarmManager(Node):
     def heartbeatTimer_callback(self):
         idRobotsToDel = []
         for robot in self.robots_dict.values():
-            print(datetime.now() - robot.heartbeat_time )
             if datetime.now() - robot.heartbeat_time > timedelta(seconds=10):
                 idRobotsToDel.append(robot.id)
 
         for delId in idRobotsToDel:
+            self.get_logger().info(f"Timeout of {delId}")
             self.deregisterRobot(delId)
-            print("Timeout of id: ",delId)
+
 
 
     def robot_state_transition_callback(self, msg:RobotStateTransition):
@@ -116,7 +117,6 @@ class SwarmManager(Node):
 def main(args=None):
     rclpy.init(args=args)
     swarmmanager = SwarmManager()
-    print('spinning')
     rclpy.spin(swarmmanager)
     rclpy.shutdown()
 

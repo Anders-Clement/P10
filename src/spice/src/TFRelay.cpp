@@ -50,9 +50,9 @@ private:
             publisher_->publish(output_msg);
 
         } catch (const tf2::TransformException & ex) {
-          RCLCPP_INFO(
-            this->get_logger(), "Could not transform %s to %s: %s",
-            toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
+          /*RCLCPP_INFO(
+            //this->get_logger(), "Could not transform %s to %s: %s",
+            toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());*/
           return;
         }
   }
