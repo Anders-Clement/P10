@@ -31,3 +31,4 @@ sudo systemctl daemon-reload
 sudo systemctl enable bringup
 
 echo "Installed bringup service, restart the pi, or run: 'systemctl start bringup' in order to start the bringup service"
+echo "You must still edit bringup.sh to have the correct ROBOT_NAMESPACE variable set"
