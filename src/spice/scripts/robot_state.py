@@ -115,14 +115,15 @@ class ReadyForJobState(RobotStateTemplate):
             response.job_accepted = False
             return response
         
-        self.sm.current_task = request
-        nav_goal = NavigateToPose.Goal()
-        nav_goal.pose = request.goal_pose
-        self.nav_response_future = self.sm.navigation_client.send_goal_async(
-            nav_goal, self.sm.on_nav_feedback)
-        self.nav_response_future.add_done_callback(self.nav_goal_response_cb)
+        ## Depricated since srv_msg had been changed:
+        # self.sm.current_task = request
+        # nav_goal = NavigateToPose.Goal()
+        # nav_goal.pose = request.goal_pose
+        # self.nav_response_future = self.sm.navigation_client.send_goal_async(
+        #     nav_goal, self.sm.on_nav_feedback)
+        # self.nav_response_future.add_done_callback(self.nav_goal_response_cb)
 
-        response.job_accepted = True
+        response.job_accepted = False
         return response
     
     def nav_goal_response_cb(self, future: Future):
