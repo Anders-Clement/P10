@@ -1,0 +1,4 @@
+string[] process_type
+string id
+---
+geometry_msgs/PoseStamped goal_pose
