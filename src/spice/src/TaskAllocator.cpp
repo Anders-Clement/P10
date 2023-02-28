@@ -9,226 +9,300 @@
 #include "spice_msgs/msg/robot.hpp"
 #include "spice_msgs/srv/robot_task.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
-
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "spice_msgs/msg/task.hpp"
+#include "spice_msgs/msg/layer.hpp"
+#include "spice_msgs/msg/node.hpp"
+#include "spice_msgs/msg/work.hpp"
 
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
+class Node
+{
+public:
+    Node(uint8_t id_, int8_t work_type_, std::vector<Node *> children_)
+    {
+        this->id = id_;
+        this->work_type = work_type_;
+        this->children = children_;
+    }
+
+    bool is_leaf() { return children.size() == 0; }
+    // int8_t depth() { return children.size(); }
+
+    uint8_t id;
+    int8_t work_type;
+    std::vector<Node *> children;
+};
+
+class Tree
+{
+public:
+    void tree_type_overview()
+    {
+        spice_msgs::msg::Task task;
+        Node node0(0, 1, {});
+        Node node1(1, 1, {});
+        Node node2(2, 2, {&node0});
+        Node node3(3, 1, {});
+        Node node4(4, 3, {&node1});
+        Node node5(5, 1, {});
+        Node node6(6, 3, {&node2, &node3});
+        Node node7(7, 2, {&node4, &node5});
+        Node node8(8, 1, {});
+        Node node9(9, 4, {&node6, &node7, &node8});
+        this->root_node = &node9;
+        this->nodes.push_back(node9);
+        this->nodes.push_back(node8);
+        this->nodes.push_back(node7);
+        this->nodes.push_back(node6);
+        this->nodes.push_back(node5);
+        this->nodes.push_back(node4);
+        this->nodes.push_back(node3);
+        this->nodes.push_back(node2);
+        this->nodes.push_back(node1);
+        this->nodes.push_back(node0);
+    }
+        void tree_type_hs()
+    {
+        spice_msgs::msg::Task task;
+        Node node0(0, 1, {});
+        Node node1(1, 1, {});
+        Node node2(2, 2, {&node0});
+        Node node3(3, 3, {&node1});
+        Node node4(4, 3, {&node2});
+        Node node5(5, 2, {&node3});
+        Node node6(6, 4, {&node4, &node5});
+        this->root_node = &node6;
+        this->nodes.push_back(node6);
+        this->nodes.push_back(node5);
+        this->nodes.push_back(node4);
+        this->nodes.push_back(node3);
+        this->nodes.push_back(node2);
+        this->nodes.push_back(node1);
+        this->nodes.push_back(node0);
+    }
+
+    spice_msgs::msg::Task to_task_msg_overview()
+    {
+        spice_msgs::msg::Task task_msg;
+        spice_msgs::msg::Layer layer_msg;
+        for (size_t j = 0; j < this->nodes.size(); j++)
+        {
+
+            spice_msgs::msg::Node node_msg;
+            node_msg.id = this->nodes[j].id;
+            node_msg.work.type = (int8_t)this->nodes[j].work_type;
+
+            for (size_t k = 0; k < this->nodes[j].children.size(); k++)
+            {
+                node_msg.children_id.push_back(this->nodes[j].children[k]->id);
+            }
+            layer_msg.nodes.push_back(node_msg);
+
+            if (j == 0 || j == 3 || j == 7 || j == 9)
+            {
+                task_msg.layers.push_back(layer_msg);
+                layer_msg.nodes = {};
+            }
+        }
+        return task_msg;
+    }
+
+        spice_msgs::msg::Task to_task_msg_hs()
+    {
+        spice_msgs::msg::Task task_msg;
+        spice_msgs::msg::Layer layer_msg;
+        for (size_t j = 0; j < this->nodes.size(); j++)
+        {
+
+            spice_msgs::msg::Node node_msg;
+            node_msg.id = this->nodes[j].id;
+            node_msg.work.type = (int8_t)this->nodes[j].work_type;
+
+            for (size_t k = 0; k < this->nodes[j].children.size(); k++)
+            {
+                node_msg.children_id.push_back(this->nodes[j].children[k]->id);
+            }
+            layer_msg.nodes.push_back(node_msg);
+
+            if (j == 0 || j == 2 || j == 4 || j == 6)
+            {
+                task_msg.layers.push_back(layer_msg);
+                layer_msg.nodes = {};
+            }
+        }
+        return task_msg;
+    }
+
+private:
+    std::vector<Node> nodes;
+    Node *root_node;
+};
 
 class TaskAllocator : public rclcpp::Node
 {
 
 public:
-    TaskAllocator()
-  : Node("task_allocator")
-  {
-
-    this->declare_parameter("use_rviz", false);
-    rclcpp::Parameter use_rviz = this->get_parameter("use_rviz");
-
-    if(!use_rviz.as_bool()){ //use deafualt Job points;
-    PopulateLocations();
-    }
-
-    readyRobotsCli_ = this->create_client<spice_msgs::srv::GetReadyRobots>("get_ready_robots");
-
-    jobSubscription_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
-      "/job_locations", 1, std::bind(&TaskAllocator::JobLocation_callback, this, _1));
-    
-    GetReadyRobot();
-
-   // srand(time(NULL)); introduce RANDOMNESS WOWOWOWOWOWOWOWWOWO
-
-    timerReadyBots_ = this->create_wall_timer(
-      10s, std::bind(&TaskAllocator::GetReadyRobot, this));
-  }
-
-  
-  void GetReadyRobot()
-  {
-    robotsRecieved = false;
-    
-    if (!readyRobotsCli_->wait_for_service(1s)) {
-      
-      if (!rclcpp::ok()) {
-        RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for Swarm Manager service. Exiting.");
-        return;
-      }
-      RCLCPP_WARN(this->get_logger(), "Swarm Manager service not available %d", locations.size());
-      
-    }
-
-
-    auto request = std::make_shared<spice_msgs::srv::GetReadyRobots::Request>();
-
-    // We give the async_send_request() method a callback that will get executed once the response
-    // is received.
-    // This way we can return immediately from this method and allow other work to be done by the
-    // executor in `spin` while waiting for the response.
-
-    using ServiceResponseFuture =
-      rclcpp::Client<spice_msgs::srv::GetReadyRobots>::SharedFuture;
-    
-    auto response_received_callback = [this](ServiceResponseFuture future) {
-        
-        auto result = future.get();
-        robots_ = result->robots;
-        robotsRecieved = true;
-        AllocateTasks();
-      };
-    
-    auto futureResult = readyRobotsCli_->async_send_request(request, response_received_callback);
-  }
-
-
-
-
-  void AllocateTasks(){
-
-    if(!robotsRecieved){
-      return;
-    }
-    else if (locations.size() <= 0)
+    TaskAllocator() : Node("task_allocator")
     {
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Run set_robot_task_poses and send poses from rviz");
-        return;
+
+        readyRobotsCli_ = this->create_client<spice_msgs::srv::GetReadyRobots>("get_ready_robots");
+
+        GetReadyRobot();
+
+        timerReadyBots_ = this->create_wall_timer(
+            10s, std::bind(&TaskAllocator::GetReadyRobot, this));
     }
-    
 
-    for (const auto & robot : robots_) {
+    void GetReadyRobot()
+    {
+        robotsRecieved = false;
 
-        allocTaskCli_ = this->create_client<spice_msgs::srv::RobotTask>(robot.id + "/allocate_task");
-                
-        if(!allocTaskCli_->wait_for_service(1s)) {
-          RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "could not find %s task service ",robot.id.c_str());
-        continue;
+        if (!readyRobotsCli_->wait_for_service(1s))
+        {
+
+            if (!rclcpp::ok())
+            {
+                RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for Swarm Manager service. Exiting.");
+                return;
+            }
+            RCLCPP_WARN(this->get_logger(), "Swarm Manager service not available");
         }
-        
-        auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();
-        
-        jobRequest->goal_pose = locations[rand()%locations.size()];
-        
-        jobRequest->process_time = rand()%20; 
-        
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to %s",robot.id.c_str());
-        
+
+        auto request = std::make_shared<spice_msgs::srv::GetReadyRobots::Request>();
+
+        // We give the async_send_request() method a callback that will get executed once the response
+        // is received.
+        // This way we can return immediately from this method and allow other work to be done by the
+        // executor in `spin` while waiting for the response.
+
         using ServiceResponseFuture =
-        rclcpp::Client<spice_msgs::srv::RobotTask>::SharedFuture;
-    
-        auto response_received_callback = [this](ServiceResponseFuture future) {
-        
-          auto result = future.get();
-          
-          std::string tookJob;
-          if(result->job_accepted){
-            tookJob = "took the job";
-          }
-          else{
-            tookJob = "did not take the job";
-          }
-          RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "robot %s ",tookJob);
+            rclcpp::Client<spice_msgs::srv::GetReadyRobots>::SharedFuture;
 
+        auto response_received_callback = [this](ServiceResponseFuture future)
+        {
+            auto result = future.get();
+            robots_ = result->robots;
+            robotsRecieved = true;
+            AllocateTasks();
         };
-    
-        auto futureResult = allocTaskCli_->async_send_request(jobRequest,response_received_callback);
-     }
-  } 
 
-  
+        auto futureResult = readyRobotsCli_->async_send_request(request, response_received_callback);
+    }
+
+    void AllocateTasks()
+    {
+        if (!robotsRecieved)
+        {
+            return;
+        }
+
+        for (const auto &robot : robots_)
+        {
+            allocTaskCli_ = this->create_client<spice_msgs::srv::RobotTask>(robot.id + "/allocate_task");
+
+            if (!allocTaskCli_->wait_for_service(1s))
+            {
+                RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "could not find %s task service ", robot.id.c_str());
+                continue;
+            }
+
+            auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();
+            jobRequest->task = this->tree.to_task_msg_hs();
+
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to %s", robot.id.c_str());
+
+            using ServiceResponseFuture =
+                rclcpp::Client<spice_msgs::srv::RobotTask>::SharedFuture;
+
+            auto response_received_callback = [this](ServiceResponseFuture future)
+            {
+                auto result = future.get();
+
+                std::string tookJob;
+                if (result->job_accepted)
+                {
+                    tookJob = "took the job";
+                }
+                else
+                {
+                    tookJob = "did not take the job";
+                }
+                RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "robot %s ", tookJob.c_str());
+            };
+
+            auto futureResult = allocTaskCli_->async_send_request(jobRequest, response_received_callback);
+        }
+    }
+
+    // Initialize the matrix to zero
+    void graph(int numVertices)
+    {
+        this->numVertices = numVertices;
+        adjMatrix = new float *[numVertices];
+        for (int i = 0; i < numVertices; i++)
+        {
+            adjMatrix[i] = new float[numVertices];
+            for (int j = 0; j < numVertices; j++)
+                adjMatrix[i][j] = false;
+        }
+    }
+
+    // Add edges
+    void addEdge(int i, int j, float cost)
+    {
+        adjMatrix[i][j] = cost;
+    }
+
+    // Remove edges
+    void removeEdge(int i, int j)
+    {
+        adjMatrix[i][j] = 0;
+    }
+
+    // Print the martix
+    void printGraph()
+    {
+        for (int i = 0; i < numVertices; i++)
+        {
+            std::cout << i << " : ";
+            for (int j = 0; j < numVertices; j++)
+                std::cout << adjMatrix[i][j] << " ";
+            std::cout << "\n";
+        }
+    }
 
 private:
+    rclcpp::Client<spice_msgs::srv::GetReadyRobots>::SharedPtr readyRobotsCli_;
+    rclcpp::Client<spice_msgs::srv::RobotTask>::SharedPtr allocTaskCli_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr jobSubscription_;
+    bool robotsRecieved = false;
+    std::shared_ptr<spice_msgs::srv::GetReadyRobots_Request> request;
+    std::vector<spice_msgs::msg::Id, std::allocator<spice_msgs::msg::Id>> robots_;
+    rclcpp::TimerBase::SharedPtr timerReadyBots_{nullptr};
 
-  void PopulateLocations(){
-
-        
-        geometry_msgs::msg::Pose poses[5];
-        
-        poses[0].orientation.w = -2.5352063179016113;
-        poses[0].orientation.x =0.0 ;
-        poses[0].orientation.y = 0.0;
-        poses[0].orientation.z = 0.9775979723076776;
-        poses[0].position.x = -0.7799386978149414;
-        poses[0].position.y = -3.2567038536071777;
-        poses[0].position.z = 0.0;
-        
-        poses[1].orientation.w = 0.9765170182634035;
-        poses[1].orientation.x = 0;
-        poses[1].orientation.y =0 ;
-        poses[1].orientation.z = -0.21544027720449957;
-        poses[1].position.x = -6.155909538269043;
-        poses[1].position.y = -0.9745041728019714;
-        poses[1].position.z =0 ;
-
-        poses[2].orientation.w = 0.38131979411579997;
-        poses[2].orientation.x = 0;
-        poses[2].orientation.y = 0;
-        poses[2].orientation.z = -0.9244431916648441;
-        poses[2].position.x = -2.2982521057128906;
-        poses[2].position.y = 0.5658056139945984;
-        poses[2].position.z = 0;
-
-        poses[3].orientation.w = 0.9861226417049496;
-        poses[3].orientation.x = 0;
-        poses[3].orientation.y = 0;
-        poses[3].orientation.z = 0.16601847944386092;
-        poses[3].position.x = -14.981329917907715;
-        poses[3].position.y = 3.0031487941741943;
-        poses[3].position.z = 0;
-
-        poses[4].orientation.w = 0.2830619845919701;
-        poses[4].orientation.x = 0;
-        poses[4].orientation.y = 0;
-        poses[4].orientation.z = 0.9591016175978723;
-        poses[4].position.x = -10.81999397277832;
-        poses[4].position.y = 1.1732733249664307;
-        poses[4].position.z = 0;
-
-        geometry_msgs::msg::PoseStamped location;
-
-        for(auto i: poses){
-        
-        location.header.stamp = this->get_clock()->now();
-        location.header.frame_id = "map";
-        location.pose = i;
-        
-        locations.push_back(location);
-        }
-  }
-
-
-
-void JobLocation_callback(const geometry_msgs::msg::PoseArray msg){
-      
-      geometry_msgs::msg::PoseStamped location;
-      
-      locations.clear();
-      
-      for(auto i : msg.poses){
-
-        location.header = msg.header;
-        location.pose = i;
-        locations.push_back(location);
-      }
-  }
-
-
-  std::vector<geometry_msgs::msg::PoseStamped, std::allocator<geometry_msgs::msg::PoseStamped>> locations;
-  rclcpp::Client<spice_msgs::srv::GetReadyRobots>::SharedPtr readyRobotsCli_;
-  rclcpp::Client<spice_msgs::srv::RobotTask>::SharedPtr allocTaskCli_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr jobSubscription_;
-  bool robotsRecieved = false;
-  rclcpp::TimerBase::SharedPtr timerReadyBots_{nullptr};
-  std::shared_ptr<spice_msgs::srv::GetReadyRobots_Request> request;
-  std::vector<spice_msgs::msg::Id, std::allocator<spice_msgs::msg::Id>> robots_;
-  
+    float **adjMatrix;
+    int numVertices;
+    Tree tree;
 };
 
-
-
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<TaskAllocator>());
-  rclcpp::shutdown();
-  return 0;
+    rclcpp::init(argc, argv);
+
+    // TaskAllocator tm;
+    // tm.graph(6);
+    // tm.addEdge(0, 1, 1);
+    // tm.addEdge(0, 2, 2);
+    // tm.addEdge(1, 3, 1);
+    // tm.addEdge(2, 4, 1);
+    // tm.addEdge(3, 5, 1);
+    // tm.addEdge(4, 5, 2);
+    // tm.printGraph();
+
+    rclcpp::spin(std::make_shared<TaskAllocator>());
+    rclcpp::shutdown();
+    return 0;
 }

@@ -40,7 +40,7 @@ ament_target_dependencies(
     tf2_msgs
 )
 
-add_executable(task_allocator src/TaskAllocator2.cpp)
+add_executable(task_allocator src/TaskAllocator.cpp)
 ament_target_dependencies(
     task_allocator
     geometry_msgs
