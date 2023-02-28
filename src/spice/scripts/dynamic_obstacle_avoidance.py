@@ -31,11 +31,12 @@ class DynamicObstacleAvoidance(Node):
         topic = self.ns+'/scan'
         self.pub_obstacle = self.create_publisher(LaserScan,topic ,1)
 
-        self.timer = self.create_timer(1.0, self.on_timer)
+        self.timer_getRobots = self.create_timer(1.0, self.getRobots_timer)
+        self.timer_updateObstacles = self.create_timer(0.1, self.updateObstacles_timer)
 
 
 
-    def on_timer(self):
+    def getRobots_timer(self):
         cli_request = GetRobots.Request()
 
         cli_response = self.cli_getRobots.call_async(cli_request) # get list of active robots as type GetRobots.srv
@@ -44,17 +45,22 @@ class DynamicObstacleAvoidance(Node):
         
 
     def add_obstacle(self, cli_response: Future):
-        
+        self.obstacles = cli_response.result().robots
+        if cli_response.result().robots is None:
+            self.get_logger().info(f"No robots found")
+        return
+
+    def updateObstacles_timer(self):
+        if self.obstacles is None:
+            return
 
 
         #self.get_logger().info(f"responce: {cli_response.result().robots}")
 
 
-        if cli_response.result().robots is None:
-            self.get_logger().info(f"No robots found")
-            return
 
-        for robot in cli_response.result().robots:
+
+        for robot in self.obstacles:
             if robot.id.id == self.ns:
                 continue
             self.get_logger().info(f"Doing: {robot.id.id}")
