@@ -17,7 +17,7 @@ class WorckCellAllocator : public rclcpp::Node
 {
 public:
   WorckCellAllocator()
-  : Node("robot_pose_relayer")
+  : Node("work_cell_allocator")
   {
         tf_buffer_ =
         std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -26,7 +26,7 @@ public:
         std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
         service = 
-        create_service<spice_msgs::srv::AllocTask>("allocate task", std::bind(&WorckCellAllocator::OnAllocTask, this,
+        create_service<spice_msgs::srv::AllocTask>("allocate_work_cell", std::bind(&WorckCellAllocator::OnAllocTask, this,
                                 std::placeholders::_1, std::placeholders::_2));
 
   }
@@ -34,17 +34,14 @@ public:
 private:
 
   void OnAllocTask(const std::shared_ptr<spice_msgs::srv::AllocTask::Request>request,
-          std::shared_ptr<spice_msgs::srv::AllocTask::Response>response){
+          const std::shared_ptr<spice_msgs::srv::AllocTask::Response>response){
     
-    std::string fromFrameRel = request.get()->id + "_base_link";
-    
-    //std::string fromFrameRel =request.get()->goal_pose;
+    std::string fromFrameRel = request.get()->id + "_base_link"; 
     geometry_msgs::msg::TransformStamped t;
     float minDist = INFINITY;
     geometry_msgs::msg::TransformStamped goal; 
 
     for(auto toFrameRel : request.get()->process_type){
-        
         try{      
             t = tf_buffer_->lookupTransform(
             toFrameRel, fromFrameRel,
@@ -57,22 +54,28 @@ private:
             }
         }
          catch (const tf2::TransformException & ex) {
-          /*RCLCPP_INFO(
-            //this->get_logger(), "Could not transform %s to %s: %s",
-            toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());*/
+          RCLCPP_INFO(
+            this->get_logger(), "Could not transform %s to %s: %s",
+            toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
           continue;
         }
     }
 
+    if(goal.header.frame_id == ""){
+      response->found_job=false;
+      return;
+    }
     //SEND RESPONSE
     geometry_msgs::msg::PoseStamped goalPose;
+    geometry_msgs::msg::Pose pose;
+
     goalPose.header = goal.header;
     goalPose.pose.position.x = goal.transform.translation.x;
-    goalPose.pose.position.x = goal.transform.translation.y;
-    goalPose.pose.position.x = goal.transform.translation.z;
+    goalPose.pose.position.y = goal.transform.translation.y;
+    goalPose.pose.position.z = goal.transform.translation.z;
     goalPose.pose.orientation = goal.transform.rotation; 
-    response->goal_pose;
-   
+    response->goal_pose = goalPose;
+    response->found_job = true;
   }
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
