@@ -40,13 +40,13 @@ ament_target_dependencies(
     tf2_msgs
 )
 
-add_executable(task_allocator src/TaskAllocator.cpp)
-ament_target_dependencies(
-    task_allocator
-    geometry_msgs
-    rclcpp
-    spice_msgs
-)
+# add_executable(task_allocator src/TaskAllocator.cpp)
+# ament_target_dependencies(
+#     task_allocator
+#     geometry_msgs
+#     rclcpp
+#     spice_msgs
+# )
 
 
 add_executable(set_robot_task_poses src/SetRobotTaskPoses.cpp)
@@ -60,7 +60,7 @@ ament_target_dependencies(
 install(TARGETS
     robot_tf_relay
     robot_tf_pose
-    task_allocator
+    # task_allocator
     set_robot_task_poses
     DESTINATION lib/${PROJECT_NAME})
 
