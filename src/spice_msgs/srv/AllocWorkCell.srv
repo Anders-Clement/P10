@@ -1,5 +1,5 @@
 string[] process_type
-string id
+Id robot_id
 ---
 geometry_msgs/PoseStamped goal_pose
 bool found_job

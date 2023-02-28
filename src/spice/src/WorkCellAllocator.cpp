@@ -9,7 +9,7 @@
 #include "tf2/exceptions.h"
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
-#include "spice_msgs/srv/alloc_task.hpp"
+#include "spice_msgs/srv/alloc_work_cell.hpp"
 
 using namespace std::chrono_literals;
 
@@ -26,17 +26,17 @@ public:
         std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
         service = 
-        create_service<spice_msgs::srv::AllocTask>("allocate_work_cell", std::bind(&WorckCellAllocator::OnAllocTask, this,
+        create_service<spice_msgs::srv::AllocWorkCell>("allocate_work_cell", std::bind(&WorckCellAllocator::OnWorkCell, this,
                                 std::placeholders::_1, std::placeholders::_2));
 
   }
 
 private:
 
-  void OnAllocTask(const std::shared_ptr<spice_msgs::srv::AllocTask::Request>request,
-          const std::shared_ptr<spice_msgs::srv::AllocTask::Response>response){
+  void OnWorkCell(const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Request>request,
+          const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Response>response){
     
-    std::string fromFrameRel = request.get()->id + "_base_link"; 
+    std::string fromFrameRel = request.get()->robot_id.id + "_base_link"; 
     geometry_msgs::msg::TransformStamped t;
     float minDist = INFINITY;
     geometry_msgs::msg::TransformStamped goal; 
@@ -79,7 +79,7 @@ private:
   }
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-  rclcpp::Service<spice_msgs::srv::AllocTask>::SharedPtr service;
+  rclcpp::Service<spice_msgs::srv::AllocWorkCell>::SharedPtr service;
 };
 
 int main(int argc, char * argv[])
