@@ -16,6 +16,10 @@ set(msg_files
   "msg/RobotState.msg"
   "msg/Robot.msg"
   "msg/RobotStateTransition.msg"
+  "msg/Task.msg"
+  "msg/Layer.msg"
+  "msg/Node.msg"
+  "msg/Work.msg"
 )
 
 set(srv_files

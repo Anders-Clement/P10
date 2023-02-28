@@ -1,4 +1,3 @@
-geometry_msgs/PoseStamped goal_pose
-float32 process_time
+Task task
 ---
 bool job_accepted
