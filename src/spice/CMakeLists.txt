@@ -40,13 +40,13 @@ ament_target_dependencies(
     tf2_msgs
 )
 
-add_executable(task_allocator src/TaskAllocator.cpp)
-ament_target_dependencies(
-    task_allocator
-    geometry_msgs
-    rclcpp
-    spice_msgs
-)
+# add_executable(task_allocator src/TaskAllocator.cpp)
+# ament_target_dependencies(
+#     task_allocator
+#     geometry_msgs
+#     rclcpp
+#     spice_msgs
+# )
 
 
 add_executable(set_robot_task_poses src/SetRobotTaskPoses.cpp)
@@ -57,23 +57,11 @@ ament_target_dependencies(
   visualization_msgs
 )
 
-add_executable(work_cell_allocator src/WorkCellAllocator.cpp)
-ament_target_dependencies(
-  work_cell_allocator
-  geometry_msgs
-  rclcpp
-  spice_msgs
-  tf2
-  tf2_ros
-  tf2_msgs
-)
-
 install(TARGETS
     robot_tf_relay
     robot_tf_pose
-    task_allocator
+    # task_allocator
     set_robot_task_poses
-    work_cell_allocator
     DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch 
@@ -99,6 +87,7 @@ install(PROGRAMS
   scripts/led_node.py
   scripts/SwarmManager.py
   scripts/robot_state_manager_node.py
+  scripts/dynamic_obstacle_avoidance.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
