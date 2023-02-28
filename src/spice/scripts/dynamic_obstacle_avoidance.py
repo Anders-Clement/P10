@@ -19,6 +19,7 @@ from spice_msgs.srv import GetRobots
 
 class DynamicObstacleAvoidance(Node):
 
+    obstacles = []
 
     def __init__(self):
         super().__init__('dynamic_obstacle_avoidance')
