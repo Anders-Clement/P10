@@ -23,9 +23,10 @@ def generate_launch_description():
         [FindPackageShare('linorobot2_navigation'), 'rviz', 'linorobot2_navigation.rviz']
     )
 
-    nav2_config_path = PathJoinSubstitution(
-        [FindPackageShare('spice'), 'config', 'navigation.yaml']
-    )
+    nav2_config_path = '/home/ubuntu/P10/src/spice/config/navigation.yaml'
+    #PathJoinSubstitution(
+        #[get_package_share_directory('spice'), 'config', 'navigation.yaml']
+    #)
 
 
     namespace = os.environ.get('ROBOT_NAMESPACE')

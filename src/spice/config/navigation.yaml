@@ -11,7 +11,7 @@ amcl:
     beam_skip_error_threshold: 0.9
     beam_skip_threshold: 0.3
     do_beamskip: false
-    global_frame_id: "map"
+    global_frame_id: map
     lambda_short: 0.1
     laser_likelihood_max_dist: 2.0
     laser_max_range: 100.0
@@ -59,7 +59,7 @@ amcl_rclcpp_node:
 bt_navigator:
   ros__parameters:
     use_sim_time: True
-    global_frame: map
+    global_frame: "map"
     robot_base_frame: base_link
     odom_topic: odom
     bt_loop_duration: 10
@@ -244,7 +244,9 @@ local_costmap:
           data_type: "PointCloud2"
       static_layer:
         map_subscribe_transient_local: True
-      always_send_full_costmap: True
+        subscribe_to_updates: True
+        map_topic: "/map"
+        enabled: True
   local_costmap_client:
     ros__parameters:
       use_sim_time: False
@@ -310,6 +312,9 @@ global_costmap:
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
+        subscribe_to_updates: True
+        map_topic: "/map"
+        enabled: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0

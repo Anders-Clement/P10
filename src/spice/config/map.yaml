@@ -3,7 +3,7 @@ map_server:
     use_sim_time: True
     yaml_filename: "turtlebot3_world.yaml"
     frame_id: map
-    topic_name: map
+    topic_name: "/map"
 
 map_saver:
   ros__parameters:

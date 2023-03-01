@@ -17,9 +17,9 @@ def generate_launch_description():
             name='map_server',
             output='screen',
             parameters=[{'use_sim_time': True}, 
-                        {'yaml_filename':map_file},
-                        {'topic_name':'/map'},
-                        {'frame_id':'map'} 
+                        {'yaml_filename': map_file},
+                        {'topic_name': '/map'},
+                        {'frame_id': 'map'} 
                        ]),
 
         Node(
