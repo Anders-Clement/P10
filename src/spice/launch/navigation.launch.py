@@ -49,7 +49,7 @@ def generate_launch_description():
     )
 
     nav2_config_path = PathJoinSubstitution(
-        [FindPackageShare('linorobot2_navigation'), 'config', 'navigation.yaml']
+        [FindPackageShare('spice'), 'config', 'navigation.yaml']
     )
 
     robot_ns = os.environ.get('ROBOT_NAMESPACE')

@@ -64,7 +64,7 @@ install(TARGETS
     set_robot_task_poses
     DESTINATION lib/${PROJECT_NAME})
 
-install(DIRECTORY launch 
+install(DIRECTORY launch config maps
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
