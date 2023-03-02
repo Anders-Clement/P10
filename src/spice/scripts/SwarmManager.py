@@ -31,7 +31,7 @@ class SwarmManager(Node):
 
 
 
-    def registerRobot(self, id:Id.id) -> bool:
+    def registerRobot(self, id:Id.id) -> bool: #Register new robots and subscribe to their state_transition_event
         for robot in self.robots_dict.values():
             if id == robot.id:
                 return False
@@ -44,7 +44,7 @@ class SwarmManager(Node):
         return True
 
 
-    def deregisterRobot(self, id:Id.id) -> bool:
+    def deregisterRobot(self, id:Id.id) -> bool: # unregister robot and stop subcribing to the that state event topic 
         found = False
         for robot in self.robots_dict.values():
             if id == robot.id:
@@ -59,7 +59,7 @@ class SwarmManager(Node):
         return False
 
     
-    def register_robot_callback(self, request:RegisterRobot.Request, response:RegisterRobot.Response) -> RegisterRobot.Response:
+    def register_robot_callback(self, request:RegisterRobot.Request, response:RegisterRobot.Response) -> RegisterRobot.Response: #srv to register robots when they start
         if self.registerRobot(request.id.id):
             response.success = True
         else:
@@ -68,7 +68,7 @@ class SwarmManager(Node):
         return response
     
 
-    def get_robots_callback(self, request:GetRobots.Request, response:GetRobots.Response) -> GetRobots.Response:
+    def get_robots_callback(self, request:GetRobots.Request, response:GetRobots.Response) -> GetRobots.Response: # send all registered robots
         for robot in self.robots_dict.values():
             robot_msg = Robot()
             robot_msg.id.id = robot.id
@@ -77,7 +77,7 @@ class SwarmManager(Node):
 
         return response
     
-    def get_ready_robots_callback(self, request:GetReadyRobots.Request, response:GetReadyRobots.Response) -> GetReadyRobots.Response:
+    def get_ready_robots_callback(self, request:GetReadyRobots.Request, response:GetReadyRobots.Response) -> GetReadyRobots.Response: #send robots that are waiting for task
         for robot in self.robots_dict.values():
             if robot.robot_state.state == RobotState.READY_FOR_JOB:
                 id_msg = Id()
