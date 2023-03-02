@@ -10,7 +10,7 @@ from rclpy.action import ActionClient
 
 from nav2_msgs.action import NavigateToPose
 
-from spice_msgs.msg import RobotState, RobotStateTransition, Id
+from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType
 from spice_msgs.srv import Heartbeat, RobotTask
 
 import robot_state
@@ -29,7 +29,7 @@ class RobotStateManager(Node):
         if robot_ns is None:
             print('Could not get robot namespace from the environment')
             raise Exception()
-        self.id = robot_ns
+        self.id = Id(id=robot_ns, robot_type=RobotType.CARRIER_ROBOT)
         self.current_task = None
 
         self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', 10)
@@ -56,7 +56,7 @@ class RobotStateManager(Node):
         self.state_transition_event_pub.publish(
             RobotStateTransition(new_state=RobotState(state=self.current_state),
                                  old_state=RobotState(state=ROBOT_STATE.STARTUP),
-                                 id=Id(id=self.id)))
+                                 id=self.id))
         self.states[self.current_state].init()
 
         self.get_logger().info('Finished intialization')
@@ -70,7 +70,7 @@ class RobotStateManager(Node):
             event_msg = RobotStateTransition()
             event_msg.old_state = RobotState(state=self.current_state)
             event_msg.new_state = RobotState(state=new_state)
-            event_msg.id = Id(id=self.id)
+            event_msg.id = self.id
             self.state_transition_event_pub.publish(event_msg)
 
             self.states[self.current_state].deinit()
@@ -84,7 +84,7 @@ class RobotStateManager(Node):
             or self.current_state == ROBOT_STATE.ERROR:
 
             if self.heartbeat_future is None:
-                heartbeat = Heartbeat.Request(id=Id(id=self.id))
+                heartbeat = Heartbeat.Request(id=self.id)
                 self.heartbeat_future = self.heartbeat_client.call_async(heartbeat)
                 self.heartbeat_future.add_done_callback(self.heartbeat_cb)
             else:
