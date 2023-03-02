@@ -77,6 +77,8 @@ ament_target_dependencies(
   rclcpp
   spice_msgs
   std_srvs
+  geometry_msgs
+  tf2_ros
 )
 
 install(TARGETS

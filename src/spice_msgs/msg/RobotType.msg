@@ -3,4 +3,4 @@ uint8 WORK_CELL_DRILL = 1
 uint8 WORK_CELL_FUSES = 2
 uint8 WORK_CELL_TOP = 3
 uint8 CARRIER_ROBOT = 4
-uint8 processing_type
+uint8 type
