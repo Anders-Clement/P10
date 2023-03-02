@@ -116,8 +116,8 @@ class ReadyForJobState(RobotStateTemplate):
             return response
         
         ## Depricated since srv_msg had been changed:
-        self.sm.current_task = request
-        self.sm.get_logger().info(f"Got task: {request}")
+        #self.sm.current_task = request
+        self.sm.get_logger().info(f"Got task: {request.task.layers}")
         # nav_goal = NavigateToPose.Goal()
         # nav_goal.pose = request.goal_pose
         # self.nav_response_future = self.sm.navigation_client.send_goal_async(
