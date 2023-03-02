@@ -20,7 +20,7 @@ set(msg_files
   "msg/Layer.msg"
   "msg/Node.msg"
   "msg/Work.msg"
-  "msg/ProcessingType.msg"
+  "msg/RobotType.msg"
 )
 
 set(srv_files
