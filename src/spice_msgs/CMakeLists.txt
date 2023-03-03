@@ -21,6 +21,7 @@ set(msg_files
   "msg/Node.msg"
   "msg/Work.msg"
   "msg/WorkCellType.msg"
+  "msg/RobotType.msg"
 )
 
 set(srv_files
@@ -30,6 +31,7 @@ set(srv_files
   "srv/RegisterRobot.srv"
   "srv/RobotTask.srv"
   "srv/AllocWorkCell.srv"
+  "srv/RegisterWork.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
