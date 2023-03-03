@@ -121,9 +121,9 @@ class ReadyForJobState(RobotStateTemplate):
             response.job_accepted = False
             return response
         
-        # if not self.sm.navigation_client.wait_for_server(5):
-        #     response.job_accepted = False
-        #     return response
+        if not self.sm.navigation_client.wait_for_server(5):
+            response.job_accepted = False
+            return response
         
         vertices = []    
         for layer in request.task.layers:
@@ -137,7 +137,6 @@ class ReadyForJobState(RobotStateTemplate):
                     for vertex in vertices:
                         if vertex.id == child_id:
                             children.append(vertex)
-                            
                             break
                 self.sm.get_logger().info(f"vertex.id: {node.id} has children: {len(children)} ") #debug
                 for child in children:
@@ -149,10 +148,6 @@ class ReadyForJobState(RobotStateTemplate):
                     
         self.sm.root_vertex = vertices[0];       
         self.sm.get_logger().info(f"root vertex: {self.sm.root_vertex}") #debug
-                
-
-
-
         response.job_accepted = False
         return response
     
@@ -166,7 +161,14 @@ class ReadyForJobState(RobotStateTemplate):
         self.nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
         self.sm.change_state(ROBOT_STATE.MOVING)
             
-
+class FindWorkCell(RobotStateTemplate):
+    # not sure if anyone is already working on this.
+    def __init__(self, sm:RobotStateManager) -> None:
+        self.sm = sm
+    def init(self):
+        pass
+    def deinit(self):
+        pass
 
 class MovingState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:

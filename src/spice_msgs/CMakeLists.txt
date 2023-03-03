@@ -20,6 +20,7 @@ set(msg_files
   "msg/Layer.msg"
   "msg/Node.msg"
   "msg/Work.msg"
+  "msg/WorkCellType.msg"
 )
 
 set(srv_files
