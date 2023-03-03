@@ -28,6 +28,7 @@ set(srv_files
   "srv/Heartbeat.srv"
   "srv/RegisterRobot.srv"
   "srv/RobotTask.srv"
+  "srv/AllocWorkCell.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
