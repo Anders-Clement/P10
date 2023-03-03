@@ -14,6 +14,7 @@
 #include "spice_msgs/msg/layer.hpp"
 #include "spice_msgs/msg/node.hpp"
 #include "spice_msgs/msg/work.hpp"
+#include <map>
 
 using namespace std::chrono_literals;
 using std::placeholders::_1;
@@ -23,27 +24,30 @@ class Node
 public:
     Node(uint8_t id_, std::string work_type_, std::vector<Node *> children_)
     {
-        this->node_msg.id = id_;
-        this->node_msg.work.type = work_type_;
+        id = id_;
         work_type = work_type_;
         children = children_;
+
+        auto rand_nr = rand() % 3 + 1;
+        work_info = std::to_string(rand_nr);
+        std::cout << work_info;
     }
 
-    bool is_leaf() { return this->node_msg.children_id.size() == 0; }
-    int8_t get_id() { return this->node_msg.id; }
+    bool is_leaf() { return children.size() == 0; }
+    int8_t get_id() { return id; }
 
-    spice_msgs::msg::Node node_msg;
+    // spice_msgs::msg::Node node_msg;
     int8_t id;
     std::vector<Node *> children;
     std::string work_type;
-
-private:
+    std::string work_info;
 };
 
 class handmadeTrees
 {
 public:
-    handmadeTrees(int8_t type = 0)
+    //handmadeTrees(){}
+    handmadeTrees(rclcpp::Node* _nh, int8_t type = 0) : nh(_nh)
     {
         this->typeOfTree = type;
         spice_msgs::msg::Task task;
@@ -107,10 +111,13 @@ public:
             spice_msgs::msg::Node node_msg;
             node_msg.id = this->nodes[j].id;
             node_msg.work.type = this->nodes[j].work_type;
+            node_msg.work.info = this->nodes[j].work_info;
 
             for (size_t k = 0; k < this->nodes[j].children.size(); k++)
             {
                 node_msg.children_id.push_back(this->nodes[j].children[k]->id);
+                RCLCPP_INFO(nh->get_logger(), "node_id: %d, child_id: %d", this->nodes[j].id, this->nodes[j].children[k]->id); //debug
+                std::cout << this->nodes[j].children[k]->id;
             }
             layer_msg.nodes.push_back(node_msg);
 
@@ -155,6 +162,7 @@ private:
     std::vector<Node> nodes;
     Node *root_node;
     int8_t typeOfTree;
+    rclcpp::Node* nh;
 };
 
 class Tree
@@ -185,54 +193,53 @@ public:
         this->nodes.push_back(node0);
     }
 
-    spice_msgs::msg::Task to_task_msg(std::vector<Node> product_variation){
-        for (auto i : product_variation){
-            
-        }
-    }
-    void search_tree(std::vector<std::string> Works)
-    {
-        std::vector<std::vector<Node>> all_path_variations;
-        while (true)
-        {
-            std::vector<Node> visited;
-            Node *last_parent;
-            std::vector<Node> stack;
-            stack.push_back(*root_node);
-            for (size_t i = 0; i < stack.size(); i++)
-            {
-                visited.push_back(stack[i]);
+    // spice_msgs::msg::Task to_task_msg(std::vector<Node> product_variation)
+    // {
+    //     for (auto i : product_variation)
+    //     {
+    //     }
+    // }
+    // void search_tree(std::vector<std::string> Works)
+    // {
+    //     std::vector<std::vector<Node>> all_path_variations;
+    //     while (true)
+    //     {
+    //         std::vector<Node> visited;
+    //         Node *last_parent;
+    //         std::vector<Node> stack;
+    //         stack.push_back(*root_node);
+    //         for (size_t i = 0; i < stack.size(); i++)
+    //         {
+    //             visited.push_back(stack[i]);
 
-                if (stack[i].children.size() == 0)
-                {
-                    all_path_variations.push_back(visited);
-                    break;
-                }
+    //             if (stack[i].children.size() == 0)
+    //             {
+    //                 all_path_variations.push_back(visited);
+    //                 break;
+    //             }
 
-                for (size_t j = 0; j < stack[i].children.size(); j++)
-                {
-                    stack.insert(stack.begin() + i + 1, *stack[i].children[j]);
-                }
+    //             for (size_t j = 0; j < stack[i].children.size(); j++)
+    //             {
+    //                 stack.insert(stack.begin() + i + 1, *stack[i].children[j]);
+    //             }
 
-                if (stack[i].children.size() >= 2)
-                {
-                    last_parent = &stack[i];
-                }
-            }
+    //             if (stack[i].children.size() >= 2)
+    //             {
+    //                 last_parent = &stack[i];
+    //             }
+    //         }
 
-            if (last_parent == NULL)
-            {
-                // save 'paths' to a file or something
-                break;
-            }
-            //last_parent->children.erase(last_parent->children.end());
-            last_parent->children.pop_back();
-         
-        }
+    //         if (last_parent == NULL)
+    //         {
+    //             // save 'paths' to a file or something
+    //             break;
+    //         }
+    //         // last_parent->children.erase(last_parent->children.end());
+    //         last_parent->children.pop_back();
+    //     }
 
-        
-        to_task_msg(all_path_variations[0]);
-    }
+    //     to_task_msg(all_path_variations[0]);
+    // }
 
 private:
     std::vector<Node> nodes;
@@ -298,26 +305,29 @@ public:
             return;
         }
 
+
         for (const auto &robot : robots_)
         {
-            allocTaskCli_ = this->create_client<spice_msgs::srv::RobotTask>(robot.id + "/allocate_task");
 
-            if (!allocTaskCli_->wait_for_service(1s))
+            robot_clients[robot.id]=this->create_client<spice_msgs::srv::RobotTask>(robot.id + "/allocate_task");
+            if (!robot_clients.find(robot.id)->second->wait_for_service(1s))
             {
                 RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "could not find %s task service ", robot.id.c_str());
                 continue;
             }
             auto randnr = rand() % 4 + 1;
-            tree = handmadeTrees(randnr);
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "random number: %d", randnr); //debug
+            tree = std::make_unique<handmadeTrees>(this,randnr);
             auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();
-            jobRequest->task = this->tree.to_task_msg();
+            jobRequest->task = this->tree->to_task_msg();
 
             RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to %s", robot.id.c_str());
 
             using ServiceResponseFuture =
                 rclcpp::Client<spice_msgs::srv::RobotTask>::SharedFuture;
 
-            auto response_received_callback = [this](ServiceResponseFuture future)
+
+            auto response_received_callback = [this, robot](ServiceResponseFuture future)
             {
                 auto result = future.get();
 
@@ -331,9 +341,10 @@ public:
                     tookJob = "did not take the job";
                 }
                 RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "robot %s ", tookJob.c_str());
+                robot_clients.find(robot.id)->second.reset();
             };
 
-            auto futureResult = allocTaskCli_->async_send_request(jobRequest, response_received_callback);
+            auto futureResult = robot_clients.find(robot.id)->second->async_send_request(jobRequest, response_received_callback);
         }
     }
 
@@ -345,8 +356,9 @@ private:
     std::shared_ptr<spice_msgs::srv::GetReadyRobots_Request> request;
     std::vector<spice_msgs::msg::Id, std::allocator<spice_msgs::msg::Id>> robots_;
     rclcpp::TimerBase::SharedPtr timerReadyBots_{nullptr};
+    std::map<std::string,rclcpp::Client<spice_msgs::srv::RobotTask>::SharedPtr> robot_clients;
 
-    handmadeTrees tree;
+    std::unique_ptr<handmadeTrees> tree;
 };
 
 int main(int argc, char *argv[])

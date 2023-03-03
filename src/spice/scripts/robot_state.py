@@ -6,10 +6,20 @@ from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action._navigate_to_pose import NavigateToPose_FeedbackMessage, NavigateToPose_Feedback
 
-from spice_msgs.msg import Id
+from spice_msgs.msg import *
 from spice_msgs.srv import RegisterRobot, RobotTask
 
 from robot_state_manager_node import RobotStateManager, ROBOT_STATE
+from dataclasses import dataclass, field
+
+from typing import List
+
+@dataclass
+class Vertex():
+    id: int
+    work_type: str
+    work_info: str
+    children_: List['Vertex'] = field(default_factory=list)
 
 
 class RobotStateTemplate():
@@ -111,18 +121,37 @@ class ReadyForJobState(RobotStateTemplate):
             response.job_accepted = False
             return response
         
-        if not self.sm.navigation_client.wait_for_server(5):
-            response.job_accepted = False
-            return response
+        # if not self.sm.navigation_client.wait_for_server(5):
+        #     response.job_accepted = False
+        #     return response
         
-        ## Depricated since srv_msg had been changed:
-        #self.sm.current_task = request
-        self.sm.get_logger().info(f"Got task: {request.task.layers}")
-        # nav_goal = NavigateToPose.Goal()
-        # nav_goal.pose = request.goal_pose
-        # self.nav_response_future = self.sm.navigation_client.send_goal_async(
-        #     nav_goal, self.sm.on_nav_feedback)
-        # self.nav_response_future.add_done_callback(self.nav_goal_response_cb)
+        vertices = []    
+        for layer in request.task.layers:
+            for node in layer.nodes:
+                vertices.append(Vertex(node.id, node.work.type, node.work.info))
+
+        for layer in request.task.layers:
+            for node in layer.nodes:
+                children = []
+                for child_id in node.children_id:
+                    for vertex in vertices:
+                        if vertex.id == child_id:
+                            children.append(vertex)
+                            
+                            break
+                self.sm.get_logger().info(f"vertex.id: {node.id} has children: {len(children)} ") #debug
+                for child in children:
+                    self.sm.get_logger().info(f"child: {child.id} ") #debug
+                for vertex in vertices:
+                    if vertex.id == node.id:
+                        vertex.children_=children
+                        break
+                    
+        self.sm.root_vertex = vertices[0];       
+        self.sm.get_logger().info(f"root vertex: {self.sm.root_vertex}") #debug
+                
+
+
 
         response.job_accepted = False
         return response
