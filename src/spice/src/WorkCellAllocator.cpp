@@ -46,6 +46,9 @@ private:
     auto futureResult = get_robots_cli->async_send_request(get_robots_request, get_robots_cb);
   }
 
+  // made client to get all ready robots and merges so type is avaialble e.g. work cell
+  // todo: be able to get a list of workcelltype.msg from robotstate and return what workcell the robot should go to.
+
   void OnWorkCell(const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Request> request,
                   const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Response> response)
   {
