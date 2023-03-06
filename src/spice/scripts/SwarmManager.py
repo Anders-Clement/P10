@@ -18,21 +18,20 @@ class RobotData():
     heartbeat_time: datetime
     state_subscriber: Subscription
 
+
 class SwarmManager(Node):
 
     robots_dict: Dict["str", "RobotData"] = dict() 
 
     def __init__(self):
         super().__init__('SwarmManager')
-        self.srvRegisterRobot = self.create_service(RegisterRobot, 'register_robot', self.register_robot_callback)
-        self.srvGetReadyRobots = self.create_service(GetReadyRobots, 'get_ready_robots', self.get_ready_robots_callback)
-        self.srvGetRobots = self.create_service(GetRobots, 'get_robots', self.get_robots_callback)
-        self.srvHeartbeat = self.create_service(Heartbeat, 'heartbeat', self.heartbeat_callback)
-        self.timerHeartbeat = self.create_timer(1, self.heartbeatTimer_callback)
+        self.srv_register_robot = self.create_service(RegisterRobot, 'register_robot', self.register_robot_callback)
+        self.srv_get_ready_robots = self.create_service(GetReadyRobots, 'get_ready_robots', self.get_ready_robots_callback)
+        self.srv_get_robots = self.create_service(GetRobots, 'get_robots', self.get_robots_callback)
+        self.srv_heartbeat = self.create_service(Heartbeat, 'heartbeat', self.heartbeat_callback)
+        self.timer_heartbeat = self.create_timer(1, self.heartbeat_timer_callback)
 
-
-
-    def registerRobot(self, id: Id) -> bool: #Register new robots and subscribe to their state_transition_event
+    def register_robot(self, id: Id) -> bool: #Register new robots and subscribe to their state_transition_event
         for robot in self.robots_dict.values():
             if id.id == robot.id.id:
                 return False
@@ -50,8 +49,7 @@ class SwarmManager(Node):
         self.get_logger().info(f"{id} has been registered, subscribing to topic: {topic}")
         return True
 
-
-    def deregisterRobot(self, id:Id) -> bool: # unregister robot and stop subcribing to the that state event topic 
+    def deregister_robot(self, id:Id) -> bool: # unregister robot and stop subcribing to the that state event topic 
         found = False
         for robot in self.robots_dict.values():
             if id.id == robot.id.id:
@@ -65,16 +63,14 @@ class SwarmManager(Node):
             return True
         return False
 
-    
     def register_robot_callback(self, request:RegisterRobot.Request, response:RegisterRobot.Response) -> RegisterRobot.Response: #srv to register robots when they start
-        if self.registerRobot(request.id):
+        if self.register_robot(request.id):
             response.success = True
         else:
             response.success = False
         
         return response
     
-
     def get_robots_callback(self, request:GetRobots.Request, response:GetRobots.Response) -> GetRobots.Response: # send all registered robots
         for robot in self.robots_dict.values():
             response.robots.append(Robot(id=robot.id, robot_state = robot.robot_state))
@@ -98,7 +94,7 @@ class SwarmManager(Node):
 
         return response
 
-    def heartbeatTimer_callback(self):
+    def heartbeat_timer_callback(self):
         idRobotsToDel = []
         for robot in self.robots_dict.values():
             if datetime.now() - robot.heartbeat_time > timedelta(seconds=10):
@@ -106,9 +102,7 @@ class SwarmManager(Node):
 
         for delId in idRobotsToDel:
             self.get_logger().info(f"Timeout of {delId}")
-            self.deregisterRobot(delId)
-
-
+            self.deregister_robot(delId)
 
     def robot_state_transition_callback(self, msg:RobotStateTransition):
         old_state = self.robots_dict[msg.id.id].robot_state
@@ -117,8 +111,6 @@ class SwarmManager(Node):
         self.robots_dict[msg.id.id].heartbeat_time = datetime.now()
 
         self.get_logger().info(f'Got state transition event {msg} \n old robot_state: {old_state}, new robot_state: {new_state}')
-
-
 
 
 def main(args=None):
