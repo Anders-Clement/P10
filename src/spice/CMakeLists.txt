@@ -96,6 +96,7 @@ install(TARGETS
     robot_tf_pose
     task_allocator
     work_cell_simulator
+    work_cell_allocator
     set_robot_task_poses
     DESTINATION lib/${PROJECT_NAME})
 
