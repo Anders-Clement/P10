@@ -107,12 +107,15 @@ class SwarmManager(Node):
 
     def get_robots_by_type_callback(self, request: GetRobotsByType.Request, response: GetRobotsByType.Response):
         if request.type.type == RobotType.WORK_CELL_ANY:
-            response.robots = [Robot(id=robot.id, robot_state=robot.robot_state) \
-                            for robot in self.robots_dict.values() if robot.id.robot_type == request.type or \
-                                                                      robot.id.robot_type == RobotType.WORK_CELL_BACK_COVER or \
-                                                                      robot.id.robot_type == RobotType.WORK_CELL_DRILL or \
-                                                                      robot.id.robot_type == RobotType.WORK_CELL_FUSES or \
-                                                                      robot.id.robot_type == RobotType.WORK_CELL_TOP]
+            for robot in self.robots_dict.values():
+                if robot.id.robot_type.type == request.type.type or \
+                    robot.id.robot_type.type == RobotType.WORK_CELL_BACK_COVER or \
+                    robot.id.robot_type.type == RobotType.WORK_CELL_DRILL or \
+                    robot.id.robot_type.type == RobotType.WORK_CELL_FUSES or \
+                    robot.id.robot_type.type == RobotType.WORK_CELL_TOP:
+
+                    response.robots.append(Robot(id=robot.id, robot_state=robot.robot_state))
+                    
         else:
             response.robots = [Robot(id=robot.id, robot_state=robot.robot_state) \
                             for robot in self.robots_dict.values() if robot.id.robot_type == request.type]
