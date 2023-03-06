@@ -34,7 +34,7 @@ class RobotStateManager(Node):
         if robot_ns is None:
             print('Could not get robot namespace from the environment')
             raise Exception()
-        self.id = Id(id=robot_ns, robot_type=RobotType.CARRIER_ROBOT)
+        self.id = Id(id=robot_ns, robot_type=RobotType(type=RobotType.CARRIER_ROBOT))
         self.current_task = None
 
         qos = QoSProfile(
