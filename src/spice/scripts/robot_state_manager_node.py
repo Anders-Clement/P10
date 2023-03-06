@@ -7,6 +7,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
 from rclpy.action import ActionClient
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoSHistoryPolicy
 
 from nav2_msgs.action import NavigateToPose
 
@@ -36,7 +37,13 @@ class RobotStateManager(Node):
         self.id = Id(id=robot_ns, robot_type=RobotType.CARRIER_ROBOT)
         self.current_task = None
 
-        self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', 10)
+        qos = QoSProfile(
+                history = QoSHistoryPolicy.KEEP_LAST, 
+                reliability = QoSReliabilityPolicy.RELIABLE,
+                durability = QoSDurabilityPolicy.TRANSIENT_LOCAL,
+                depth = 10
+            )
+        self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', qos)
 
         self.heartbeat_client = self.create_client(Heartbeat, '/heartbeat')
         self.heartbeat_timer = self.create_timer(5, self.heartbeat_timer_cb)
@@ -72,9 +79,22 @@ class RobotStateManager(Node):
         else:
             self.get_logger().info(f'State transition from: {self.current_state.name} to {new_state.name}')
 
+            def internal_robot_state_to_robot_state_msg_state(internal_state: ROBOT_STATE) -> RobotState:
+                if internal_state == ROBOT_STATE.STARTUP:
+                    return RobotState(state=RobotState.STARTUP)
+                elif internal_state == ROBOT_STATE.READY_FOR_JOB:
+                    return RobotState(state=RobotState.MR_READY_FOR_JOB)
+                elif internal_state == ROBOT_STATE.MOVING or internal_state == ROBOT_STATE.PROCESSING:
+                    return RobotState(state=RobotState.MR_PROCESSING_JOB)
+                elif internal_state == ROBOT_STATE.ERROR:
+                    return RobotState(state=RobotState.ERROR)
+                else:
+                    self.get_logger().error("Internal state is not published correctly")
+                    return RobotState()
+
             event_msg = RobotStateTransition()
-            event_msg.old_state = RobotState(state=self.current_state)
-            event_msg.new_state = RobotState(state=new_state)
+            event_msg.old_state = internal_robot_state_to_robot_state_msg_state(self.current_state)
+            event_msg.new_state = internal_robot_state_to_robot_state_msg_state(new_state)
             event_msg.id = self.id
             self.state_transition_event_pub.publish(event_msg)
 

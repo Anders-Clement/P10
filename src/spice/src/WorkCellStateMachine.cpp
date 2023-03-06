@@ -17,6 +17,14 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
     m_robot_ready_for_processing_service = m_nodehandle.create_service<std_srvs::srv::Trigger>(
         m_work_cell_name + "/robot_ready_for_processing", 
         std::bind(&WorkCellStateMachine::on_robot_ready_for_processing, this, std::placeholders::_1, std::placeholders::_2));
+
+    auto qos_profile_TL = rmw_qos_profile_default;
+    qos_profile_TL.durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
+
+    m_state_transition_event_pub = m_nodehandle.create_publisher<spice_msgs::msg::RobotStateTransition>(
+        m_work_cell_name + "/robot_state_transition_event",
+        rclcpp::QoS(rclcpp::QoSInitialization(qos_profile_TL.history, 10), qos_profile_TL)
+    );
     m_tf_static_broadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(m_nodehandle);
 
     m_current_state = WORK_CELL_STATE::STARTUP;
@@ -38,7 +46,14 @@ void WorkCellStateMachine::change_state(WORK_CELL_STATE new_state)
         return;
     }
     RCLCPP_INFO(m_nodehandle.get_logger(), "%s state transition to %d from %d", m_work_cell_name.c_str(),
-            static_cast<int>(m_current_state), static_cast<int>(new_state));
+            static_cast<int>(new_state), static_cast<int>(m_current_state));
+
+    auto robot_state_transition_msg = std::make_unique<spice_msgs::msg::RobotStateTransition>();
+    robot_state_transition_msg->old_state = internal_state_to_robot_state(m_current_state);
+    robot_state_transition_msg->new_state = internal_state_to_robot_state(new_state);
+    robot_state_transition_msg->id = get_work_cell_id();
+    m_state_transition_event_pub->publish(std::move(robot_state_transition_msg));
+
     m_states[static_cast<int>(m_current_state)]->deinit();
     m_current_state = new_state;
     m_states[static_cast<int>(m_current_state)]->init();
@@ -73,6 +88,7 @@ std::optional<spice_msgs::srv::RegisterWork::Request> WorkCellStateMachine::get_
 
 void WorkCellStateMachine::activate_heartbeat()
 {
+    //RCLCPP_INFO(this->m_nodehandle.get_logger(), "%s activating heartbeat", m_work_cell_name.c_str());
     if (!m_heartbeat_client)
     {
         m_heartbeat_client = m_nodehandle.create_client<spice_msgs::srv::Heartbeat>("heartbeat");
@@ -89,7 +105,17 @@ void WorkCellStateMachine::activate_heartbeat()
                     RCLCPP_WARN(this->m_nodehandle.get_logger(), "Timeout on heartbeat service");
                 }
                 auto request = std::make_shared<spice_msgs::srv::Heartbeat::Request>();
-                this->m_heartbeat_client->async_send_request(request);
+                request->id = get_work_cell_id();
+                this->m_heartbeat_client->async_send_request(request,
+                [this](rclcpp::Client<spice_msgs::srv::Heartbeat>::SharedFuture future) -> void{
+                    auto response = future.get();
+                    if(response->restart_robot)
+                    {
+                        RCLCPP_WARN(this->m_nodehandle.get_logger(), 
+                            "%s was asked to restart, but is is not implemented", 
+                            this->m_work_cell_name.c_str());
+                    }
+                });
             }
         );
     }
@@ -110,7 +136,42 @@ void WorkCellStateMachine::publish_transform()
 
     t.header.stamp = m_nodehandle.get_clock()->now();
     t.header.frame_id = "map";
-    t.child_frame_id = get_work_cell_id();
+    t.child_frame_id = get_work_cell_id().id;
     t.transform = m_transform;
     m_tf_static_broadcaster->sendTransform(t);
 }
+
+spice_msgs::msg::RobotState WorkCellStateMachine::internal_state_to_robot_state(WORK_CELL_STATE state)
+{
+    spice_msgs::msg::RobotState robot_state;
+    if(state == WORK_CELL_STATE::STARTUP)
+    {
+        robot_state.state = spice_msgs::msg::RobotState::STARTUP;
+    }
+    else if (state == WORK_CELL_STATE::READY_FOR_ROBOT ||
+        state == WORK_CELL_STATE::ROBOT_ENTERING ||
+        state == WORK_CELL_STATE::PROCESSING ||
+        state == WORK_CELL_STATE::ROBOT_EXITING)
+    {
+        robot_state.state = spice_msgs::msg::RobotState::WC_READY_FOR_ROBOTS;
+    }
+    return robot_state;
+}
+
+spice_msgs::msg::Id WorkCellStateMachine::get_work_cell_id() 
+{ 
+    spice_msgs::msg::Id id;
+    id.id = m_work_cell_name;
+    id.robot_type.type = m_robot_type;
+    return id; 
+}
+
+
+// enum class WORK_CELL_STATE : uint8_t{
+    // STARTUP = 0,
+    // READY_FOR_ROBOT,
+    // ROBOT_ENTERING,
+    // PROCESSING,
+    // ROBOT_EXITING,
+    // NUM_STATES
+// };

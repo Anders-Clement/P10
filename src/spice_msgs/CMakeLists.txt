@@ -31,7 +31,8 @@ set(srv_files
   "srv/RobotTask.srv"
   "srv/AllocWorkCell.srv"
   "srv/RegisterWork.srv"
-  "srv/AllocWorkCell.srv"
+  "srv/GetRobotsByState.srv"
+  "srv/GetRobotsByType.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

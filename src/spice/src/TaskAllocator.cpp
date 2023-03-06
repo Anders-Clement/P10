@@ -5,7 +5,7 @@
 #include <time.h>
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "spice_msgs/srv/get_ready_robots.hpp"
+#include "spice_msgs/srv/get_robots_by_state.hpp"
 #include "spice_msgs/msg/robot.hpp"
 #include "spice_msgs/srv/robot_task.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
@@ -254,7 +254,7 @@ public:
     TaskAllocator() : Node("task_allocator")
     {
 
-        readyRobotsCli_ = this->create_client<spice_msgs::srv::GetReadyRobots>("get_ready_robots");
+        readyRobotsCli_ = this->create_client<spice_msgs::srv::GetRobotsByState>("get_robots_by_state");
 
         GetReadyRobot();
 
@@ -277,7 +277,8 @@ public:
             RCLCPP_WARN(this->get_logger(), "Swarm Manager service not available");
         }
 
-        auto request = std::make_shared<spice_msgs::srv::GetReadyRobots::Request>();
+        auto request = std::make_shared<spice_msgs::srv::GetRobotsByState::Request>();
+        request->state.state = spice_msgs::msg::RobotState::MR_READY_FOR_JOB;
 
         // We give the async_send_request() method a callback that will get executed once the response
         // is received.
@@ -285,7 +286,7 @@ public:
         // executor in `spin` while waiting for the response.
 
         using ServiceResponseFuture =
-            rclcpp::Client<spice_msgs::srv::GetReadyRobots>::SharedFuture;
+            rclcpp::Client<spice_msgs::srv::GetRobotsByState>::SharedFuture;
 
         auto response_received_callback = [this](ServiceResponseFuture future)
         {
@@ -309,10 +310,10 @@ public:
         for (const auto &robot : robots_)
         {
 
-            robot_clients[robot.id]=this->create_client<spice_msgs::srv::RobotTask>(robot.id + "/allocate_task");
-            if (!robot_clients.find(robot.id)->second->wait_for_service(1s))
+            robot_clients[robot.id.id]=this->create_client<spice_msgs::srv::RobotTask>(robot.id.id + "/allocate_task");
+            if (!robot_clients.find(robot.id.id)->second->wait_for_service(1s))
             {
-                RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "could not find %s task service ", robot.id.c_str());
+                RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "could not find %s task service ", robot.id.id.c_str());
                 continue;
             }
             auto randnr = rand() % 4 + 1;
@@ -321,7 +322,7 @@ public:
             auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();
             jobRequest->task = this->tree->to_task_msg();
 
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to %s", robot.id.c_str());
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to %s", robot.id.id.c_str());
 
             using ServiceResponseFuture =
                 rclcpp::Client<spice_msgs::srv::RobotTask>::SharedFuture;
@@ -341,20 +342,20 @@ public:
                     tookJob = "did not take the job";
                 }
                 RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "robot %s ", tookJob.c_str());
-                robot_clients.find(robot.id)->second.reset();
+                robot_clients.find(robot.id.id)->second.reset();
             };
 
-            auto futureResult = robot_clients.find(robot.id)->second->async_send_request(jobRequest, response_received_callback);
+            auto futureResult = robot_clients.find(robot.id.id)->second->async_send_request(jobRequest, response_received_callback);
         }
     }
 
 private:
-    rclcpp::Client<spice_msgs::srv::GetReadyRobots>::SharedPtr readyRobotsCli_;
+    rclcpp::Client<spice_msgs::srv::GetRobotsByState>::SharedPtr readyRobotsCli_;
     rclcpp::Client<spice_msgs::srv::RobotTask>::SharedPtr allocTaskCli_;
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr jobSubscription_;
     bool robotsRecieved = false;
-    std::shared_ptr<spice_msgs::srv::GetReadyRobots_Request> request;
-    std::vector<spice_msgs::msg::Id, std::allocator<spice_msgs::msg::Id>> robots_;
+    spice_msgs::srv::GetRobotsByState::Request::SharedPtr request;
+    std::vector<spice_msgs::msg::Robot> robots_;
     rclcpp::TimerBase::SharedPtr timerReadyBots_{nullptr};
     std::map<std::string,rclcpp::Client<spice_msgs::srv::RobotTask>::SharedPtr> robot_clients;
 

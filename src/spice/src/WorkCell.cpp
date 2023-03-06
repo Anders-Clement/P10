@@ -26,7 +26,7 @@ void StartupState::deinit()
 void StartupState::try_register_robot()
 {
     auto request = std::make_shared<spice_msgs::srv::RegisterRobot::Request>();
-    request->id.id = m_sm.get_work_cell_id();
+    request->id = m_sm.get_work_cell_id();
     m_register_work_cell_client->async_send_request(
         request,
         [this](rclcpp::Client<spice_msgs::srv::RegisterRobot>::SharedFuture future) -> void {

@@ -11,7 +11,7 @@
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
 #include "spice_msgs/srv/alloc_work_cell.hpp"
-#include "spice_msgs/srv/get_robots.hpp"
+#include "spice_msgs/srv/get_robots_by_type.hpp"
 #include "spice_msgs/msg/robot.hpp"
 
 using namespace std::chrono_literals;
@@ -34,15 +34,16 @@ public:
     create_wall_timer(5s, std::bind(&WorckCellAllocator::get_robots_on_timer_cb, this));
 
     get_robots_cli = 
-    create_client<spice_msgs::srv::GetRobots>("get_robots");
+    create_client<spice_msgs::srv::GetRobotsByType>("get_robots_by_type");
   }
 
 private:
   void get_robots_on_timer_cb()
   {
-    auto get_robots_request = std::make_shared<spice_msgs::srv::GetRobots::Request>();
+    auto get_robots_request = std::make_shared<spice_msgs::srv::GetRobotsByType::Request>();
+    get_robots_request->type.type = spice_msgs::msg::RobotType::WORK_CELL_ANY;
 
-    using ServiceResponseFuture = rclcpp::Client<spice_msgs::srv::GetRobots>::SharedFuture;
+    using ServiceResponseFuture = rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedFuture;
 
     auto get_robots_cb = [this](ServiceResponseFuture future)
     {
@@ -113,7 +114,7 @@ private:
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   rclcpp::Service<spice_msgs::srv::AllocWorkCell>::SharedPtr service;
   rclcpp::TimerBase::SharedPtr get_ready_robots_timer{nullptr};
-  rclcpp::Client<spice_msgs::srv::GetRobots>::SharedPtr get_robots_cli;
+  rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_robots_cli;
   std::vector<spice_msgs::msg::Robot> robots; //list of all robots including workcells
 };
 
