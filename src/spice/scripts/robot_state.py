@@ -127,7 +127,7 @@ class StartUpState(RobotStateTemplate):
 
     def register_robot(self):
         register_robot_request = RegisterRobot.Request()
-        register_robot_request.id = Id(id=self.sm.id, robot_type=RobotType.CARRIER_ROBOT)
+        register_robot_request.id = self.sm.id
         if not self.register_robot_client.wait_for_service(1):
             self.sm.get_logger().info('Robot StartUpState timeout for /register_robot service')
             return
