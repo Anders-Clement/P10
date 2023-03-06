@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -20,15 +21,20 @@ class WorckCellAllocator : public rclcpp::Node
 public:
   WorckCellAllocator() : Node("work_cell_allocator")
   {
-    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+    tf_buffer_ = 
+    std::make_unique<tf2_ros::Buffer>(this->get_clock());
 
-    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    tf_listener_ =
+     std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-    service = create_service<spice_msgs::srv::AllocWorkCell>("allocate_work_cell", std::bind(&WorckCellAllocator::OnWorkCell, this,
+    service = 
+    create_service<spice_msgs::srv::AllocWorkCell>("allocate_work_cell", std::bind(&WorckCellAllocator::OnWorkCell, this,
                                                                                              std::placeholders::_1, std::placeholders::_2));
-    get_ready_robots_timer = create_wall_timer(5s, std::bind(&WorckCellAllocator::get_robots_on_timer_cb, this));
+    get_ready_robots_timer = 
+    create_wall_timer(5s, std::bind(&WorckCellAllocator::get_robots_on_timer_cb, this));
 
-    get_robots_cli = create_client<spice_msgs::srv::GetRobots>("get_robots");
+    get_robots_cli = 
+    create_client<spice_msgs::srv::GetRobots>("get_robots");
   }
 
 private:
@@ -53,34 +59,40 @@ private:
                   const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Response> response)
   {
 
-    std::string fromFrameRel = request.get()->robot_id.id + "_base_link";
+    std::string toFrameRel = request.get()->robot_id.id + "_base_link";
     geometry_msgs::msg::TransformStamped t;
     float minDist = INFINITY;
     geometry_msgs::msg::TransformStamped goal;
 
-    // for (auto toFrameRel : request.get()->work_cell_types)
-    // {
-    //   try
-    //   {
-    //     t = tf_buffer_->lookupTransform(
-    //         toFrameRel, fromFrameRel,
-    //         tf2::TimePointZero);
-    //     float dist = sqrt(std::pow(t.transform.translation.x, 2) + std::pow(t.transform.translation.y, 2) + std::pow(t.transform.translation.z, 2));
+    for(auto robot : robots){
+      for(auto type : request.get()->robot_types ){ // check if robot is of requested type
+        if(type == robot.id.robot_type){
+          
+          std::string fromFrameRel = robot.id.id;
+          try
+          {
+            t = tf_buffer_->lookupTransform(
+            toFrameRel, fromFrameRel,
+            tf2::TimePointZero);
+            float dist = sqrt(std::pow(t.transform.translation.x, 2) + std::pow(t.transform.translation.y, 2) + std::pow(t.transform.translation.z, 2));
 
-    //     if (dist < minDist)
-    //     {
-    //       minDist = dist;
-    //       goal = tf_buffer_->lookupTransform("map", toFrameRel, tf2::TimePointZero);
-    //     }
-    //   }
-    //   catch (const tf2::TransformException &ex)
-    //   {
-    //     RCLCPP_INFO(this->get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
-    //     continue;
-    //   }
-    // }
+            if (dist < minDist)
+            {
+              minDist = dist;
+              goal = tf_buffer_->lookupTransform("map", fromFrameRel, tf2::TimePointZero);
+            }
+          }
+          catch (const tf2::TransformException &ex)
+          {
+            RCLCPP_INFO(this->get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
+            continue;
+          }
 
-    if (goal.header.frame_id == "")
+        }  
+      }
+    }
+
+    if (goal.header.frame_id == "") // if message is correct
     {
       response->found_job = false;
       return;
@@ -102,7 +114,7 @@ private:
   rclcpp::Service<spice_msgs::srv::AllocWorkCell>::SharedPtr service;
   rclcpp::TimerBase::SharedPtr get_ready_robots_timer{nullptr};
   rclcpp::Client<spice_msgs::srv::GetRobots>::SharedPtr get_robots_cli;
-  std::vector<spice_msgs::msg::Robot> robots;
+  std::vector<spice_msgs::msg::Robot> robots; //list of all robots including workcells
 };
 
 int main(int argc, char *argv[])

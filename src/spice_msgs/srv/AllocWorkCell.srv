@@ -1,4 +1,4 @@
-WorkCellType[] work_cell_types
+RobotType[] robot_types
 Id robot_id
 ---
 geometry_msgs/PoseStamped goal_pose
