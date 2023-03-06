@@ -26,7 +26,6 @@ class SwarmManager(Node):
     def __init__(self):
         super().__init__('SwarmManager')
         self.srv_register_robot = self.create_service(RegisterRobot, 'register_robot', self.register_robot_callback)
-        self.srv_get_ready_robots = self.create_service(GetReadyRobots, 'get_ready_robots', self.get_ready_robots_callback)
         self.srv_get_robots = self.create_service(GetRobots, 'get_robots', self.get_robots_callback)
         self.srv_get_robots_by_type = self.create_service(GetRobotsByType, 'get_robots_by_type', self.get_robots_by_type_callback)
         self.srv_get_robots_by_state = self.create_service(GetRobotsByState, 'get_robots_by_state', self.get_robots_by_state_callback)
@@ -77,11 +76,6 @@ class SwarmManager(Node):
         response.robots = [Robot(id=robot.id, robot_state = robot.robot_state) for robot in self.robots_dict.values()]
 
         return response
-    
-    def get_ready_robots_callback(self, request:GetReadyRobots.Request, response:GetReadyRobots.Response) -> GetReadyRobots.Response: #send robots that are waiting for task
-        response.robots = [Robot(id=robot.id, robot_state=robot.robot_state) \
-                           for robot in self.robots_dict.values() if robot.robot_state.state == RobotState.MR_READY_FOR_JOB]
-        return response
 
     def heartbeat_callback(self, request:Heartbeat.Request, response:Heartbeat.Response) -> Heartbeat.Response:
         response.restart_robot = True
@@ -112,8 +106,16 @@ class SwarmManager(Node):
         self.get_logger().info(f'Got state transition event {msg} \n old robot_state: {old_state}, new robot_state: {new_state}')
 
     def get_robots_by_type_callback(self, request: GetRobotsByType.Request, response: GetRobotsByType.Response):
-        response.robots = [Robot(id=robot.id, robot_state=robot.robot_state) \
-                           for robot in self.robots_dict.values() if robot.id.robot_type == request.type]
+        if request.type.type == RobotType.WORK_CELL_ANY:
+            response.robots = [Robot(id=robot.id, robot_state=robot.robot_state) \
+                            for robot in self.robots_dict.values() if robot.id.robot_type == request.type or \
+                                                                      robot.id.robot_type == RobotType.WORK_CELL_BACK_COVER or \
+                                                                      robot.id.robot_type == RobotType.WORK_CELL_DRILL or \
+                                                                      robot.id.robot_type == RobotType.WORK_CELL_FUSES or \
+                                                                      robot.id.robot_type == RobotType.WORK_CELL_TOP]
+        else:
+            response.robots = [Robot(id=robot.id, robot_state=robot.robot_state) \
+                            for robot in self.robots_dict.values() if robot.id.robot_type == request.type]
         return response
     
     def get_robots_by_state_callback(self, request: GetRobotsByState.Request, response: GetRobotsByState.Response):
