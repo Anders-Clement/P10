@@ -3,6 +3,46 @@
 
 using namespace std::chrono_literals;
 
+StartupState::StartupState(WorkCellStateMachine& sm) : m_sm(sm)
+{
+
+}
+void StartupState::init()
+{
+    m_register_work_cell_client = m_sm.m_nodehandle.create_client<spice_msgs::srv::RegisterRobot>("register_robot");
+    m_timer = rclcpp::create_timer(
+        &m_sm.m_nodehandle,
+        m_sm.m_nodehandle.get_clock(),
+        rclcpp::Duration::from_seconds(1),
+        std::bind(&StartupState::try_register_robot, this)
+    );
+    m_sm.deactivate_heartbeat();
+}
+void StartupState::deinit()
+{
+    m_register_work_cell_client.reset();
+    m_timer.reset();
+}
+void StartupState::try_register_robot()
+{
+    auto request = std::make_shared<spice_msgs::srv::RegisterRobot::Request>();
+    request->id.id = m_sm.get_work_cell_id();
+    m_register_work_cell_client->async_send_request(
+        request,
+        [this](rclcpp::Client<spice_msgs::srv::RegisterRobot>::SharedFuture future) -> void {
+            rclcpp::Client<spice_msgs::srv::RegisterRobot>::SharedResponse response = future.get();
+            if ( response->success)
+            {
+                // TODO: activate heartbeat timer here
+                this->m_sm.activate_heartbeat();
+                this->m_sm.publish_transform();
+                this->m_sm.change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
+            }
+        }
+    );
+}
+
+
 ReadyForRobotState::ReadyForRobotState(WorkCellStateMachine& sm) : m_sm(sm)
 {
 

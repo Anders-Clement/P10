@@ -6,6 +6,7 @@
 #include <array>
 #include "spice_msgs/msg/processing_type.hpp"
 #include "spice_msgs/msg/task.hpp"
+#include "spice_msgs/srv/register_robot.hpp"
 #include "spice/work_cell_state_machine.hpp"
 
 class WorkCellStateMachine;
@@ -22,6 +23,19 @@ public:
         {
             response->success = false;
         }
+};
+
+class StartupState : public WorkCellState
+{
+public:
+    StartupState(WorkCellStateMachine& sm);
+    void init() override;
+    void deinit() override;
+private:
+    void try_register_robot();
+    rclcpp::Client<spice_msgs::srv::RegisterRobot>::SharedPtr m_register_work_cell_client;
+    WorkCellStateMachine& m_sm;
+    rclcpp::TimerBase::SharedPtr m_timer;
 };
 
 class ReadyForRobotState : public WorkCellState
