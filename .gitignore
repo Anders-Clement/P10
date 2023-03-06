@@ -40,3 +40,5 @@ install
 .vscode
 
 src/pigpio-master
+
+*.pyc

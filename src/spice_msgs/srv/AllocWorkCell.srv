@@ -1,4 +1,4 @@
-string[] process_type
+RobotType[] robot_types
 Id robot_id
 ---
 geometry_msgs/PoseStamped goal_pose

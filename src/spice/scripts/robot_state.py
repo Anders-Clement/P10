@@ -6,10 +6,20 @@ from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action._navigate_to_pose import NavigateToPose_FeedbackMessage, NavigateToPose_Feedback
 
-from spice_msgs.msg import Id
+from spice_msgs.msg import Id, RobotType
 from spice_msgs.srv import RegisterRobot, RobotTask
 
 from robot_state_manager_node import RobotStateManager, ROBOT_STATE
+from dataclasses import dataclass, field
+
+from typing import List
+
+@dataclass
+class Vertex():
+    id: int
+    work_type: str
+    work_info: str
+    children_: List['Vertex'] = field(default_factory=list)
 
 
 class RobotStateTemplate():
@@ -31,19 +41,21 @@ class RobotStateTemplate():
 class StartUpState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
         self.sm = sm
-        self.register_robot_client = self.sm.create_client(RegisterRobot, '/register_robot')
-        self.navigation_is_active_client = self.sm.create_client(Trigger, 'lifecycle_manager_navigation/is_active')
-        self.register_future = None
-        self.nav_stack_is_active_future = None
-        self.timer = self.sm.create_timer(1, self.try_initialize)
-        self.timer.cancel()
 
     def init(self):
-        # check that all robot state is good
         self.sm.get_logger().info('init StartUpState')
         self.nav_stack_is_active = False
         self.registered_robot = False
-        self.timer.reset()
+        self.timer = self.sm.create_timer(1, self.try_initialize)
+
+        self.register_robot_client = self.sm.create_client(RegisterRobot, '/register_robot')
+        self.navigation_is_active_client = self.sm.create_client(Trigger, 'lifecycle_manager_navigation/is_active')
+
+        self.register_future = None
+        self.nav_stack_is_active_future = None
+
+        # ensure no heartbeat in this state
+        self.sm.heartbeat_timer.cancel()
 
     def try_initialize(self):
         if not self.nav_stack_is_active:
@@ -68,9 +80,10 @@ class StartUpState(RobotStateTemplate):
 
     def register_robot(self):
         register_robot_request = RegisterRobot.Request()
-        register_robot_request.id = Id(id=self.sm.id)
-        while not self.register_robot_client.wait_for_service(1):
+        register_robot_request.id = Id(id=self.sm.id, robot_type=RobotType.CARRIER_ROBOT)
+        if not self.register_robot_client.wait_for_service(1):
             self.sm.get_logger().info('Robot StartUpState timeout for /register_robot service')
+            return
 
         self.register_future = self.register_robot_client.call_async(register_robot_request)
         self.register_future.add_done_callback(self.register_robot_done_callback)
@@ -90,18 +103,21 @@ class StartUpState(RobotStateTemplate):
         if self.nav_stack_is_active_future:
             if not self.nav_stack_is_active_future.cancelled():
                 self.nav_stack_is_active_future.cancel()
-        self.timer.cancel()
+        self.timer.destroy()
+        self.register_robot_client.destroy()
+        self.navigation_is_active_client.destroy()
 
 
 class ReadyForJobState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
         self.sm = sm
-        self.nav_response_future = None
-        self.nav_goal_done_future = None
         
     def init(self):
         self.sm.heartbeat_timer.reset()
         self.sm.heartbeat_future = None
+
+        self.nav_response_future = None
+        self.nav_goal_done_future = None
 
     def deinit(self):
         pass
@@ -109,20 +125,41 @@ class ReadyForJobState(RobotStateTemplate):
     def on_allocate_task(self, request: RobotTask.Request, response: RobotTask.Response) -> RobotTask.Response:
         if self.sm.current_task is not None:
             response.job_accepted = False
+            self.sm.get_logger().warn("Got a new task, but a task is already allocated, \
+                                       ignoring new task")
             return response
         
         if not self.sm.navigation_client.wait_for_server(5):
             response.job_accepted = False
+            self.sm.get_logger().warn("Got a new task, but received timeout \
+                                      on wait for navigation client server, \
+                                      ignoring the task")
             return response
         
-        self.sm.current_task = request
-        nav_goal = NavigateToPose.Goal()
-        nav_goal.pose = request.goal_pose
-        self.nav_response_future = self.sm.navigation_client.send_goal_async(
-            nav_goal, self.sm.on_nav_feedback)
-        self.nav_response_future.add_done_callback(self.nav_goal_response_cb)
+        vertices = []    
+        for layer in request.task.layers:
+            for node in layer.nodes:
+                vertices.append(Vertex(node.id, node.work.type, node.work.info))
 
-        response.job_accepted = True
+        for layer in request.task.layers:
+            for node in layer.nodes:
+                children = []
+                for child_id in node.children_id:
+                    for vertex in vertices:
+                        if vertex.id == child_id:
+                            children.append(vertex)
+                            break
+                self.sm.get_logger().info(f"vertex.id: {node.id} has children: {len(children)} ") #debug
+                for child in children:
+                    self.sm.get_logger().info(f"child: {child.id} ") #debug
+                for vertex in vertices:
+                    if vertex.id == node.id:
+                        vertex.children_=children
+                        break
+                    
+        self.sm.root_vertex = vertices[0];       
+        self.sm.get_logger().info(f"root vertex: {self.sm.root_vertex}") #debug
+        response.job_accepted = False
         return response
     
     def nav_goal_response_cb(self, future: Future):
@@ -134,7 +171,24 @@ class ReadyForJobState(RobotStateTemplate):
         self.nav_goal_done_future: Future = goal_handle.get_result_async()
         self.nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
         self.sm.change_state(ROBOT_STATE.MOVING)
-            
+
+
+class FindWorkCell(RobotStateTemplate):
+    def __init__(self, sm: RobotStateManager) -> None:
+        self.sm = sm
+
+    def init(self):
+        self.current_work = self.sm.get_next_work()
+        if not self.current_work: # no more work
+            self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
+            return
+        
+        self.work_cell_allocator_client = self.sm.create_client()
+        
+    def deinit(self):
+        pass
+
+
 
 
 class MovingState(RobotStateTemplate):
