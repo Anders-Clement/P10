@@ -1,1 +1,2 @@
 string id
+RobotType robot_type

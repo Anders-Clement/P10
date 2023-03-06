@@ -20,6 +20,7 @@ set(msg_files
   "msg/Layer.msg"
   "msg/Node.msg"
   "msg/Work.msg"
+  "msg/RobotType.msg"
 )
 
 set(srv_files
@@ -28,6 +29,7 @@ set(srv_files
   "srv/Heartbeat.srv"
   "srv/RegisterRobot.srv"
   "srv/RobotTask.srv"
+  "srv/RegisterWork.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
