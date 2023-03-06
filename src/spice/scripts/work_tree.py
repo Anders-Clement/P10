@@ -6,7 +6,7 @@ from spice_msgs.msg import Id, RobotType, Layer, Node, Work
 
 class Vertex():
     id: int
-    work_type: str
+    work_type: RobotType
     work_info: str
     children_: List['Vertex'] = field(default_factory=list)
 
@@ -20,7 +20,7 @@ class WorkTree():
     __rootVertex: Vertex
     __vertices = []
     __currentTask: Vertex
-    __firstTask: bool
+    __firstTask:bool
 
     def __init__(self, layers):
         self.layers = layers
@@ -43,6 +43,7 @@ class WorkTree():
                         break
         self.__rootVertex = self.__vertices[0]
         self.__currentTask = self.__rootVertex
+        self.__firstTask = True
         
     def get_root(self):
         return self.__rootVertex
@@ -54,7 +55,6 @@ class WorkTree():
         if(self.__firstTask):
             self.__firstTask = False
             return self.get_root()
-        
         next_task = self.__currentTask.children_
         self.__currentTask = next_task
         return next_task

@@ -11,63 +11,6 @@ from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell
 
 from work_tree import WorkTree, Vertex
 from robot_state_manager_node import RobotStateManager, ROBOT_STATE
-#from dataclasses import dataclass, field
-
-#from typing import List
-
-# @dataclass
-
-# class Vertex():
-#     id: int
-#     work_type: str
-#     work_info: str
-#     children_: List['Vertex'] = field(default_factory=list)
-
-
-# class WorkTree():
-
-#     __vertex: Vertex
-#     __rootVertex: Vertex
-#     __vertices = []
-#     __currentTask: Vertex
-
-#     def __init__(self, layers):
-#         self.layers = layers
-
-#         for layer in self.layers: # create work tree
-#             for node in layer.nodes:
-#                 self.__vertices.append(Vertex(node.id, node.work.type, node.work.info))
-
-#         for layer in self.layers:
-#             for node in layer.nodes:
-#                 children = []
-#                 for child_id in node.children_id:
-#                     for vertex in self.__vertices:
-#                         if vertex.id == child_id:
-#                             children.append(vertex)
-#                             break
-#                 for vertex in self.__vertices:
-#                     if vertex.id == node.id:
-#                         vertex.children_=children
-#                         break
-#         self.__rootVertex = self.__vertices[0]
-#         self.__currentTask = self.__rootVertex
-        
-#     def is_leaf(self):
-#         return self.__vertex.children_.count == 0 
-    
-#     def get_root(self):
-#         return self.__rootVertex
-    
-#     def get_tree(self):
-#         return self.__vertices
-    
-#     def next_task(self):
-#         next_task = self.__currentTask.children_
-#         self.__currentTask = next_task
-#         return next_task
-
-
 
 class RobotStateTemplate():
     def __init__(self) -> None:
@@ -213,13 +156,15 @@ class FindWorkCell(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
             return
 
-        self.work_cell_allocator_client = self.sm.create_client(AllocWorkCell, "allocate_work_cell")
+        self.work_cell_allocator_client = self.sm.create_client(AllocWorkCell, "/allocate_work_cell")
         self.alloc_workcell()
     
     def alloc_workcell(self):
         alloc_workcell_request = AllocWorkCell.Request()
-        alloc_workcell_request.robot_id = Id(id=self.sm.id, robot_type=RobotType.CARRIER_ROBOT)
-        alloc_workcell_request.robot_types = self.current_work
+        alloc_workcell_request.robot_id = self.sm.id
+        
+        for child in self.current_work.children_:
+            alloc_workcell_request.robot_types.append(child.work_type)
 
         if not self.work_cell_allocator_client.wait_for_service(timeout_sec=1.0):
             self.sm.get_logger().info("workcell allocator not available")
@@ -242,6 +187,7 @@ class FindWorkCell(RobotStateTemplate):
             
         else:
             self.sm.get_logger().info('Failed to allocate workcell to robot, are they available?')
+            
 
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()

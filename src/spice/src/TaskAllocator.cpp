@@ -7,6 +7,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "spice_msgs/srv/get_robots_by_state.hpp"
 #include "spice_msgs/msg/robot.hpp"
+#include "spice_msgs/msg/robot_type.hpp"
 #include "spice_msgs/srv/robot_task.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
@@ -22,10 +23,10 @@ using std::placeholders::_1;
 class Node
 {
 public:
-    Node(uint8_t id_, std::string work_type_, std::vector<Node *> children_)
+    Node(uint8_t id_, spice_msgs::msg::RobotType::_type_type work_type_, std::vector<Node *> children_)
     {
         id = id_;
-        work_type = work_type_;
+        work_type.type = work_type_;
         children = children_;
 
         auto rand_nr = rand() % 3 + 1;
@@ -39,7 +40,7 @@ public:
     // spice_msgs::msg::Node node_msg;
     int8_t id;
     std::vector<Node *> children;
-    std::string work_type;
+    spice_msgs::msg::RobotType work_type;
     std::string work_info;
 };
 
@@ -54,13 +55,13 @@ public:
 
         if (type == 1) // type h & s
         {
-            Node node0(0, "l", {});
-            Node node1(1, "l", {});
-            Node node2(2, "s", {&node0});
-            Node node3(3, "h", {&node1});
-            Node node4(4, "h", {&node2});
-            Node node5(5, "s", {&node3});
-            Node node6(6, "b", {&node4, &node5});
+            Node node0(0, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
+            Node node1(1, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
+            Node node2(2, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node0});
+            Node node3(3, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node1});
+            Node node4(4, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node2});
+            Node node5(5, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node3});
+            Node node6(6, spice_msgs::msg::RobotType::WORK_CELL_TOP, {&node4, &node5});
             this->root_node = &node6;
             this->nodes.push_back(node6);
             this->nodes.push_back(node5);
@@ -72,9 +73,9 @@ public:
         }
         else if (type == 2) // type h
         {
-            Node node0(0, "l", {});
-            Node node1(1, "h", {&node0});
-            Node node2(2, "b", {&node1});
+            Node node0(0, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
+            Node node1(1, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node0});
+            Node node2(2, spice_msgs::msg::RobotType::WORK_CELL_TOP, {&node1});
             this->root_node = &node2;
             this->nodes.push_back(node2);
             this->nodes.push_back(node1);
@@ -82,9 +83,9 @@ public:
         }
         else if (type == 3) // type s
         {
-            Node node0(0, "l", {});
-            Node node1(1, "s", {&node0});
-            Node node2(2, "b", {&node1});
+            Node node0(0, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
+            Node node1(1, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node0});
+            Node node2(2, spice_msgs::msg::RobotType::WORK_CELL_TOP, {&node1});
             this->root_node = &node2;
             this->nodes.push_back(node2);
             this->nodes.push_back(node1);
@@ -92,8 +93,8 @@ public:
         }
         else if (type == 4) // type l
         {
-            Node node0(0, "l", {});
-            Node node1(1, "b", {&node0});
+            Node node0(0, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
+            Node node1(1, spice_msgs::msg::RobotType::WORK_CELL_TOP, {&node0});
             this->root_node = &node1;
             this->nodes.push_back(node1);
             this->nodes.push_back(node0);
@@ -170,16 +171,16 @@ class Tree
 public:
     Tree()
     {
-        Node node0(0, "l", {});
-        Node node1(1, "l", {});
-        Node node2(2, "s", {&node0});
-        Node node3(3, "l", {});
-        Node node4(4, "h", {&node1});
-        Node node5(5, "l", {});
-        Node node6(6, "h", {&node2, &node3});
-        Node node7(7, "s", {&node4, &node5});
-        Node node8(8, "l", {});
-        Node node9(9, "b", {&node6, &node7, &node8});
+        Node node0(0, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
+        Node node1(1, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
+        Node node2(2, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node0});
+        Node node3(3, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
+        Node node4(4, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node1});
+        Node node5(5, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
+        Node node6(6, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node2, &node3});
+        Node node7(7, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node4, &node5});
+        Node node8(8, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
+        Node node9(9, spice_msgs::msg::RobotType::WORK_CELL_TOP, {&node6, &node7, &node8});
         this->root_node = &node9;
         this->nodes.push_back(node9);
         this->nodes.push_back(node8);

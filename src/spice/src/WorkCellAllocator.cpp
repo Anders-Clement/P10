@@ -29,7 +29,7 @@ public:
 
     service = 
     create_service<spice_msgs::srv::AllocWorkCell>("allocate_work_cell", std::bind(&WorckCellAllocator::OnWorkCell, this,
-                                                                                             std::placeholders::_1, std::placeholders::_2));
+    std::placeholders::_1, std::placeholders::_2));
     get_ready_robots_timer = 
     create_wall_timer(5s, std::bind(&WorckCellAllocator::get_robots_on_timer_cb, this));
 
