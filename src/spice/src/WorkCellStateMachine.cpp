@@ -1,7 +1,7 @@
 #include <string>
 #include <rclcpp/node.hpp>
 #include <optional>
-#include "spice_msgs/msg/processing_type.hpp"
+#include "spice_msgs/msg/robot_type.hpp"
 #include "spice_msgs/msg/task.hpp"
 #include "spice/work_cell_state_machine.hpp"
 

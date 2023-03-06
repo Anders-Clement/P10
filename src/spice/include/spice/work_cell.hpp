@@ -4,7 +4,6 @@
 #include <string>
 #include <rclcpp/node.hpp>
 #include <array>
-#include "spice_msgs/msg/processing_type.hpp"
 #include "spice_msgs/msg/task.hpp"
 #include "spice_msgs/srv/register_robot.hpp"
 #include "spice/work_cell_state_machine.hpp"

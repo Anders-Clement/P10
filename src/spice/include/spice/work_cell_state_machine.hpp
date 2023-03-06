@@ -8,7 +8,7 @@
 #include "std_srvs/srv/trigger.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2_ros/static_transform_broadcaster.h"
-#include "spice_msgs/msg/processing_type.hpp"
+#include "spice_msgs/msg/robot_type.hpp"
 #include "spice_msgs/msg/task.hpp"
 #include "spice_msgs/msg/id.hpp"
 #include "spice_msgs/msg/robot_type.hpp"

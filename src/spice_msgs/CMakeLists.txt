@@ -30,6 +30,7 @@ set(srv_files
   "srv/RegisterRobot.srv"
   "srv/RobotTask.srv"
   "srv/RegisterWork.srv"
+  "srv/AllocWorkCell.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
