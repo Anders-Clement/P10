@@ -12,6 +12,7 @@
 #include "spice_msgs/msg/task.hpp"
 #include "spice_msgs/msg/id.hpp"
 #include "spice_msgs/msg/robot_type.hpp"
+#include "spice_msgs/msg/robot_state_transition.hpp"
 #include "spice_msgs/srv/register_work.hpp"
 #include "spice_msgs/srv/heartbeat.hpp"
 #include "spice/work_cell.hpp"
@@ -38,7 +39,7 @@ public:
     void publish_transform();
     std::optional<spice_msgs::srv::RegisterWork::Request> get_enqueued_robot();
     float get_processing_time() {return 5.0;} // TODO: add and use processing time in Work msg
-    std::string get_work_cell_id() { return m_work_cell_name; }
+    spice_msgs::msg::Id get_work_cell_id();
     rclcpp::Logger get_logger() { return m_nodehandle.get_logger(); }
 
     rclcpp::Node& m_nodehandle;
@@ -53,6 +54,7 @@ private:
     void on_robot_ready_for_processing(
         const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
         std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+    spice_msgs::msg::RobotState internal_state_to_robot_state(WORK_CELL_STATE state);
 
     std::string m_work_cell_name;
     spice_msgs::msg::RobotType::_type_type m_robot_type;
@@ -64,6 +66,7 @@ private:
     rclcpp::TimerBase::SharedPtr m_heartbeat_timer;
     std::shared_ptr<rclcpp::Service<spice_msgs::srv::RegisterWork>> m_register_work_service;
     std::shared_ptr<rclcpp::Service<std_srvs::srv::Trigger>> m_robot_ready_for_processing_service;
+    std::shared_ptr<rclcpp::Publisher<spice_msgs::msg::RobotStateTransition>> m_state_transition_event_pub;
     std::queue<spice_msgs::srv::RegisterWork::Request> m_enqueued_robots;
 };
 

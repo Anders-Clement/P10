@@ -7,6 +7,7 @@ from datetime import *
 import rclpy
 from rclpy.node import Node
 from rclpy.subscription import Subscription
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoSHistoryPolicy
 from dataclasses import dataclass
 from typing import Dict
 
@@ -37,10 +38,16 @@ class SwarmManager(Node):
                 return False
             
         topic = id.id+'/robot_state_transition_event'
-        statesub = self.create_subscription(RobotStateTransition, topic, self.robot_state_transition_callback,10)
+        qos = QoSProfile(
+                history = QoSHistoryPolicy.KEEP_LAST, 
+                reliability = QoSReliabilityPolicy.RELIABLE,
+                durability = QoSDurabilityPolicy.TRANSIENT_LOCAL,
+                depth = 10
+            )
+        statesub = self.create_subscription(RobotStateTransition, topic, self.robot_state_transition_callback, qos)
         robot = RobotData(id, RobotState(state=RobotState.STARTUP), datetime.now(),statesub)
         self.robots_dict[id.id] = robot
-        self.get_logger().info(f"{id} has been registered")
+        self.get_logger().info(f"{id} has been registered, subscribing to topic: {topic}")
         return True
 
 
@@ -70,16 +77,13 @@ class SwarmManager(Node):
 
     def get_robots_callback(self, request:GetRobots.Request, response:GetRobots.Response) -> GetRobots.Response: # send all registered robots
         for robot in self.robots_dict.values():
-            robot_msg = Robot()
-            robot_msg.id = robot.id
-            robot_msg.robot_state = robot.robot_state
-            response.robots.append(robot_msg)
+            response.robots.append(Robot(id=robot.id, robot_state = robot.robot_state))
 
         return response
     
     def get_ready_robots_callback(self, request:GetReadyRobots.Request, response:GetReadyRobots.Response) -> GetReadyRobots.Response: #send robots that are waiting for task
         for robot in self.robots_dict.values():
-            if robot.robot_state.state == RobotState.READY_FOR_JOB:
+            if robot.robot_state.state == RobotState.MR_READY_FOR_JOB:
                 response.robots.append(robot.id)
 
         return response
@@ -107,8 +111,13 @@ class SwarmManager(Node):
 
 
     def robot_state_transition_callback(self, msg:RobotStateTransition):
+        old_state = self.robots_dict[msg.id.id].robot_state
         self.robots_dict[msg.id.id].robot_state = msg.new_state
+        new_state = self.robots_dict[msg.id.id].robot_state
         self.robots_dict[msg.id.id].heartbeat_time = datetime.now()
+
+        self.get_logger().info(f'Got state transition event {msg} \n old robot_state: {old_state}, new robot_state: {new_state}')
+
 
 
 
