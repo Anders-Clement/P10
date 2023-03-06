@@ -28,6 +28,8 @@ class SwarmManager(Node):
         self.srv_register_robot = self.create_service(RegisterRobot, 'register_robot', self.register_robot_callback)
         self.srv_get_ready_robots = self.create_service(GetReadyRobots, 'get_ready_robots', self.get_ready_robots_callback)
         self.srv_get_robots = self.create_service(GetRobots, 'get_robots', self.get_robots_callback)
+        self.srv_get_robots_by_type = self.create_service(GetRobotsByType, 'get_robots_by_type', self.get_robots_by_type_callback)
+        self.srv_get_robots_by_state = self.create_service(GetRobotsByState, 'get_robots_by_state', self.get_robots_by_state_callback)
         self.srv_heartbeat = self.create_service(Heartbeat, 'heartbeat', self.heartbeat_callback)
         self.timer_heartbeat = self.create_timer(1, self.heartbeat_timer_callback)
 
@@ -72,16 +74,13 @@ class SwarmManager(Node):
         return response
     
     def get_robots_callback(self, request:GetRobots.Request, response:GetRobots.Response) -> GetRobots.Response: # send all registered robots
-        for robot in self.robots_dict.values():
-            response.robots.append(Robot(id=robot.id, robot_state = robot.robot_state))
+        response.robots = [Robot(id=robot.id, robot_state = robot.robot_state) for robot in self.robots_dict.values()]
 
         return response
     
     def get_ready_robots_callback(self, request:GetReadyRobots.Request, response:GetReadyRobots.Response) -> GetReadyRobots.Response: #send robots that are waiting for task
-        for robot in self.robots_dict.values():
-            if robot.robot_state.state == RobotState.MR_READY_FOR_JOB:
-                response.robots.append(robot.id)
-
+        response.robots = [Robot(id=robot.id, robot_state=robot.robot_state) \
+                           for robot in self.robots_dict.values() if robot.robot_state.state == RobotState.MR_READY_FOR_JOB]
         return response
 
     def heartbeat_callback(self, request:Heartbeat.Request, response:Heartbeat.Response) -> Heartbeat.Response:
@@ -111,6 +110,17 @@ class SwarmManager(Node):
         self.robots_dict[msg.id.id].heartbeat_time = datetime.now()
 
         self.get_logger().info(f'Got state transition event {msg} \n old robot_state: {old_state}, new robot_state: {new_state}')
+
+    def get_robots_by_type_callback(self, request: GetRobotsByType.Request, response: GetRobotsByType.Response):
+        response.robots = [Robot(id=robot.id, robot_state=robot.robot_state) \
+                           for robot in self.robots_dict.values() if robot.id.robot_type == request.type]
+        return response
+    
+    def get_robots_by_state_callback(self, request: GetRobotsByState.Request, response: GetRobotsByState.Response):
+        response.robots = [Robot(id=robot.id, robot_state=robot.robot_state) \
+                           for robot in self.robots_dict.values() if robot.robot_state.state == request.state.state]
+        return response
+
 
 
 def main(args=None):
