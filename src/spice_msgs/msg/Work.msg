@@ -1,2 +1,2 @@
-string type
+RobotType type
 string info
