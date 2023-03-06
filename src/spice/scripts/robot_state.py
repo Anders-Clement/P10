@@ -6,20 +6,67 @@ from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action._navigate_to_pose import NavigateToPose_FeedbackMessage, NavigateToPose_Feedback
 
-from spice_msgs.msg import Id, RobotType
-from spice_msgs.srv import RegisterRobot, RobotTask
+from spice_msgs.msg import Id, RobotType, Layer, Node, Work
+from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell
 
+from work_tree import WorkTree, Vertex
 from robot_state_manager_node import RobotStateManager, ROBOT_STATE
-from dataclasses import dataclass, field
+#from dataclasses import dataclass, field
 
-from typing import List
+#from typing import List
 
-@dataclass
-class Vertex():
-    id: int
-    work_type: str
-    work_info: str
-    children_: List['Vertex'] = field(default_factory=list)
+# @dataclass
+
+# class Vertex():
+#     id: int
+#     work_type: str
+#     work_info: str
+#     children_: List['Vertex'] = field(default_factory=list)
+
+
+# class WorkTree():
+
+#     __vertex: Vertex
+#     __rootVertex: Vertex
+#     __vertices = []
+#     __currentTask: Vertex
+
+#     def __init__(self, layers):
+#         self.layers = layers
+
+#         for layer in self.layers: # create work tree
+#             for node in layer.nodes:
+#                 self.__vertices.append(Vertex(node.id, node.work.type, node.work.info))
+
+#         for layer in self.layers:
+#             for node in layer.nodes:
+#                 children = []
+#                 for child_id in node.children_id:
+#                     for vertex in self.__vertices:
+#                         if vertex.id == child_id:
+#                             children.append(vertex)
+#                             break
+#                 for vertex in self.__vertices:
+#                     if vertex.id == node.id:
+#                         vertex.children_=children
+#                         break
+#         self.__rootVertex = self.__vertices[0]
+#         self.__currentTask = self.__rootVertex
+        
+#     def is_leaf(self):
+#         return self.__vertex.children_.count == 0 
+    
+#     def get_root(self):
+#         return self.__rootVertex
+    
+#     def get_tree(self):
+#         return self.__vertices
+    
+#     def next_task(self):
+#         next_task = self.__currentTask.children_
+#         self.__currentTask = next_task
+#         return next_task
+
 
 
 class RobotStateTemplate():
@@ -88,6 +135,7 @@ class StartUpState(RobotStateTemplate):
         self.register_future = self.register_robot_client.call_async(register_robot_request)
         self.register_future.add_done_callback(self.register_robot_done_callback)
 
+
     def register_robot_done_callback(self, future: Future):
         response: RegisterRobot.Response = future.result()
         if response.success:
@@ -136,33 +184,15 @@ class ReadyForJobState(RobotStateTemplate):
                                       ignoring the task")
             return response
         
-        vertices = []    
-        for layer in request.task.layers:
-            for node in layer.nodes:
-                vertices.append(Vertex(node.id, node.work.type, node.work.info))
-
-        for layer in request.task.layers:
-            for node in layer.nodes:
-                children = []
-                for child_id in node.children_id:
-                    for vertex in vertices:
-                        if vertex.id == child_id:
-                            children.append(vertex)
-                            break
-                self.sm.get_logger().info(f"vertex.id: {node.id} has children: {len(children)} ") #debug
-                for child in children:
-                    self.sm.get_logger().info(f"child: {child.id} ") #debug
-                for vertex in vertices:
-                    if vertex.id == node.id:
-                        vertex.children_=children
-                        break
-                    
-        self.sm.root_vertex = vertices[0];       
-        self.sm.get_logger().info(f"root vertex: {self.sm.root_vertex}") #debug
-        response.job_accepted = False
+        self.sm.taskTree = WorkTree(request.task.layers) # create task tree of robot task
+                   
+        #self.sm.root_vertex = taskTree.get_root()       
+        #self.sm.get_logger().info(f"root vertex: {self.sm.root_vertex}") #debug
+        response.job_accepted = True
+        self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)
         return response
     
-    def nav_goal_response_cb(self, future: Future):
+    def nav_goal_response_cb(self, future: Future): ## Remove?
         goal_handle: ClientGoalHandle = future.result()
         if not goal_handle.accepted:
             self.sm.get_logger().error('Nav 2 goal was rejected, aborting task')
@@ -178,15 +208,53 @@ class FindWorkCell(RobotStateTemplate):
         self.sm = sm
 
     def init(self):
-        self.current_work = self.sm.get_next_work()
+        self.current_work = self.sm.taskTree.next_task()
         if not self.current_work: # no more work
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
             return
+
+        self.work_cell_allocator_client = self.sm.create_client(AllocWorkCell, "allocate_work_cell")
+        self.alloc_workcell()
+    
+    def alloc_workcell(self):
+        alloc_workcell_request = AllocWorkCell.Request()
+        alloc_workcell_request.robot_id = Id(id=self.sm.id, robot_type=RobotType.CARRIER_ROBOT)
+        alloc_workcell_request.robot_types = self.current_work
+
+        if not self.work_cell_allocator_client.wait_for_service(timeout_sec=1.0):
+            self.sm.get_logger().info("workcell allocator not available")
+            return
+
+        self.register_future = self.work_cell_allocator_client.call_async(alloc_workcell_request)
+        self.register_future.add_done_callback(self.alloc_workcell_done_callback)
+
+    def alloc_workcell_done_callback(self, future: Future):
+        response: AllocWorkCell.Response = future.result()
         
-        self.work_cell_allocator_client = self.sm.create_client()
+        if response.found_job:
+            ## call nav go
+            nav_goal = NavigateToPose.Goal()
+            nav_goal.pose = response.goal_pose
+            self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
+                nav_goal, self.sm.on_nav_feedback)
+            self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
+            self.sm.get_logger().info("trying to move to workcell")
+            
+        else:
+            self.sm.get_logger().info('Failed to allocate workcell to robot, are they available?')
+
+    def nav_goal_response_cb(self, future: Future):
+        goal_handle: ClientGoalHandle = future.result()
+        if not goal_handle.accepted:
+            self.sm.get_logger().error('Nav 2 goal was rejected, aborting task')
+            self.sm.change_state(ROBOT_STATE.ERROR)
         
+        self.nav_goal_done_future: Future = goal_handle.get_result_async()
+        self.nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
+        self.sm.change_state(ROBOT_STATE.MOVING)
+
     def deinit(self):
-        pass
+        self.work_cell_allocator_client.destroy()
 
 
 
@@ -228,7 +296,7 @@ class ProcessingState(RobotStateTemplate):
     
     def timer_cb(self):
         self.sm.current_task = None
-        self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
+        self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)
 
 class ErrorState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:

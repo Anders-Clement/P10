@@ -12,17 +12,21 @@ from nav2_msgs.action import NavigateToPose
 
 from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType
 from spice_msgs.srv import Heartbeat, RobotTask
-
+from work_tree import WorkTree, Vertex
 import robot_state
+
 
 class ROBOT_STATE(enum.IntEnum):
     STARTUP = 0
     READY_FOR_JOB = 1
-    MOVING = 2
-    PROCESSING = 3
-    ERROR = 4
+    FIND_WORKCELL = 2
+    MOVING = 3
+    PROCESSING = 4
+    ERROR = 5
+   
 
 class RobotStateManager(Node):
+    taskTree: WorkTree
     def __init__(self) -> None:
         super().__init__('robot_state_manager_node')
         robot_ns = os.environ.get('ROBOT_NAMESPACE')
@@ -48,6 +52,7 @@ class RobotStateManager(Node):
         self.states: "[RobotState]" = [
             robot_state.StartUpState(self),
             robot_state.ReadyForJobState(self),
+            robot_state.FindWorkCell(self),
             robot_state.MovingState(self),
             robot_state.ProcessingState(self),
             robot_state.ErrorState(self)
@@ -80,6 +85,7 @@ class RobotStateManager(Node):
     def heartbeat_timer_cb(self):
         if self.current_state == ROBOT_STATE.READY_FOR_JOB \
             or self.current_state == ROBOT_STATE.MOVING \
+            or self.current_state == ROBOT_STATE.FIND_WORKCELL\
             or self.current_state == ROBOT_STATE.PROCESSING \
             or self.current_state == ROBOT_STATE.ERROR:
 
