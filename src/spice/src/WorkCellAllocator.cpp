@@ -13,6 +13,7 @@
 #include "spice_msgs/srv/alloc_work_cell.hpp"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
 #include "spice_msgs/msg/robot.hpp"
+#include "spice_msgs/msg/robot_type.hpp"
 
 using namespace std::chrono_literals;
 
@@ -64,6 +65,7 @@ private:
     geometry_msgs::msg::TransformStamped t;
     float minDist = INFINITY;
     geometry_msgs::msg::TransformStamped goal;
+    spice_msgs::msg::RobotType workType;
 
     for(auto robot : robots){
       for(auto type : request.get()->robot_types ){ // check if robot is of requested type
@@ -79,6 +81,8 @@ private:
 
             if (dist < minDist)
             {
+              
+              workType.type = type.type;
               minDist = dist;
               goal = tf_buffer_->lookupTransform("map", fromFrameRel, tf2::TimePointZero);
             }
@@ -109,6 +113,7 @@ private:
     goalPose.pose.orientation = goal.transform.rotation;
     response->goal_pose = goalPose;
     response->found_job = true;
+    response->work_type = workType;
   }
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;

@@ -27,6 +27,7 @@ class RobotStateTemplate():
         response.job_accepted = False
         return response
     
+    
 
 class StartUpState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
@@ -151,7 +152,7 @@ class FindWorkCell(RobotStateTemplate):
         self.sm = sm
 
     def init(self):
-        self.current_work = self.sm.taskTree.next_task()
+        self.current_work = self.sm.taskTree.next_task(lastWorkType=self.sm.current_task)
         if not self.current_work: # no more work
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
             return
@@ -163,8 +164,8 @@ class FindWorkCell(RobotStateTemplate):
         alloc_workcell_request = AllocWorkCell.Request()
         alloc_workcell_request.robot_id = self.sm.id
         
-        for child in self.current_work.children_:
-            alloc_workcell_request.robot_types.append(child.work_type)
+        for work in self.current_work:
+            alloc_workcell_request.robot_types.append(work.work_type)
 
         if not self.work_cell_allocator_client.wait_for_service(timeout_sec=1.0):
             self.sm.get_logger().info("workcell allocator not available")
@@ -180,10 +181,11 @@ class FindWorkCell(RobotStateTemplate):
             ## call nav go
             nav_goal = NavigateToPose.Goal()
             nav_goal.pose = response.goal_pose
+            self.sm.current_task = response.work_type
             self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
                 nav_goal, self.sm.on_nav_feedback)
             self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
-            self.sm.get_logger().info("trying to move to workcell")
+            
             
         else:
             self.sm.get_logger().info('Failed to allocate workcell to robot, are they available?')
@@ -234,6 +236,8 @@ class ProcessingState(RobotStateTemplate):
         if self.sm.current_task is None:
             self.sm.get_logger().warn('Entered ProcessingState with no task available!')
             self.sm.change_state(ROBOT_STATE.ERROR)
+        
+
         self.timer = self.sm.create_timer(self.sm.current_task.process_time, self.timer_cb)
 
     def deinit(self):
