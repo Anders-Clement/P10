@@ -60,6 +60,7 @@ private:
   void OnWorkCell(const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Request> request,
                   const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Response> response)
   {
+    RCLCPP_INFO(this->get_logger(), "Allocating task to robot: %s", request->robot_id.id.c_str());
 
     std::string toFrameRel = request.get()->robot_id.id + "_base_link";
     geometry_msgs::msg::TransformStamped t;
@@ -69,7 +70,7 @@ private:
 
     for(auto robot : robots){
       for(auto type : request.get()->robot_types ){ // check if robot is of requested type
-        if(type == robot.id.robot_type){
+        if(type.type == robot.id.robot_type.type){
           
           std::string fromFrameRel = robot.id.id;
           try
