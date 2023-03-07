@@ -28,6 +28,7 @@ class ROBOT_STATE(enum.IntEnum):
 
 class RobotStateManager(Node):
     taskTree: WorkTree
+    current_task : Id
     def __init__(self) -> None:
         super().__init__('robot_state_manager_node')
         robot_ns = os.environ.get('ROBOT_NAMESPACE')

@@ -1,3 +1,6 @@
+import os
+import enum
+
 from rclpy.task import Future
 from rclpy.action.client import ClientGoalHandle
 
@@ -7,7 +10,7 @@ from action_msgs.msg import GoalStatus
 from nav2_msgs.action._navigate_to_pose import NavigateToPose_FeedbackMessage, NavigateToPose_Feedback
 
 from spice_msgs.msg import Id, RobotType, Layer, Node, Work
-from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell
+from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell, RegisterWork
 
 from work_tree import WorkTree, Vertex
 from robot_state_manager_node import RobotStateManager, ROBOT_STATE
@@ -152,7 +155,7 @@ class FindWorkCell(RobotStateTemplate):
         self.sm = sm
 
     def init(self):
-        self.current_work = self.sm.taskTree.next_task(lastWorkType=self.sm.current_task)
+        self.current_work = self.sm.taskTree.next_task(lastWorkType=self.sm.current_task.robot_type)
         if not self.current_work: # no more work
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
             return
@@ -181,7 +184,7 @@ class FindWorkCell(RobotStateTemplate):
             ## call nav go
             nav_goal = NavigateToPose.Goal()
             nav_goal.pose = response.goal_pose
-            self.sm.current_task = response.work_type
+            self.sm.current_task = response.workcell_id
             self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
                 nav_goal, self.sm.on_nav_feedback)
             self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
@@ -203,8 +206,6 @@ class FindWorkCell(RobotStateTemplate):
 
     def deinit(self):
         self.work_cell_allocator_client.destroy()
-
-
 
 
 class MovingState(RobotStateTemplate):
@@ -229,6 +230,16 @@ class MovingState(RobotStateTemplate):
 
 
 class ProcessingState(RobotStateTemplate):
+
+    class ProcessStates(enum.IntEnum):
+        REGISTER_WORK = 0
+        WAIT_IN_QUEUE = 1
+        READY_FOR_PROCESS = 2
+        PROCESSING = 3
+        EXIT_WC = 4
+        ERROR = 99
+
+
     def __init__(self, sm: RobotStateManager) -> None:
         self.sm = sm
 
@@ -237,15 +248,118 @@ class ProcessingState(RobotStateTemplate):
             self.sm.get_logger().warn('Entered ProcessingState with no task available!')
             self.sm.change_state(ROBOT_STATE.ERROR)
         
+        self.register_work_client = self.sm.create_client(RegisterWork, self.sm.current_task.id+'/register_work')
 
-        self.timer = self.sm.create_timer(self.sm.current_task.process_time, self.timer_cb)
+        self.robot_ready_process_client = self.sm.create_client(Trigger, self.sm.current_task.id + "/robot_ready_for_processing")
+
+        self.processing_states(state=0)
+
+   
+    def processing_states(self, state):
+        match state:
+            case self.ProcessStates.REGISTER_WORK:
+                self.process_state = self.ProcessStates.REGISTER_WORK
+                self.register_work()
+            
+            case self.ProcessStates.WAIT_IN_QUEUE:
+                self.process_state = self.ProcessStates.WAIT_IN_QUEUE #enterWorkCell = True
+                self.srv_call_robot = self.sm.create_service(
+                    Trigger, self.sm.id.id + "/call_robot", self.call_robot_cb)
+                                       
+            case self.ProcessStates.READY_FOR_PROCESS:
+                self.process_state = self.ProcessStates.READY_FOR_PROCESS
+                self.robot_ready_process() #readyforprocessing = True
+
+            case self.ProcessStates.PROCESSING:
+                self.process_state = self.ProcessStates.PROCESSING  #waitforProcessing = True
+                self.srv_done_processing = self.sm.create_service(
+                    Trigger, self.sm.id + "/done_processing", self.done_processing_cb)   
+                   
+            case self.ProcessStates.EXIT_WC:
+                self.process_state = self.ProcessStates.EXIT_WC
+                self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)  #doneProcessing = True
+                                               
+            case self.ProcessStates.ERROR:
+                self.process_state = self.ProcessStates.ERROR  #thingsAreWorking = False
+                self.sm.change_state(ROBOT_STATE.ERROR)
+                                                
+
+    def register_work(self):
+        register_work_request = RegisterWork.Request()
+        register_work_request.robot_id = self.sm.id
+        register_work_request.work.type = self.sm.current_task.robot_type
+        register_work_request.work.info = "register work pls"
+
+        if not self.register_work_client.wait_for_service(timeout_sec=1.0):
+            self.sm.get_logger().info("register work server not avialable")
+            return
+        
+        self.register_work_future = self.register_work_client.call_async(register_work_request)
+        self.register_work_future.add_done_callback(self.register_work_cb)
+    
+
+    def register_work_cb(self, future:Future):
+        response : RegisterWork.Response = future.result()
+
+        if response.work_is_enqueued:
+            self.processing_states(state=self.ProcessStates.WAIT_IN_QUEUE)
+        else:
+            self.processing_states(state=self.ProcessStates.ERROR)
+
+
+    def call_robot_cb(self, request:Trigger.Request, response:Trigger.Response) -> Trigger.Response:
+        
+        if self.process_state == self.ProcessStates.WAIT_IN_QUEUE:
+            response = True
+            #TODO: Navigate to cell entrance
+            self.processing_states(state=self.ProcessStates.READY_FOR_PROCESS)
+
+        else:
+            response = False
+        
+        return response
+
+
+    def robot_ready_process(self):
+        robot_ready_process_request = Trigger.Request()
+
+        if not self.register_work_client.wait_for_service(timeout_sec=1.0):
+            self.sm.get_logger().info("robot ready for process server not avialable")
+            return
+        
+        self.register_work_future = self.register_work_client.call_async(robot_ready_process_request)
+        self.register_work_future.add_done_callback(self.robot_ready_process_done_cb)
+
+
+    def robot_ready_process_done_cb(self, future:Future):
+        response : Trigger.Response = future.result()
+
+        if(response):
+            self.processing_states(state=self.ProcessStates.PROCESSING)
+        else:
+            self.processing_states(state=self.ProcessStates.ERROR)
+
+
+    def done_processing_cb(self):
+        if(self.process_state == self.ProcessStates.PROCESSING):
+            response = True
+            self.processing_states(state=self.ProcessStates.EXIT_WC)
+        else:
+            response = False
+        return response
+    
+
 
     def deinit(self):
         if self.timer:
             self.timer.cancel()
-    
+
+        self.register_work_client.destroy()
+        self.robot_ready_process_client.destroy()
+        self.srv_call_robot.destroy()
+        self.srv_done_processing.destroy()
+
     def timer_cb(self):
-        self.sm.current_task = None
         self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)
 
 class ErrorState(RobotStateTemplate):
