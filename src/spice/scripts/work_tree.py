@@ -15,7 +15,8 @@ class Vertex():
 
 
 class WorkTree():
-
+    
+    __currentTask = []
     __vertex: Vertex
     __rootVertex: Vertex
     __vertices = []
@@ -53,7 +54,7 @@ class WorkTree():
     def next_task(self, lastWorkType:RobotType):
         if(self.__firstTask):
             self.__firstTask = False
-            self.__currentTask = self.get_root()
+            self.__currentTask.append(self.get_root())
             return self.__currentTask
         
         for task in self.__currentTask:

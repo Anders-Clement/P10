@@ -27,8 +27,10 @@ class ROBOT_STATE(enum.IntEnum):
    
 
 class RobotStateManager(Node):
+    
     taskTree: WorkTree
     current_task : Id
+
     def __init__(self) -> None:
         super().__init__('robot_state_manager_node')
         robot_ns = os.environ.get('ROBOT_NAMESPACE')
@@ -44,6 +46,7 @@ class RobotStateManager(Node):
                 durability = QoSDurabilityPolicy.TRANSIENT_LOCAL,
                 depth = 10
             )
+        
         self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', qos)
 
         self.heartbeat_client = self.create_client(Heartbeat, '/heartbeat')
@@ -65,6 +68,7 @@ class RobotStateManager(Node):
             robot_state.ProcessingState(self),
             robot_state.ErrorState(self)
         ]
+
         self.current_state = ROBOT_STATE.STARTUP
         self.state_transition_event_pub.publish(
             RobotStateTransition(new_state=RobotState(state=self.current_state),
