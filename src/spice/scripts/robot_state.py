@@ -249,32 +249,38 @@ class ProcessingState(RobotStateTemplate):
         match state:
             case self.ProcessStates.REGISTER_WORK:
                 self.process_state = self.ProcessStates.REGISTER_WORK
+                self.sm.get_logger().info(self.sm.id.id+  ' register work at workcell: ' + self.sm.current_task.id)
                 self.register_work_client = self.sm.create_client(
                     RegisterWork, self.sm.current_task.id+'/register_work')
                 self.register_work()
             
             case self.ProcessStates.WAIT_IN_QUEUE:
                 self.process_state = self.ProcessStates.WAIT_IN_QUEUE #enterWorkCell = True
+                self.sm.get_logger().info(self.sm.id.id+  ' waiting in queueu')
                 self.srv_call_robot = self.sm.create_service(
                     Trigger, self.sm.id.id + "/call_robot", self.call_robot_cb)
                                        
             case self.ProcessStates.READY_FOR_PROCESS:
                 self.process_state = self.ProcessStates.READY_FOR_PROCESS
+                self.sm.get_logger().info(self.sm.id.id+  ' is ready for process at ' + self.sm.current_task.id)
                 self.robot_ready_process_client = self.sm.create_client(
                     Trigger, self.sm.current_task.id + "/robot_ready_for_processing")
                 self.robot_ready_process() #readyforprocessing = True
 
             case self.ProcessStates.PROCESSING:
                 self.process_state = self.ProcessStates.PROCESSING  #waitforProcessing = True
+                self.sm.get_logger().info(self.sm.id.id+  ' is being processed')
                 self.srv_done_processing = self.sm.create_service(
                     Trigger, self.sm.id + "/done_processing", self.done_processing_cb)   
                    
             case self.ProcessStates.EXIT_WC:
+                self.sm.get_logger().info(self.sm.id.id+  ' is done processing at ' + self.sm.current_task.id + ' exiting work cell')
                 self.process_state = self.ProcessStates.EXIT_WC
                 self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)  #doneProcessing = True
                                                
             case self.ProcessStates.ERROR:
                 self.process_state = self.ProcessStates.ERROR  #thingsAreWorking = False
+                self.sm.get_logger().info(self.sm.id.id+  ': Oops ohno something went wrong')
                 self.sm.change_state(ROBOT_STATE.ERROR)
                                                 
 
