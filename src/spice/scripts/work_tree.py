@@ -42,8 +42,7 @@ class WorkTree():
                         vertex.children_=children
                         break
         self.__rootVertex = self.__vertices[0]
-        self.__currentTask = self.__rootVertex
-        self.__firstTask = True
+        #self.__currentTask = self.__rootVertex
         
     def get_root(self):
         return self.__rootVertex
@@ -51,9 +50,8 @@ class WorkTree():
     def get_tree(self):
         return self.__vertices
     
-    def next_task(self, lastWorkType:RobotType):
-        if(self.__firstTask):
-            self.__firstTask = False
+    def next_task(self, lastWorkType:RobotType = None):
+        if(lastWorkType == None):
             self.__currentTask.append(self.get_root())
             return self.__currentTask
         
