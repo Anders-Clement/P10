@@ -57,7 +57,7 @@ class WorkTree():
         
         for task in self.__currentTask:
             if task.work_type.type == lastWorkType.type:
-                next_task = self.task.children_
+                next_task = task.children_
                 break
         self.__currentTask = next_task
         return next_task

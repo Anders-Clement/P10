@@ -237,11 +237,9 @@ class ProcessRegisterWorkState(RobotStateTemplate):
         if self.sm.current_task is None:
             self.sm.get_logger().warn('Entered ProcessingState with no task available!')
             self.sm.change_state(ROBOT_STATE.ERROR)
-
-        self.sm.get_logger().info(self.sm.id.id+  ' register work at workcell: ' + self.sm.current_task.id)
         self.register_work_client = self.sm.create_client(
                     RegisterWork, '/'+self.sm.current_task.id+'/register_work')
-        self.sm.get_logger().info(self.sm.id.id+  ' register work at workcell: ' + self.sm.current_task.id)
+        self.register_work_future = None
         self.register_work()
 
 
@@ -264,8 +262,10 @@ class ProcessRegisterWorkState(RobotStateTemplate):
         if response.work_is_enqueued:
             self.sm.change_state(ROBOT_STATE.WAIT_IN_QUEUE)
         else:
-            self.sm.get_logger().info("something went wrong in:" + self.sm.current_state)
+            self.sm.get_logger().info("something went wrong in:" + self.sm.current_state.__str__())
             self.sm.change_state(ROBOT_STATE.ERROR)##something went wrong
+        
+        self.sm.get_logger().info(self.sm.id.id+  ' regisiter_work_cb')
 
     def deinit(self):
 
@@ -283,17 +283,19 @@ class ProcessWaitQueueState(RobotStateTemplate):
         self.sm = sm
     
     def init(self):
-        self.sm.get_logger().info(self.sm.id.id+  ' waiting in queueu')
+
         self.srv_call_robot = self.sm.create_service(
                     Trigger, 'call_robot', self.call_robot_cb)
     
     def call_robot_cb(self, request:Trigger.Request, response:Trigger.Response) -> Trigger.Response:       
         response.success = True
         self.sm.change_state(ROBOT_STATE.READY_FOR_PROCESS) ##changestate to ready for process
+        self.sm.get_logger().info(self.sm.id.id+  ' call_robot_cb')
         return response
 
     def deinit(self):
-        self.srv_call_robot.destroy()
+        #self.srv_call_robot.destroy()
+        pass
     
 
 
@@ -302,10 +304,9 @@ class ProcessReadyProcessState(RobotStateTemplate):
         self.sm = sm
     
     def init(self):
-        self.sm.get_logger().info(self.sm.id.id+  ' is ready for process at ' + self.sm.current_task.id)
         self.robot_ready_process_client = self.sm.create_client(
                     Trigger, '/'+self.sm.current_task.id + "/robot_ready_for_processing")
-        self.robot_ready_process()
+        self.timer = self.sm.create_timer(5.0, self.robot_ready_process)
 
     def robot_ready_process(self):
         if not self.robot_ready_process_client.wait_for_service(timeout_sec=1.0):
@@ -314,25 +315,23 @@ class ProcessReadyProcessState(RobotStateTemplate):
         
         self.robot_ready_process_future = self.robot_ready_process_client.call_async(Trigger.Request())
         self.robot_ready_process_future.add_done_callback(self.robot_ready_process_done_cb)
-        self.sm.get_logger().info("robot wait processeing waiting for call back")
 
     def robot_ready_process_done_cb(self, future:Future):
-        self.sm.get_logger().info("robot ready for process call back")
         response : Trigger.Response = future.result()
         
+        self.sm.get_logger().info( 'robot_ready_process_done_cb reponse: ' + response.success.__str__())
         if(response.success):
-            self.sm.change_state(ROBOT_STATE.PROCESSING) # change state to processing
-        else:
-            self.sm.get_logger().info("something went wrong in:" + self.sm.current_state)
-            self.sm.change_state # change state to error or do something else
+            self.sm.change_state(ROBOT_STATE.PROCESS_DONE) # change state to processing
+        
+            self.sm.get_logger().info(self.sm.id.id+  ' robot_ready_process_done_cb')
 
 
     def deinit(self):
         if self.robot_ready_process_future:
             if not self.robot_ready_process_future.cancelled():
                 self.robot_ready_process_future.cancel()
-
         self.robot_ready_process_client.destroy()
+        self.timer.cancel()
 
 
 class ProcessProcessingState(RobotStateTemplate):
@@ -340,17 +339,18 @@ class ProcessProcessingState(RobotStateTemplate):
         self.sm = sm
     
     def init(self):
-        self.sm.get_logger().info(self.sm.id.id+  ' is being processed')
         self.srv_done_processing = self.sm.create_service(
-                    Trigger, 'done_processing', self.done_processing_cb)
+                    Trigger, 'robot_done_processing', self.done_processing_cb)
         
     def done_processing_cb(self,request:Trigger.Request, response:Trigger.Response) -> Trigger.Response:
         response.success = True
         self.sm.change_state(ROBOT_STATE.EXIT_WORKCELL) # change state to exit work cell
+        self.sm.get_logger().info(self.sm.id.id+  ' done_processing_cb')
         return response   
    
     def deinit(self):
-        self.srv_done_processing.destroy()
+        pass
+        #self.srv_done_processing.destroy()
 
 
 class ProcessExitWCState(RobotStateTemplate):
