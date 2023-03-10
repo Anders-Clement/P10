@@ -63,7 +63,16 @@ public:
         poses[4].translation.y = 1.1732733249664307;
         poses[4].translation.z = 0;
 
-        m_num_c4_positions++;
+        poses[5].rotation.w = 1;
+        poses[5].rotation.x = 0;
+        poses[5].rotation.y = 0;
+        poses[5].rotation.z = 0;
+        poses[5].translation.x = -4.3;
+        poses[5].translation.y = -1.6;
+        poses[5].translation.z = 0;
+
+        m_num_c4_positions = 5;
+
 
         return poses[m_num_c4_positions];      
   }
@@ -93,13 +102,13 @@ public:
                 *this,
                 generator.C4Locations()),
             std::make_shared<WorkCellStateMachine>(
-                "fuses_cell", 
-                spice_msgs::msg::RobotType::WORK_CELL_FUSES, 
+                "lid_cell", 
+                spice_msgs::msg::RobotType::WORK_CELL_TOP, 
                 *this,
                 generator.C4Locations()),
             std::make_shared<WorkCellStateMachine>(
-                "lid_cell", 
-                spice_msgs::msg::RobotType::WORK_CELL_TOP, 
+                "fuses_cell", 
+                spice_msgs::msg::RobotType::WORK_CELL_FUSES, 
                 *this,
                 generator.C4Locations()),
             std::make_shared<WorkCellStateMachine>(
