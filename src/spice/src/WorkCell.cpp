@@ -64,6 +64,7 @@ void ReadyForRobotState::try_call_robot()
     auto robot = m_sm.get_enqueued_robot();
     if (robot)
     {
+        m_timer->cancel();
         m_sm.m_current_robot_work = robot.value();
         std::string call_robot_client_topic_name = m_sm.m_current_robot_work.robot_id.id + "/call_robot";
         m_sm.m_call_robot_client = m_sm.m_nodehandle.create_client<std_srvs::srv::Trigger>(call_robot_client_topic_name);
@@ -73,6 +74,7 @@ void ReadyForRobotState::try_call_robot()
         if (!m_sm.m_call_robot_client->wait_for_service(1s))
         {
             RCLCPP_WARN(m_sm.get_logger(), "Timeout waiting for service: %s, ignoring the robot", call_robot_client_topic_name.c_str());
+            m_timer->reset();
             return;
         }
         m_sm.m_call_robot_client->async_send_request(
@@ -86,6 +88,7 @@ void ReadyForRobotState::try_call_robot()
                 else
                 {
                     this->m_sm.m_current_robot_work = spice_msgs::srv::RegisterWork::Request();
+                    m_timer->reset();
                     RCLCPP_WARN(m_sm.get_logger(), "Called robot, but got response false");
                 }
             }

@@ -24,7 +24,7 @@ class DynamicObstacleAvoidance(Node):
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-        self.cli_getRobots= self.create_client(GetRobotsByType,'get_robots_by_type')
+        self.cli_getRobots= self.create_client(GetRobotsByType,'/get_robots_by_type')
         topic = self.ns+'/scan'
         self.pub_obstacle = self.create_publisher(LaserScan,topic ,1)
 
@@ -53,25 +53,28 @@ class DynamicObstacleAvoidance(Node):
             except TransformException as ex:
                 self.get_logger().info(f'Could not transform {self.to_frame_rel} to {from_frame_rel}: {ex}')
                 continue
-        
-            x = t.transform.translation.x
-            y = t.transform.translation.y
-            rad = math.atan2(y,x)
-            dist = math.sqrt(x ** 2 + y ** 2)
-            deg1 = math.pi/180
+            
+            
+            robot_x = t.transform.translation.x
+            robot_y = t.transform.translation.y
+            angle_to_robot = math.atan2(robot_y,robot_x)
+            distance_to_robot = math.sqrt(robot_x ** 2 + robot_y ** 2)
+            ROBOT_RADIUS = 0.15
+            # to get points at the sides of the other robot
+            angle_increment = math.atan2(ROBOT_RADIUS, distance_to_robot)
 
             laser_msg = LaserScan()
             frame_id = 'base_link'
             laser_msg.header.frame_id = frame_id
             laser_msg.header.stamp = self.get_clock().now().to_msg()
-            laser_msg.angle_min = rad-deg1
-            laser_msg.angle_max = rad+deg1
-            laser_msg.angle_increment = deg1
+            laser_msg.angle_min = angle_to_robot-angle_increment
+            laser_msg.angle_max = angle_to_robot+angle_increment
+            laser_msg.angle_increment = angle_increment
             laser_msg.time_increment = 0.01
             laser_msg.scan_time = 1.0
             laser_msg.range_min = 0.0
             laser_msg.range_max = 10.0
-            laser_msg.ranges = [dist,dist,dist]
+            laser_msg.ranges = [distance_to_robot,distance_to_robot,distance_to_robot]
             laser_msg.intensities = []
 
             self.pub_obstacle.publish(laser_msg)

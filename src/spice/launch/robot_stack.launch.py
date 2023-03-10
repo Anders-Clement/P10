@@ -50,6 +50,11 @@ def generate_launch_description():
             package='spice',
             executable='robot_state_manager_node.py',
             name='robot_state_manager_node'
+          ),
+          Node(
+            package='spice',
+            executable='dynamic_obstacle_avoidance.py',
+            name='dynamic_obstacle_avoidance_node'
           )
         ]),
         
