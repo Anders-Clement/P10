@@ -56,9 +56,8 @@ public:
         if (type == 1) // type h & s
         {
             Node node0(0, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
-            Node node1(1, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
             Node node2(2, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node0});
-            Node node3(3, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node1});
+            Node node3(3, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node0});
             Node node4(4, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node2});
             Node node5(5, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node3});
             Node node6(6, spice_msgs::msg::RobotType::WORK_CELL_TOP, {&node4, &node5});
@@ -68,7 +67,6 @@ public:
             this->nodes.push_back(node4);
             this->nodes.push_back(node3);
             this->nodes.push_back(node2);
-            this->nodes.push_back(node1);
             this->nodes.push_back(node0);
         }
         else if (type == 2) // type h

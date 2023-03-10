@@ -86,6 +86,7 @@ void ReadyForRobotState::try_call_robot()
                 else
                 {
                     this->m_sm.m_current_robot_work = spice_msgs::srv::RegisterWork::Request();
+                    RCLCPP_WARN(m_sm.get_logger(), "Called robot, but got response false");
                 }
             }
         ); 
@@ -110,6 +111,7 @@ void RobotEnteringState::on_robot_ready_for_processing(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) 
 {
+    RCLCPP_INFO(m_sm.m_nodehandle.get_logger(), "robot is ready for processing");
     response->success = true;
     m_sm.change_state(WORK_CELL_STATE::PROCESSING);
 }
@@ -149,8 +151,8 @@ void ProcessingState::init()
         );
 }
 void ProcessingState::deinit()
-{
-    m_processing_timer->reset();
+{   
+    m_processing_timer.reset();
 }
 
 
@@ -173,6 +175,5 @@ void RobotExitingState::init()
 }
 void RobotExitingState::deinit()
 {
-    m_sm.m_done_processing_client.reset();
     m_timer.reset();
 }

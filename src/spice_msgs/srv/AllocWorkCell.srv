@@ -2,5 +2,5 @@ RobotType[] robot_types
 Id robot_id
 ---
 geometry_msgs/PoseStamped goal_pose
-RobotType work_type
+Id workcell_id
 bool found_job

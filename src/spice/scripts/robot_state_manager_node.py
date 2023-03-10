@@ -22,12 +22,17 @@ class ROBOT_STATE(enum.IntEnum):
     READY_FOR_JOB = 1
     FIND_WORKCELL = 2
     MOVING = 3
-    PROCESSING = 4
-    ERROR = 5
+    REGISTER_WORK = 4
+    WAIT_IN_QUEUE = 5
+    READY_FOR_PROCESS = 6
+    PROCESS_DONE =7
+    EXIT_WORKCELL = 8
+    ERROR = 9
    
 
 class RobotStateManager(Node):
-    taskTree: WorkTree
+    task_tree: WorkTree
+    
     def __init__(self) -> None:
         super().__init__('robot_state_manager_node')
         robot_ns = os.environ.get('ROBOT_NAMESPACE')
@@ -35,7 +40,8 @@ class RobotStateManager(Node):
             print('Could not get robot namespace from the environment')
             raise Exception()
         self.id = Id(id=robot_ns, robot_type=RobotType(type=RobotType.CARRIER_ROBOT))
-        self.current_task = None
+        self.current_work = None
+        self.task_tree = None
 
         qos = QoSProfile(
                 history = QoSHistoryPolicy.KEEP_LAST, 
@@ -43,6 +49,7 @@ class RobotStateManager(Node):
                 durability = QoSDurabilityPolicy.TRANSIENT_LOCAL,
                 depth = 10
             )
+        
         self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', qos)
 
         self.heartbeat_client = self.create_client(Heartbeat, '/heartbeat')
@@ -61,9 +68,14 @@ class RobotStateManager(Node):
             robot_state.ReadyForJobState(self),
             robot_state.FindWorkCell(self),
             robot_state.MovingState(self),
-            robot_state.ProcessingState(self),
+            robot_state.ProcessRegisterWorkState(self),
+            robot_state.ProcessWaitQueueState(self),
+            robot_state.ProcessReadyForProcessingState(self),
+            robot_state.ProcessProcessingDoneState(self),
+            robot_state.ProcessExitWorkCellState(self),
             robot_state.ErrorState(self)
         ]
+
         self.current_state = ROBOT_STATE.STARTUP
         self.state_transition_event_pub.publish(
             RobotStateTransition(new_state=RobotState(state=self.current_state),
@@ -84,7 +96,7 @@ class RobotStateManager(Node):
                     return RobotState(state=RobotState.STARTUP)
                 elif internal_state == ROBOT_STATE.READY_FOR_JOB:
                     return RobotState(state=RobotState.MR_READY_FOR_JOB)
-                elif internal_state == ROBOT_STATE.MOVING or internal_state == ROBOT_STATE.PROCESSING:
+                elif internal_state == ROBOT_STATE.MOVING or internal_state == ROBOT_STATE.REGISTER_WORK or internal_state == ROBOT_STATE.WAIT_IN_QUEUE or internal_state == ROBOT_STATE.READY_FOR_PROCESS or internal_state == ROBOT_STATE.PROCESS_DONE or internal_state == ROBOT_STATE.EXIT_WORKCELL:
                     return RobotState(state=RobotState.MR_PROCESSING_JOB)
                 elif internal_state == ROBOT_STATE.ERROR:
                     return RobotState(state=RobotState.ERROR)
@@ -106,7 +118,11 @@ class RobotStateManager(Node):
         if self.current_state == ROBOT_STATE.READY_FOR_JOB \
             or self.current_state == ROBOT_STATE.MOVING \
             or self.current_state == ROBOT_STATE.FIND_WORKCELL\
-            or self.current_state == ROBOT_STATE.PROCESSING \
+            or self.current_state == ROBOT_STATE.REGISTER_WORK \
+            or self.current_state == ROBOT_STATE.WAIT_IN_QUEUE \
+            or self.current_state == ROBOT_STATE.READY_FOR_PROCESS\
+            or self.current_state == ROBOT_STATE.PROCESS_DONE\
+            or self.current_state == ROBOT_STATE.EXIT_WORKCELL\
             or self.current_state == ROBOT_STATE.ERROR:
 
             if self.heartbeat_future is None:
