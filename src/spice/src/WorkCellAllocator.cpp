@@ -13,6 +13,7 @@
 #include "spice_msgs/srv/alloc_work_cell.hpp"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
 #include "spice_msgs/msg/robot.hpp"
+#include "spice_msgs/msg/robot_type.hpp"
 
 using namespace std::chrono_literals;
 
@@ -29,7 +30,7 @@ public:
 
     service = 
     create_service<spice_msgs::srv::AllocWorkCell>("allocate_work_cell", std::bind(&WorckCellAllocator::OnWorkCell, this,
-                                                                                             std::placeholders::_1, std::placeholders::_2));
+    std::placeholders::_1, std::placeholders::_2));
     get_ready_robots_timer = 
     create_wall_timer(5s, std::bind(&WorckCellAllocator::get_robots_on_timer_cb, this));
 
@@ -59,15 +60,17 @@ private:
   void OnWorkCell(const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Request> request,
                   const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Response> response)
   {
+    RCLCPP_INFO(this->get_logger(), "Allocating task to robot: %s", request->robot_id.id.c_str());
 
     std::string toFrameRel = request.get()->robot_id.id + "_base_link";
     geometry_msgs::msg::TransformStamped t;
     float minDist = INFINITY;
     geometry_msgs::msg::TransformStamped goal;
+    spice_msgs::msg::Id workcellType;
 
     for(auto robot : robots){
       for(auto type : request.get()->robot_types ){ // check if robot is of requested type
-        if(type == robot.id.robot_type){
+        if(type.type == robot.id.robot_type.type){
           
           std::string fromFrameRel = robot.id.id;
           try
@@ -79,6 +82,8 @@ private:
 
             if (dist < minDist)
             {
+              
+              workcellType = robot.id;
               minDist = dist;
               goal = tf_buffer_->lookupTransform("map", fromFrameRel, tf2::TimePointZero);
             }
@@ -109,6 +114,7 @@ private:
     goalPose.pose.orientation = goal.transform.rotation;
     response->goal_pose = goalPose;
     response->found_job = true;
+    response->workcell_id = workcellType;
   }
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;

@@ -36,7 +36,7 @@ class LedNode(Node):
         
 
     def led_cb(self, msg: LedOutput):
-        self.get_logger().info(f'Setting LEDs: \n{msg}')
+        self.get_logger().info(f'Setting LEDs: r: {msg.red}, g: {msg.green}, b: {msg.blue}')
         self.pi.set_PWM_dutycycle(self.ledPins['r'], msg.red*25)
         self.pi.set_PWM_dutycycle(self.ledPins['g'], msg.green*25)
         self.pi.set_PWM_dutycycle(self.ledPins['b'], msg.blue*25)

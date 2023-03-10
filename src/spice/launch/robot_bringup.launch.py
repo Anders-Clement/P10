@@ -16,41 +16,19 @@ from ament_index_python import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.actions import GroupAction
-from launch_ros.actions import PushRosNamespace, Node
 
-def generate_launch_description():
-    namespace = os.environ.get('ROBOT_NAMESPACE')
-    if namespace is None:
-        print('Failed to find ROBOT_NAMESPACE in environment, please add it!')
-        return
-    
+def generate_launch_description():    
     return LaunchDescription([
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory('spice'),
-                  'launch/robot_bringup.launch.py')
+                os.path.join(get_package_share_directory('linorobot2_bringup'),
+                  'launch/namespace_bringup.launch.py')
                 )
         ),
-        GroupAction(actions=[
-          PushRosNamespace(namespace),
-          IncludeLaunchDescription(
+        IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory('spice'),
-                  'launch/tf_relay.launch.py')
+                os.path.join(get_package_share_directory('linorobot2_navigation'),
+                  'launch/navigation.launch.py')
                 )
-          ),
-          Node
-          (
-            package='spice',
-            executable='led_node.py',
-            name='led_node'
-          ),
-          Node(
-            package='spice',
-            executable='robot_state_manager_node.py',
-            name='robot_state_manager_node'
-          )
-        ]),
-        
+        ),
       ])
