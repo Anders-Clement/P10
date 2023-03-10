@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-...
-
 import math
-
 import os
 import rclpy
 from rclpy.node import Node
@@ -12,9 +9,8 @@ from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 from sensor_msgs.msg import LaserScan
-from spice_msgs.srv import GetRobots
-
-
+from spice_msgs.msg import RobotType
+from spice_msgs.srv import GetRobotsByType
 
 
 class DynamicObstacleAvoidance(Node):
@@ -28,62 +24,40 @@ class DynamicObstacleAvoidance(Node):
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-        self.cli_getRobots= self.create_client(GetRobots,'get_robots')
+        self.cli_getRobots= self.create_client(GetRobotsByType,'get_robots_by_type')
         topic = self.ns+'/scan'
         self.pub_obstacle = self.create_publisher(LaserScan,topic ,1)
 
         self.timer_getRobots = self.create_timer(1.0, self.getRobots_timer)
         self.timer_updateObstacles = self.create_timer(0.1, self.updateObstacles_timer)
 
-
-
     def getRobots_timer(self):
-        cli_request = GetRobots.Request()
+        cli_request = GetRobotsByType.Request()
+        cli_request.type = RobotType(type=RobotType.CARRIER_ROBOT)
 
         cli_response = self.cli_getRobots.call_async(cli_request) # get list of active robots as type GetRobots.srv
         cli_response.add_done_callback(self.add_obstacle)
 
-        
-
     def add_obstacle(self, cli_response: Future):
         self.obstacles = cli_response.result().robots
-        if cli_response.result().robots is None:
-            self.get_logger().info(f"No robots found")
-        return
 
     def updateObstacles_timer(self):
-        if self.obstacles is None:
-            return
-
-
-        #self.get_logger().info(f"responce: {cli_response.result().robots}")
-
-
-
-
         for robot in self.obstacles:
             if robot.id.id == self.ns:
                 continue
-            self.get_logger().info(f"Doing: {robot.id.id}")
-
+            #self.get_logger().info(f"Doing: {robot.id.id}")
             from_frame_rel = robot.id.id+'_base_link'
-
-
             
             try:
                 t = self.tf_buffer.lookup_transform(self.to_frame_rel, from_frame_rel, rclpy.time.Time())
-
             except TransformException as ex:
                 self.get_logger().info(f'Could not transform {self.to_frame_rel} to {from_frame_rel}: {ex}')
                 continue
         
             x = t.transform.translation.x
             y = t.transform.translation.y
-            
             rad = math.atan2(y,x)
-
             dist = math.sqrt(x ** 2 + y ** 2)
-            
             deg1 = math.pi/180
 
             laser_msg = LaserScan()
@@ -103,14 +77,11 @@ class DynamicObstacleAvoidance(Node):
             self.pub_obstacle.publish(laser_msg)
     
 
-
-
 def main(args=None):
     rclpy.init(args=args)
     dynamic_obstacle_avoidance = DynamicObstacleAvoidance()
     rclpy.spin(dynamic_obstacle_avoidance)
     rclpy.shutdown()
-
 
 
 if __name__ == '__main__':

@@ -71,7 +71,7 @@ public:
         poses[5].translation.y = -1.6;
         poses[5].translation.z = 0;
 
-        m_num_c4_positions ++;
+        m_num_c4_positions++;
 
 
         return poses[m_num_c4_positions];      
