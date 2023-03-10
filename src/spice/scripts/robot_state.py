@@ -108,6 +108,9 @@ class ReadyForJobState(RobotStateTemplate):
     def init(self):
         self.sm.heartbeat_timer.reset()
         self.sm.heartbeat_future = None
+        if self.sm.task_tree is not None:
+            self.sm.get_logger().warn('Entering ready_for_job state, but task tree was not None')
+        self.sm.task_tree = None
 
         self.nav_response_future = None
         self.nav_goal_done_future = None
@@ -154,7 +157,6 @@ class FindWorkCell(RobotStateTemplate):
         self.sm.current_work = self.sm.task_tree.get_next_work_types() 
 
         if len(self.sm.current_work) == 0: # no more work
-            self.sm.task_tree = None
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
             return
 
