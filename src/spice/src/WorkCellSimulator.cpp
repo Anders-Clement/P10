@@ -21,7 +21,7 @@ public:
 
     geometry_msgs::msg::Transform C4Locations(){
 
-        geometry_msgs::msg::Transform poses[5];
+        geometry_msgs::msg::Transform poses[6];
         
         poses[0].rotation.w = -2.5352063179016113;
         poses[0].rotation.x =0.0 ;
@@ -71,7 +71,7 @@ public:
         poses[5].translation.y = -1.6;
         poses[5].translation.z = 0;
 
-        m_num_c4_positions = 5;
+        m_num_c4_positions ++;
 
 
         return poses[m_num_c4_positions];      
