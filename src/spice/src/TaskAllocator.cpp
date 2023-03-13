@@ -30,7 +30,7 @@ public:
         children = children_;
         auto rand_nr = 1;
         if (work_type.type == spice_msgs::msg::RobotType::WORK_CELL_DRILL)
-            rand_nr = rand() % 4 + 1;
+            rand_nr = rand() % 2 + 3;
         else if (work_type.type == spice_msgs::msg::RobotType::WORK_CELL_FUSES)
             rand_nr = rand() % 2 + 1;
         
