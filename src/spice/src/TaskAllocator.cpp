@@ -28,8 +28,12 @@ public:
         id = id_;
         work_type.type = work_type_;
         children = children_;
-
-        auto rand_nr = rand() % 3 + 1;
+        auto rand_nr = 1;
+        if (work_type.type == spice_msgs::msg::RobotType::WORK_CELL_DRILL)
+            rand_nr = rand() % 2 + 3;
+        else if (work_type.type == spice_msgs::msg::RobotType::WORK_CELL_FUSES)
+            rand_nr = rand() % 2 + 1;
+        
         work_info = std::to_string(rand_nr);
         std::cout << work_info;
     }
