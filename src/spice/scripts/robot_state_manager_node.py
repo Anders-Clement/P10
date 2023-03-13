@@ -92,17 +92,23 @@ class RobotStateManager(Node):
             self.get_logger().info(f'State transition from: {self.current_state.name} to {new_state.name}')
 
             def internal_robot_state_to_robot_state_msg_state(internal_state: ROBOT_STATE) -> RobotState:
+                robot_state_msg = RobotState(internal_state=internal_state.value)
                 if internal_state == ROBOT_STATE.STARTUP:
-                    return RobotState(state=RobotState.STARTUP)
+                    robot_state_msg.state=RobotState.STARTUP
                 elif internal_state == ROBOT_STATE.READY_FOR_JOB:
-                    return RobotState(state=RobotState.MR_READY_FOR_JOB)
-                elif internal_state == ROBOT_STATE.MOVING or internal_state == ROBOT_STATE.REGISTER_WORK or internal_state == ROBOT_STATE.WAIT_IN_QUEUE or internal_state == ROBOT_STATE.READY_FOR_PROCESS or internal_state == ROBOT_STATE.PROCESS_DONE or internal_state == ROBOT_STATE.EXIT_WORKCELL:
-                    return RobotState(state=RobotState.MR_PROCESSING_JOB)
+                    robot_state_msg.state=RobotState.MR_READY_FOR_JOB
+                elif internal_state == ROBOT_STATE.MOVING or \
+                        internal_state == ROBOT_STATE.REGISTER_WORK or \
+                        internal_state == ROBOT_STATE.WAIT_IN_QUEUE or \
+                        internal_state == ROBOT_STATE.READY_FOR_PROCESS or \
+                        internal_state == ROBOT_STATE.PROCESS_DONE or \
+                        internal_state == ROBOT_STATE.EXIT_WORKCELL:
+                    robot_state_msg.state=RobotState.MR_PROCESSING_JOB
                 elif internal_state == ROBOT_STATE.ERROR:
-                    return RobotState(state=RobotState.ERROR)
+                    robot_state_msg.state=RobotState.ERROR
                 else:
                     self.get_logger().error("Internal state is not published correctly")
-                    return RobotState()
+                return robot_state_msg
 
             event_msg = RobotStateTransition()
             event_msg.old_state = internal_robot_state_to_robot_state_msg_state(self.current_state)

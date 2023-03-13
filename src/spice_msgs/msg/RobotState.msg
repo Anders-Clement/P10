@@ -10,3 +10,4 @@ uint8 STARTUP = 3
 uint8 ERROR = 4
 
 uint8 state
+uint8 internal_state 0
