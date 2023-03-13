@@ -125,6 +125,7 @@ install(PROGRAMS
   scripts/robot_state_manager_node.py
   scripts/dynamic_obstacle_avoidance.py
   scripts/work_tree.py
+  scripts/gui.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
