@@ -60,7 +60,7 @@ class DynamicObstacleAvoidance(Node):
             distance_to_robot = math.sqrt(robot_x ** 2 + robot_y ** 2)
             ROBOT_RADIUS = 0.15
             # to get points at the sides of the other robot
-            angle_increment = math.atan2(ROBOT_RADIUS, distance_to_robot)
+            angle_increment = math.atan2(0.01, distance_to_robot)
 
             laser_msg = LaserScan()
             frame_id = 'base_link'
@@ -73,7 +73,7 @@ class DynamicObstacleAvoidance(Node):
             laser_msg.scan_time = 1.0
             laser_msg.range_min = 0.0
             laser_msg.range_max = 10.0
-            laser_msg.ranges = [distance_to_robot,distance_to_robot,distance_to_robot]
+            laser_msg.ranges = [distance_to_robot-0.25,distance_to_robot,distance_to_robot-0.50]
             laser_msg.intensities = []
 
             self.pub_obstacle.publish(laser_msg)
