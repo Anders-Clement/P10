@@ -26,7 +26,7 @@ class DynamicObstacleAvoidance(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.cli_getRobots= self.create_client(GetRobotsByType,'/get_robots_by_type')
-        self.pub_obstacle = self.create_publisher(PoseArray, 'scan', 1)
+        self.pub_obstacle = self.create_publisher(PoseArray, 'dynamic_obstacle', 1)
 
         self.timer_getRobots = self.create_timer(1.0, self.getRobots_timer)
         self.timer_updateObstacles = self.create_timer(0.1, self.updateObstacles_timer)
