@@ -1,6 +1,7 @@
 #ifndef DYNAMIC_OBSTACLE_LAYER_HPP
 #define DYNAMIC_OBSTACLE_LAYER_HPP
 
+#include "map"
 #include "string"
 #include "vector"
 #include "rclcpp/rclcpp.hpp"
@@ -55,8 +56,8 @@ private:
 
     std::string topic_;  
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_;
-    std::vector<geometry_msgs::msg::PoseArray> messageBuffer;
-    
+    std::map<std::string, geometry_msgs::msg::PoseArray> messageBuffer;
+    rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;
 };
 }
 #endif

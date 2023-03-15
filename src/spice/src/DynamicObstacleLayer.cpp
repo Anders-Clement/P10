@@ -27,13 +27,13 @@ DynamicObstacleLayer::DynamicObstacleLayer()
 
 void DynamicObstacleLayer::onInitialize()
 {
-  auto node = node_.lock();
+  nh_ = node_.lock();
   declareParameter("enabled", rclcpp::ParameterValue(true));
   declareParameter("topic", rclcpp::ParameterValue("dynamic_obstacle"));
-  node->get_parameter(name_ + "." + "enabled", enabled_);
-  node->get_parameter(name_ + "." + "topic", topic_);
+  nh_->get_parameter(name_ + "." + "enabled", enabled_);
+  nh_->get_parameter(name_ + "." + "topic", topic_);
 
-  subscription_ = node->create_subscription<geometry_msgs::msg::PoseArray>(
+  subscription_ = nh_->create_subscription<geometry_msgs::msg::PoseArray>(
       topic_, 10, std::bind(&DynamicObstacleLayer::DynamicObstacleCallback, this, _1));
 
   need_recalculation_ = false;
@@ -43,7 +43,7 @@ void DynamicObstacleLayer::onInitialize()
 
 void DynamicObstacleLayer::DynamicObstacleCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
 {
-  messageBuffer.push_back(*msg);
+  messageBuffer[msg->header.frame_id] = *msg;
 }
 
 
@@ -94,7 +94,11 @@ void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, 
 
   for (auto obstaclePoints : messageBuffer)
   {  // for msg in buffer update cost map
-    for(auto pose : obstaclePoints.poses){ //get pose index in master_grid
+    if(obstaclePoints.second.header.stamp.sec - nh_->now().seconds() > 10.0 ){ // check if msg time is within threshold 
+      continue;
+    }
+    
+    for(auto pose : obstaclePoints.second.poses){ //get pose index in master_grid
       
       int index = master_grid.getIndex(pose.position.x, pose.position.y);
       master_array[index] = LETHAL_OBSTACLE;
