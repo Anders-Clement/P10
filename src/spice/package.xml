@@ -16,6 +16,8 @@
   <depend>tf2_ros</depend>
   <depend>tf2_msgs</depend>
   <depend>visualization_msgs</depend>
+  <depend>nav2_costmap_2d</depend>
+  <depend>pluginlib</depend>
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>launch</exec_depend>
@@ -25,6 +27,7 @@
   <test_depend>ament_lint_common</test_depend>
 
   <export>
+    <costmap_2d plugin="${prefix}/dynamic_obstacle_layer.xml"/>
     <build_type>ament_cmake</build_type>
   </export>
 </package>

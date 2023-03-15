@@ -2,13 +2,14 @@
 #define DYNAMIC_OBSTACLE_LAYER_HPP
 
 #include "string"
+#include "vector"
 #include "rclcpp/rclcpp.hpp"
 #include "nav2_costmap_2d/layer.hpp"
 #include "nav2_costmap_2d/layered_costmap.hpp"
-#include "tf2/exceptions.h"
-#include "tf2_ros/transform_listener.h"
-#include "tf2_ros/buffer.h"
-#include "spice_msgs/srv/get_robots_by_type.hpp"
+#include "geometry_msgs/msg/pose_array.hpp"
+
+namespace nav2_costmap_2d
+{
 
 
 class DynamicObstacleLayer : public nav2_costmap_2d::Layer
@@ -37,15 +38,15 @@ class DynamicObstacleLayer : public nav2_costmap_2d::Layer
 
     virtual bool isClearable() {return false;}
 
-    virtual void DynamicObstacleCallback();
+    virtual void DynamicObstacleCallback(geometry_msgs::msg::PoseArray::SharedPtr msg);
 
 
 private:
 
-    double last_min_x_, last_min_y_, last_max_x_, last_max_y_;
+  double last_min_x_, last_min_y_, last_max_x_, last_max_y_;
 
   // Indicates that the entire gradient should be recalculated next time.
-    bool need_recalculation_;
+  bool need_recalculation_;
 
   // Size of gradient in cells
     int GRADIENT_SIZE = 20;
@@ -53,8 +54,9 @@ private:
     int GRADIENT_FACTOR = 10;
 
     std::string topic_;  
-    rclcpp::Subscription<spice_msgs::msg::DynamicObstacle>::SharedPtr subscription_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_;
+    std::vector<geometry_msgs::msg::PoseArray> messageBuffer;
     
 };
-
+}
 #endif

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 project(spice)
 
+set(lib_name ${PROJECT_NAME}_core)
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -24,6 +26,11 @@ find_package(tf2_msgs REQUIRED)
 find_package(spice_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(nav2_costmap_2d REQUIRED)
+find_package(pluginlib REQUIRED)
+
+
+
 
 include_directories(
   include
@@ -99,6 +106,21 @@ install(TARGETS
     work_cell_allocator
     set_robot_task_poses
     DESTINATION lib/${PROJECT_NAME})
+    
+set(dep_pkgs
+    rclcpp
+    nav2_costmap_2d
+    pluginlib
+    geometry_msgs
+    )
+
+
+add_library(${lib_name} SHARED
+    src/DynamicObstacleLayer.cpp)
+include_directories(include)
+
+install(TARGETS ${lib_name}
+    DESTINATION lib)
 
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME})
@@ -128,5 +150,8 @@ install(PROGRAMS
   scripts/gui.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+pluginlib_export_plugin_description_file(nav2_costmap_2d dynamic_obstacle_layer.xml)
+ament_target_dependencies(${lib_name} ${dep_pkgs})
 
 ament_package()
