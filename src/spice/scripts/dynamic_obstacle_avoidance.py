@@ -74,11 +74,16 @@ class DynamicObstacleAvoidance(Node):
             ROBOT_RADIUS = 0.15
 
             for i in range(8):
-                robot_pose_msg.position.x = ROBOT_RADIUS**math.cos((360/8)**i)
-                robot_pose_msg.position.y = ROBOT_RADIUS**math.sin((360/8)**i)
+                robot_pose_msg = Pose()
+                robot_pose_msg.position.x = t.transform.translation.x + (ROBOT_RADIUS**math.cos((6.28/8)**i))
+                robot_pose_msg.position.y = t.transform.translation.y + (ROBOT_RADIUS**math.sin((6.28/8)**i))
+                robot_pose_msg.position.z = t.transform.translation.z
+                robot_pose_msg.orientation.w = t.transform.rotation.w
+                robot_pose_msg.orientation.x = t.transform.rotation.x
+                robot_pose_msg.orientation.y = t.transform.rotation.y
+                robot_pose_msg.orientation.z = t.transform.rotation.z
                 robot_pose_array_msg.poses.append(robot_pose_msg)
 
-            
             self.pub_obstacle.publish(robot_pose_array_msg)
 
     
