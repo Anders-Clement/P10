@@ -21,7 +21,8 @@ class DynamicObstacleAvoidance(Node):
     def __init__(self):
         super().__init__('dynamic_obstacle_avoidance')
         self.ns = os.getenv("ROBOT_NAMESPACE")
-        self.to_frame_rel = self.ns + '_base_link'
+        #self.to_frame_rel = self.ns + '_base_link'
+        self.to_frame_rel = 'map'
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -58,7 +59,7 @@ class DynamicObstacleAvoidance(Node):
             
             robot_pose_array_msg = PoseArray()
             robot_pose_array_msg.header.stamp = self.get_clock().now().to_msg()
-            robot_pose_array_msg.header.frame_id = 'base_link'
+            robot_pose_array_msg.header.frame_id = from_frame_rel + 'base_link'
 
             robot_pose_msg = Pose()
 

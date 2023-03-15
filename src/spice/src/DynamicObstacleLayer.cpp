@@ -94,7 +94,7 @@ void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, 
 
   for (auto obstaclePoints : messageBuffer)
   {  // for msg in buffer update cost map
-    if(obstaclePoints.second.header.stamp.sec - nh_->now().seconds() > 10.0 ){ // check if msg time is within threshold 
+    if(nh_->now().seconds() - obstaclePoints.second.header.stamp.sec > 10.0 ){ // check if msg time is within threshold 
       continue;
     }
     
