@@ -98,16 +98,23 @@ void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, 
       continue;
     }
     
-    for(auto pose : obstaclePoints.second.poses){ //get pose index in master_grid
-      
-      int index = master_grid.getIndex(pose.position.x, pose.position.y);
-      master_array[index] = LETHAL_OBSTACLE;
+    //for(auto pose : obstaclePoints.second.poses){ //get pose index in master_grid
+      for(int i = min_i; i < max_i; i++){
+        for(int j = min_j; j < max_j; j++){
+          if(i%5 < 2){
+            int index = master_grid.getIndex(i,j);
+            master_array[index] = LETHAL_OBSTACLE;
+          }
+      }
+
+      //master_array[index] = LETHAL_OBSTACLE;
 
       }
 
-    }
+   // }
     
   }
+}
 
 
 void DynamicObstacleLayer::onFootprintChanged()
@@ -118,7 +125,8 @@ void DynamicObstacleLayer::onFootprintChanged()
                layered_costmap_->getFootprint().size());
 }
 
-}  // namespace nav2_costmap_2d
+
+} // namespace nav2_costmap_2d
 
 #include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(nav2_costmap_2d::DynamicObstacleLayer, nav2_costmap_2d::Layer)
