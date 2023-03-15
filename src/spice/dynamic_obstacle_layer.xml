@@ -1,6 +1,6 @@
 
-<library path="namespace nav2_costmap_2d">
-  <class name="namespace nav2_costmap_2d/DynamicObstacleLayer" type="nav2_gradient_costmap_plugin::DynamicObstacleLayer" base_class_type="nav2_costmap_2d::Layer">
+<library path="spice_core">
+  <class type="nav2_costmap_2d::DynamicObstacleLayer" base_class_type="nav2_costmap_2d::Layer">
     <description>This is a small plugins that add dynamic obstacles to the robot costmap</description>
   </class>
 </library>
