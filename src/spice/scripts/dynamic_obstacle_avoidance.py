@@ -47,7 +47,7 @@ class DynamicObstacleAvoidance(Node):
         for robot in self.obstacles:
             if robot.id.id == self.ns:
                 continue
-            #self.get_logger().info(f"Doing: {robot.id.id}")
+            # self.get_logger().info(f"Adding obstacle on robot: {robot.id.id}")
             from_frame_rel = robot.id.id+'_base_link'
             
             try:
@@ -72,13 +72,19 @@ class DynamicObstacleAvoidance(Node):
 
             robot_pose_array_msg.poses.append(robot_pose_msg)
             ROBOT_RADIUS = 0.15
-
+            ANGLE_INCREMENT = 6.28/8
+            
             for i in range(8):
-                robot_pose_msg.position.x = ROBOT_RADIUS**math.cos((360/8)**i)
-                robot_pose_msg.position.y = ROBOT_RADIUS**math.sin((360/8)**i)
+                robot_pose_msg = Pose()
+                robot_pose_msg.position.x = t.transform.translation.x + (ROBOT_RADIUS*math.cos(ANGLE_INCREMENT*i))
+                robot_pose_msg.position.y = t.transform.translation.y + (ROBOT_RADIUS*math.sin(ANGLE_INCREMENT*i))
+                robot_pose_msg.position.z = t.transform.translation.z
+                robot_pose_msg.orientation.w = t.transform.rotation.w
+                robot_pose_msg.orientation.x = t.transform.rotation.x
+                robot_pose_msg.orientation.y = t.transform.rotation.y
+                robot_pose_msg.orientation.z = t.transform.rotation.z
                 robot_pose_array_msg.poses.append(robot_pose_msg)
 
-            
             self.pub_obstacle.publish(robot_pose_array_msg)
 
     
