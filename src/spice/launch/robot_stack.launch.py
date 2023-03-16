@@ -49,7 +49,7 @@ def generate_launch_description():
             ),
             launch_arguments={
                 'map': LaunchConfiguration("map")
-            }
+            }.items()
         ),
         GroupAction(actions=[
             PushRosNamespace(namespace),

@@ -36,6 +36,6 @@ def generate_launch_description():
             ),
             launch_arguments={
                 'map': map_yaml_file
-            }
+            }.items()
         ),
     ])
