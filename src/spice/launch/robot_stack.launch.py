@@ -22,7 +22,7 @@ from launch.substitutions import PathJoinSubstitution, LaunchConfiguration
 from launch_ros.substitutions import FindPackageShare
 from launch.actions import DeclareLaunchArgument
 
-DEFAULT_MAP_NAME = 'C4'  # change to the name of the default map here
+DEFAULT_MAP_NAME = 'C4.yaml'  # change to the name of the default map here
 
 
 def generate_launch_description():
@@ -31,23 +31,23 @@ def generate_launch_description():
         print('Failed to find ROBOT_NAMESPACE in environment, please add it!')
         return
 
-    DeclareLaunchArgument(
-        name='map',
-        default_value=DEFAULT_MAP_NAME,
-        description='Navigation map name'
-    )
 
     default_map_path = PathJoinSubstitution(
-        [FindPackageShare('spice_map'), 'maps', [LaunchConfiguration('map'), '.yaml']]
-    )
-
-    DeclareLaunchArgument(
-        name='map_path',
-        default_value=default_map_path,
-        description='Navigation map path'
+        [FindPackageShare('spice_map'), 'maps', LaunchConfiguration('map')]
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            name='map',
+            default_value = DEFAULT_MAP_NAME,
+            description='Map name.yaml'
+        ),
+
+        DeclareLaunchArgument(
+            name='map_path',
+            default_value = default_map_path,
+            description='Map path'
+        ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
