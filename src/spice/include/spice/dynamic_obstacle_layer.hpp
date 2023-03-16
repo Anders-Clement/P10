@@ -48,11 +48,12 @@ private:
 
   // Indicates that the entire gradient should be recalculated next time.
   bool need_recalculation_;
-
+    float update_;
    std::string topic_;  
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_;
     std::map<std::string, geometry_msgs::msg::PoseArray> messageBuffer;
     rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;
+    
 };
 }
 #endif
