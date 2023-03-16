@@ -37,21 +37,23 @@ void DynamicObstacleLayer::onInitialize()
   need_recalculation_ = false;
   current_ = true;
   default_value_ = NO_INFORMATION;
-
-  Costmap2D* master = layered_costmap_->getCostmap();
-  resizeMap(master->getSizeInCellsX(), master->getSizeInCellsY(), master->getResolution(), master->getOriginX(), master->getOriginY());
+  matchSize();
   RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN] initialized and subribed to topic: %s", topic_);
 }
 
+void DynamicObstacleLayer::matchSize(){
+
+  Costmap2D* master = layered_costmap_->getCostmap();
+  resizeMap(master->getSizeInCellsX(), master->getSizeInCellsY(), master->getResolution(), master->getOriginX(), master->getOriginY());
+}
 
 void DynamicObstacleLayer::DynamicObstacleCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
 {
   geometry_msgs::msg::PoseArray poseArray = *msg;
-  RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN] message recieved");
 
   if (messageBuffer.find(msg->header.frame_id) == messageBuffer.end())
   {  // frame id does not exist in map
-
+    
     messageBuffer.insert({ msg->header.frame_id, poseArray });
   }
   else
@@ -64,9 +66,7 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
                                         double* max_x, double* max_y)
 {
   double maxmx, minmx, minmy, maxmy;
-  for(int i = 0; i<sizeof(costmap_); i++){
-    costmap_[i] = NO_INFORMATION;
-  }
+  matchSize();
   // if (need_recalculation_)
   // {
   //   last_min_x_ = *min_x;

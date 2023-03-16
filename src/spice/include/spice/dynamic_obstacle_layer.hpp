@@ -38,6 +38,7 @@ class DynamicObstacleLayer : public nav2_costmap_2d::Layer, public nav2_costmap_
     virtual void onFootprintChanged();
 
     virtual bool isClearable() {return false;}
+    virtual void matchSize();
 
     virtual void DynamicObstacleCallback(geometry_msgs::msg::PoseArray::SharedPtr msg);
 
