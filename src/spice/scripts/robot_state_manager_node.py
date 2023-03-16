@@ -100,17 +100,10 @@ class RobotStateManager(Node):
                     robot_state_msg.state=RobotState.STARTUP
                 elif internal_state == ROBOT_STATE.READY_FOR_JOB:
                     robot_state_msg.state=RobotState.MR_READY_FOR_JOB
-                elif internal_state == ROBOT_STATE.MOVING or \
-                        internal_state == ROBOT_STATE.REGISTER_WORK or \
-                        internal_state == ROBOT_STATE.WAIT_IN_QUEUE or \
-                        internal_state == ROBOT_STATE.READY_FOR_PROCESS or \
-                        internal_state == ROBOT_STATE.PROCESS_DONE or \
-                        internal_state == ROBOT_STATE.EXIT_WORKCELL:
-                    robot_state_msg.state=RobotState.MR_PROCESSING_JOB
                 elif internal_state == ROBOT_STATE.ERROR:
                     robot_state_msg.state=RobotState.ERROR
                 else:
-                    self.get_logger().error("Internal state is not published correctly")
+                    robot_state_msg.state=RobotState.MR_PROCESSING_JOB
                 return robot_state_msg
 
             event_msg = RobotStateTransition()
