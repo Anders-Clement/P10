@@ -21,8 +21,7 @@ class DynamicObstacleAvoidance(Node):
     def __init__(self):
         super().__init__('dynamic_obstacle_avoidance')
         self.ns = os.getenv("ROBOT_NAMESPACE")
-        #self.to_frame_rel = self.ns + '_base_link'
-        self.to_frame_rel = 'map'
+        self.to_frame_rel = self.ns + '_base_link'
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -30,7 +29,7 @@ class DynamicObstacleAvoidance(Node):
         self.pub_obstacle = self.create_publisher(PoseArray, 'local_costmap/dynamic_obstacle', 1)
 
         self.timer_getRobots = self.create_timer(1.0, self.getRobots_timer)
-        self.timer_updateObstacles = self.create_timer(0.1, self.updateObstacles_timer)
+        self.timer_updateObstacles = self.create_timer(1.0, self.updateObstacles_timer)
 
     def getRobots_timer(self):
         cli_request = GetRobotsByType.Request()

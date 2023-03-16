@@ -49,12 +49,7 @@ private:
   // Indicates that the entire gradient should be recalculated next time.
   bool need_recalculation_;
 
-  // Size of gradient in cells
-    int GRADIENT_SIZE = 20;
-  // Step of increasing cost per one cell in gradient
-    int GRADIENT_FACTOR = 10;
-
-    std::string topic_;  
+   std::string topic_;  
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_;
     std::map<std::string, geometry_msgs::msg::PoseArray> messageBuffer;
     rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;

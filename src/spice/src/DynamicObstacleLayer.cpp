@@ -41,7 +41,18 @@ void DynamicObstacleLayer::onInitialize()
 
 void DynamicObstacleLayer::DynamicObstacleCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
 {
-  messageBuffer[msg->header.frame_id] = *msg;
+  geometry_msgs::msg::PoseArray poseArray = *msg;
+  RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN] message recieved");
+
+  if (messageBuffer.find(msg->header.frame_id) == messageBuffer.end())
+  {  // frame id does not exist in map
+
+    messageBuffer.insert({ msg->header.frame_id, poseArray });
+  }
+  else
+  {  // replace existing value;
+    messageBuffer[msg->header.frame_id] = poseArray;
+  }
 }
 
 void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
@@ -94,10 +105,10 @@ void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, 
   //
   unsigned int span = master_grid.getSizeInCellsX();
 
-  for (auto obstaclePoints : messageBuffer)
+  for (auto const& obstaclePoints : messageBuffer)
   {  // for msg in buffer update cost map
-    RCLCPP_INFO(logger_, "obstacle points proccesed with frame id: %s",obstaclePoints.second.header.frame_id);
-    
+    RCLCPP_INFO(logger_, "obstacle points proccesed with frame id: %s", obstaclePoints.second.header.frame_id);
+
     if (nh_->now().seconds() - obstaclePoints.second.header.stamp.sec > 10.0)
     {  // check if msg time is within threshold
       continue;
@@ -105,7 +116,8 @@ void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, 
 
     for (auto pose : obstaclePoints.second.poses)
     {  // get pose index in master_grid
-      RCLCPP_INFO(logger_, "obstacle point at world position: x: %f y:%f z:%f",pose.position.x, pose.position.y, pose.position.z);
+      RCLCPP_INFO(logger_, "obstacle point at world position: x: %f y:%f z:%f", pose.position.x, pose.position.y,
+                  pose.position.z);
       unsigned int mx, my;
       if (master_grid.worldToMap(pose.position.x, pose.position.y, mx, my))
       {
@@ -113,7 +125,8 @@ void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, 
         int index = master_grid.getIndex(mx, my);
         master_array[index] = LETHAL_OBSTACLE;
       }
-      else RCLCPP_INFO(logger_, "obstacle failed to transform to costmap");
+      else
+        RCLCPP_INFO(logger_, "obstacle failed to transform to costmap");
     }
   }
 }
