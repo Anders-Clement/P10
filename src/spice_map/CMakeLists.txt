@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(spice_msgs)
+project(spice_map)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -7,42 +7,12 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
-find_package(geometry_msgs REQUIRED)
+# uncomment the following section in order to fill in
+# further dependencies manually.
+# find_package(<dependency> REQUIRED)
 
-set(msg_files
-  "msg/LedOutput.msg"
-  "msg/Id.msg"
-  "msg/RobotState.msg"
-  "msg/Robot.msg"
-  "msg/RobotStateTransition.msg"
-  "msg/Task.msg"
-  "msg/Layer.msg"
-  "msg/Node.msg"
-  "msg/Work.msg"
-  "msg/RobotType.msg"
-)
-
-set(srv_files
-  "srv/GetReadyRobots.srv"
-  "srv/GetRobots.srv"
-  "srv/Heartbeat.srv"
-  "srv/RegisterRobot.srv"
-  "srv/RobotTask.srv"
-  "srv/AllocWorkCell.srv"
-  "srv/RegisterWork.srv"
-  "srv/GetRobotsByState.srv"
-  "srv/GetRobotsByType.srv"
-)
-
-rosidl_generate_interfaces(${PROJECT_NAME}
-  ${msg_files}
-  ${srv_files}  
-  DEPENDENCIES geometry_msgs 
-)
-
-ament_export_dependencies(rosidl_default_runtime)
-
+install(DIRECTORY launch maps
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

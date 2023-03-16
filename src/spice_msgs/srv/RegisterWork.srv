@@ -1,0 +1,6 @@
+Work work
+Id robot_id
+---
+bool work_is_enqueued
+geometry_msgs/PoseStamped processing_pose
+geometry_msgs/PoseStamped exit_pose

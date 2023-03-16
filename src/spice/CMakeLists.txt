@@ -5,6 +5,10 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
 # uncomment the following section in order to fill in
@@ -19,6 +23,11 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_msgs REQUIRED) 
 find_package(spice_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
+
+include_directories(
+  include
+)
 
 add_executable(robot_tf_relay src/FramePublisher.cpp)
 ament_target_dependencies(
@@ -57,14 +66,41 @@ ament_target_dependencies(
   visualization_msgs
 )
 
+add_executable(work_cell_allocator src/WorkCellAllocator.cpp)
+ament_target_dependencies(
+  work_cell_allocator
+  geometry_msgs
+  rclcpp
+  spice_msgs
+  tf2
+  tf2_ros
+  tf2_msgs
+)
+set(WORK_CELL_SIMULATOR_SOURCES 
+  src/WorkCell.cpp
+  src/WorkCellSimulator.cpp
+  src/WorkCellStateMachine.cpp
+)
+add_executable(work_cell_simulator ${WORK_CELL_SIMULATOR_SOURCES})
+ament_target_dependencies(
+  work_cell_simulator
+  rclcpp
+  spice_msgs
+  std_srvs
+  geometry_msgs
+  tf2_ros
+)
+
 install(TARGETS
     robot_tf_relay
     robot_tf_pose
     task_allocator
+    work_cell_simulator
+    work_cell_allocator
     set_robot_task_poses
     DESTINATION lib/${PROJECT_NAME})
 
-install(DIRECTORY launch 
+install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
@@ -88,6 +124,8 @@ install(PROGRAMS
   scripts/SwarmManager.py
   scripts/robot_state_manager_node.py
   scripts/dynamic_obstacle_avoidance.py
+  scripts/work_tree.py
+  scripts/gui.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

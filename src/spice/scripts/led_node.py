@@ -27,18 +27,16 @@ class LedNode(Node):
     def robot_state_transition_event_cb(self, msg: RobotStateTransition) -> None:
         if msg.new_state.state == RobotState.STARTUP:
             self.led_cb(LedOutput(red=True, blue=False, green=True))
-        elif msg.new_state.state == RobotState.READY_FOR_JOB:
+        elif msg.new_state.state == RobotState.MR_READY_FOR_JOB:
             self.led_cb(LedOutput(red=False, blue=False, green=True))
-        elif msg.new_state.state == RobotState.MOVING:
+        elif msg.new_state.state == RobotState.MR_PROCESSING_JOB:
             self.led_cb(LedOutput(red=False, blue=True, green=True))
-        elif msg.new_state.state == RobotState.PROCESSING:
-            self.led_cb(LedOutput(red=True, blue=True, green=True))
         elif msg.new_state.state == RobotState.ERROR:
             self.led_cb(LedOutput(red=True, blue=False, green=False))
         
 
     def led_cb(self, msg: LedOutput):
-        self.get_logger().info(f'Setting LEDs: \n{msg}')
+        self.get_logger().info(f'Setting LEDs: r: {msg.red}, g: {msg.green}, b: {msg.blue}')
         self.pi.set_PWM_dutycycle(self.ledPins['r'], msg.red*25)
         self.pi.set_PWM_dutycycle(self.ledPins['g'], msg.green*25)
         self.pi.set_PWM_dutycycle(self.ledPins['b'], msg.blue*25)

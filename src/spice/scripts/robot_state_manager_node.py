@@ -7,32 +7,52 @@ import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
 from rclpy.action import ActionClient
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoSHistoryPolicy
 
 from nav2_msgs.action import NavigateToPose
 
-from spice_msgs.msg import RobotState, RobotStateTransition, Id
+from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType
 from spice_msgs.srv import Heartbeat, RobotTask
-
+from work_tree import WorkTree, Vertex
 import robot_state
+
 
 class ROBOT_STATE(enum.IntEnum):
     STARTUP = 0
     READY_FOR_JOB = 1
-    MOVING = 2
-    PROCESSING = 3
-    ERROR = 4
+    FIND_WORKCELL = 2
+    MOVING = 3
+    REGISTER_WORK = 4
+    WAIT_IN_QUEUE = 5
+    ENTER_WORKCELL = 6
+    READY_FOR_PROCESS = 7
+    PROCESS_DONE = 8
+    EXIT_WORKCELL = 9
+    ERROR = 10
+   
 
 class RobotStateManager(Node):
+    task_tree: WorkTree
+    
     def __init__(self) -> None:
         super().__init__('robot_state_manager_node')
         robot_ns = os.environ.get('ROBOT_NAMESPACE')
         if robot_ns is None:
             print('Could not get robot namespace from the environment')
             raise Exception()
-        self.id = robot_ns
-        self.current_task = None
+        self.id = Id(id=robot_ns, robot_type=RobotType(type=RobotType.CARRIER_ROBOT))
+        self.current_work = None
+        self.current_work_cell_info = None
+        self.task_tree = None
 
-        self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', 10)
+        qos = QoSProfile(
+                history = QoSHistoryPolicy.KEEP_LAST, 
+                reliability = QoSReliabilityPolicy.RELIABLE,
+                durability = QoSDurabilityPolicy.TRANSIENT_LOCAL,
+                depth = 10
+            )
+        
+        self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', qos)
 
         self.heartbeat_client = self.create_client(Heartbeat, '/heartbeat')
         self.heartbeat_timer = self.create_timer(5, self.heartbeat_timer_cb)
@@ -48,15 +68,22 @@ class RobotStateManager(Node):
         self.states: "[RobotState]" = [
             robot_state.StartUpState(self),
             robot_state.ReadyForJobState(self),
+            robot_state.FindWorkCell(self),
             robot_state.MovingState(self),
-            robot_state.ProcessingState(self),
+            robot_state.ProcessRegisterWorkState(self),
+            robot_state.ProcessWaitQueueState(self),
+            robot_state.EnterWorkCellState(self),
+            robot_state.ProcessReadyForProcessingState(self),
+            robot_state.ProcessProcessingDoneState(self),
+            robot_state.ProcessExitWorkCellState(self),
             robot_state.ErrorState(self)
         ]
+
         self.current_state = ROBOT_STATE.STARTUP
         self.state_transition_event_pub.publish(
             RobotStateTransition(new_state=RobotState(state=self.current_state),
                                  old_state=RobotState(state=ROBOT_STATE.STARTUP),
-                                 id=Id(id=self.id)))
+                                 id=self.id))
         self.states[self.current_state].init()
 
         self.get_logger().info('Finished intialization')
@@ -67,10 +94,22 @@ class RobotStateManager(Node):
         else:
             self.get_logger().info(f'State transition from: {self.current_state.name} to {new_state.name}')
 
+            def internal_robot_state_to_robot_state_msg_state(internal_state: ROBOT_STATE) -> RobotState:
+                robot_state_msg = RobotState(internal_state=internal_state.name)
+                if internal_state == ROBOT_STATE.STARTUP:
+                    robot_state_msg.state=RobotState.STARTUP
+                elif internal_state == ROBOT_STATE.READY_FOR_JOB:
+                    robot_state_msg.state=RobotState.MR_READY_FOR_JOB
+                elif internal_state == ROBOT_STATE.ERROR:
+                    robot_state_msg.state=RobotState.ERROR
+                else:
+                    robot_state_msg.state=RobotState.MR_PROCESSING_JOB
+                return robot_state_msg
+
             event_msg = RobotStateTransition()
-            event_msg.old_state = RobotState(state=self.current_state)
-            event_msg.new_state = RobotState(state=new_state)
-            event_msg.id = Id(id=self.id)
+            event_msg.old_state = internal_robot_state_to_robot_state_msg_state(self.current_state)
+            event_msg.new_state = internal_robot_state_to_robot_state_msg_state(new_state)
+            event_msg.id = self.id
             self.state_transition_event_pub.publish(event_msg)
 
             self.states[self.current_state].deinit()
@@ -80,11 +119,16 @@ class RobotStateManager(Node):
     def heartbeat_timer_cb(self):
         if self.current_state == ROBOT_STATE.READY_FOR_JOB \
             or self.current_state == ROBOT_STATE.MOVING \
-            or self.current_state == ROBOT_STATE.PROCESSING \
+            or self.current_state == ROBOT_STATE.FIND_WORKCELL\
+            or self.current_state == ROBOT_STATE.REGISTER_WORK \
+            or self.current_state == ROBOT_STATE.WAIT_IN_QUEUE \
+            or self.current_state == ROBOT_STATE.READY_FOR_PROCESS\
+            or self.current_state == ROBOT_STATE.PROCESS_DONE\
+            or self.current_state == ROBOT_STATE.EXIT_WORKCELL\
             or self.current_state == ROBOT_STATE.ERROR:
 
             if self.heartbeat_future is None:
-                heartbeat = Heartbeat.Request(id=Id(id=self.id))
+                heartbeat = Heartbeat.Request(id=self.id)
                 self.heartbeat_future = self.heartbeat_client.call_async(heartbeat)
                 self.heartbeat_future.add_done_callback(self.heartbeat_cb)
             else:

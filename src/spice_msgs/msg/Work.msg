@@ -1,0 +1,2 @@
+RobotType type
+string info
