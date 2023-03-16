@@ -36,6 +36,10 @@ void DynamicObstacleLayer::onInitialize()
       topic_, 10, std::bind(&DynamicObstacleLayer::DynamicObstacleCallback, this, _1));
   need_recalculation_ = false;
   current_ = true;
+  default_value_ = NO_INFORMATION;
+
+  Costmap2D* master = layered_costmap_->getCostmap();
+  resizeMap(master->getSizeInCellsX(), master->getSizeInCellsY(), master->getResolution(), master->getOriginX(), master->getOriginY());
   RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN] initialized and subribed to topic: %s", topic_);
 }
 
