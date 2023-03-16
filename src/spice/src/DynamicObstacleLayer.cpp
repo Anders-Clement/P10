@@ -64,6 +64,9 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
                                         double* max_x, double* max_y)
 {
   double maxmx, minmx, minmy, maxmy;
+  for(int i = 0; i<sizeof(costmap_); i++){
+    costmap_[i] = NO_INFORMATION;
+  }
   // if (need_recalculation_)
   // {
   //   last_min_x_ = *min_x;
