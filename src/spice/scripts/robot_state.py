@@ -157,6 +157,7 @@ class FindWorkCell(RobotStateTemplate):
         self.sm.current_work = self.sm.task_tree.get_next_work_types() 
 
         if len(self.sm.current_work) == 0: # no more work
+            self.sm.task_tree = None
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
             return
 
@@ -170,7 +171,8 @@ class FindWorkCell(RobotStateTemplate):
         alloc_workcell_request.robot_types = self.sm.current_work
 
         if not self.work_cell_allocator_client.wait_for_service(timeout_sec=5.0):
-            self.sm.get_logger().info("workcell allocator not available")
+            self.sm.get_logger().warn("workcell allocator not available")
+            self.sm.change_state(ROBOT_STATE.ERROR)
             return
 
         self.register_future = self.work_cell_allocator_client.call_async(alloc_workcell_request)
@@ -191,6 +193,7 @@ class FindWorkCell(RobotStateTemplate):
             
         else:
             self.sm.get_logger().info('Failed to allocate workcell to robot, are they available?')
+            self.sm.change_state(ROBOT_STATE.ERROR)
             
 
     def nav_goal_response_cb(self, future: Future):
@@ -220,7 +223,7 @@ class MovingState(RobotStateTemplate):
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.sm.change_state(ROBOT_STATE.REGISTER_WORK)
         else:
-            self.sm.current_task = None
+            self.sm.get_logger().info('Failed navigation, going to ERROR!')
             self.sm.change_state(ROBOT_STATE.ERROR)
     def on_nav_feedback(self, msg: NavigateToPose_FeedbackMessage):
         # feedback: NavigateToPose_Feedback = msg.feedback
@@ -264,8 +267,8 @@ class ProcessRegisterWorkState(RobotStateTemplate):
             self.sm.current_work_cell_info = response
             self.sm.change_state(ROBOT_STATE.WAIT_IN_QUEUE)
         else:
-            self.sm.get_logger().info("something went wrong in:" + self.sm.current_state.__str__())
-            self.sm.change_state(ROBOT_STATE.ERROR)##something went wrong
+            self.sm.get_logger().info("Could not register work at work cell, going to ERROR!")
+            self.sm.change_state(ROBOT_STATE.ERROR)
         
 
     def deinit(self):
@@ -342,8 +345,10 @@ class EnterWorkCellState(RobotStateTemplate):
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.sm.change_state(ROBOT_STATE.READY_FOR_PROCESS)
         else:
-            self.sm.current_task = None
             self.sm.change_state(ROBOT_STATE.ERROR)
+
+    def deinit(self):
+        pass
             
 
 class ProcessReadyForProcessingState(RobotStateTemplate):
@@ -417,9 +422,7 @@ class ProcessProcessingDoneState(RobotStateTemplate):
 
     
     def check_service_cb(self):
-        if(self.processing_is_done == False):
-            return
-        else:
+        if self.processing_is_done:
             self.sm.change_state(ROBOT_STATE.EXIT_WORKCELL)
     
    
@@ -469,6 +472,9 @@ class ErrorState(RobotStateTemplate):
 
     def init(self):
         self.recovery_timer.reset()
+        # clear job and task tree
+        self.sm.current_task = None
+        self.sm.task_tree = None
         
     def deinit(self):
         self.recovery_timer.cancel()

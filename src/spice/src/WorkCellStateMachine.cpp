@@ -67,8 +67,8 @@ void WorkCellStateMachine::on_register_robot(
     // TODO: do we want to implement simulated checks for work compatibility, queue lenght etc?
     m_enqueued_robots.emplace(*request);
     response->work_is_enqueued = true;
-    // TODO: processing pose and exit pose is just a 0.5m offset, consider if suitable
-    response->processing_pose.pose.position.x = m_transform.translation.x + 0.5;
+    // TODO: processing pose and exit pose is just an offset, consider if suitable
+    response->processing_pose.pose.position.x = m_transform.translation.x + 0.1;
     response->processing_pose.pose.position.y = m_transform.translation.y;
     response->processing_pose.pose.position.z = m_transform.translation.z;
     response->processing_pose.pose.orientation.x = m_transform.rotation.x;
@@ -76,13 +76,19 @@ void WorkCellStateMachine::on_register_robot(
     response->processing_pose.pose.orientation.z = m_transform.rotation.z;
     response->processing_pose.pose.orientation.w = m_transform.rotation.w;
 
-    response->exit_pose.pose.position.x = m_transform.translation.x + 1.0;
+    response->exit_pose.pose.position.x = m_transform.translation.x + 0.2;
     response->exit_pose.pose.position.y = m_transform.translation.y;
     response->exit_pose.pose.position.z = m_transform.translation.z;
     response->exit_pose.pose.orientation.x = m_transform.rotation.x;
     response->exit_pose.pose.orientation.y = m_transform.rotation.y;
     response->exit_pose.pose.orientation.z = m_transform.rotation.z;
     response->exit_pose.pose.orientation.w = m_transform.rotation.w;
+
+    response->processing_pose.header.frame_id = "map";
+    response->processing_pose.header.stamp = m_nodehandle.get_clock()->now();
+    response->exit_pose.header.frame_id = "map";
+    response->exit_pose.header.stamp = m_nodehandle.get_clock()->now();
+    
 
     RCLCPP_INFO(m_nodehandle.get_logger(), "Enqueued robot: %s", request->robot_id.id.c_str());
 }
