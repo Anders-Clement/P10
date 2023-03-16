@@ -34,12 +34,11 @@ void DynamicObstacleLayer::onInitialize()
 
   subscription_ = nh_->create_subscription<geometry_msgs::msg::PoseArray>(
       topic_, 10, std::bind(&DynamicObstacleLayer::DynamicObstacleCallback, this, _1));
-
-
   need_recalculation_ = false;
   current_ = true;
   RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN] initialized and subribed to topic: %s", topic_);
 }
+
 
 void DynamicObstacleLayer::DynamicObstacleCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
 {
@@ -90,7 +89,6 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
   // }
 
   for (auto const& obstaclePoints : messageBuffer){
-      
     if (nh_->now().seconds() - obstaclePoints.second.header.stamp.sec > 10.0)
     {  // check if msg time is within threshold
       continue;
@@ -98,8 +96,8 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 
     for (auto pose : obstaclePoints.second.poses){
       unsigned int mx, my;
-      if(layered_costmap_->getCostmap()->worldToMap(pose.position.x, pose.position.y,mx,my)){
-        layered_costmap_->getCostmap()->setCost(mx,my,LETHAL_OBSTACLE);
+      if(/*layered_costmap_->getCostmap()->*/worldToMap(pose.position.x, pose.position.y,mx,my)){
+        /*layered_costmap_->getCostmap()->*/setCost(mx,my,LETHAL_OBSTACLE);
       }
 
       minmx=std::min(pose.position.x,minmx);
@@ -126,11 +124,11 @@ void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, 
 
   for(int j = min_j; j < max_j; j++){
     for(int i = min_i; i < max_i; i++){
-      int index = master_grid.getIndex(i,j);
-      if(master_grid.getCharMap()[index]==NO_INFORMATION){
+      int index = getIndex(i,j);
+      if(costmap_[index]==NO_INFORMATION){
         continue;
       }
-      master_grid.setCost(i,j,master_grid.getCharMap()[index]);
+      master_grid.setCost(i,j,costmap_[index]);
     }
 
   }

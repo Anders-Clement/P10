@@ -13,7 +13,7 @@ namespace nav2_costmap_2d
 {
 
 
-class DynamicObstacleLayer : public nav2_costmap_2d::Layer
+class DynamicObstacleLayer : public nav2_costmap_2d::Layer, public nav2_costmap_2d::Costmap2D
 {   
     public:
     DynamicObstacleLayer();
@@ -53,7 +53,7 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_;
     std::map<std::string, geometry_msgs::msg::PoseArray> messageBuffer;
     rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;
-    
+
 };
 }
 #endif
