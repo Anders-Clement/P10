@@ -95,7 +95,7 @@ class RobotStateManager(Node):
             self.get_logger().info(f'State transition from: {self.current_state.name} to {new_state.name}')
 
             def internal_robot_state_to_robot_state_msg_state(internal_state: ROBOT_STATE) -> RobotState:
-                robot_state_msg = RobotState(internal_state=internal_state.value)
+                robot_state_msg = RobotState(internal_state=internal_state.name)
                 if internal_state == ROBOT_STATE.STARTUP:
                     robot_state_msg.state=RobotState.STARTUP
                 elif internal_state == ROBOT_STATE.READY_FOR_JOB:

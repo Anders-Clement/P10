@@ -178,7 +178,7 @@ spice_msgs::msg::RobotState WorkCellStateMachine::internal_state_to_robot_state(
     {
         robot_state.state = spice_msgs::msg::RobotState::WC_READY_FOR_ROBOTS;
     }
-    robot_state.internal_state = static_cast<uint8_t>(state);
+    robot_state.internal_state = WORK_CELL_STATE_NAMES[static_cast<uint8_t>(state)];
     return robot_state;
 }
 

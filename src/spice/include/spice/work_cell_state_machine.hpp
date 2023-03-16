@@ -26,6 +26,14 @@ enum class WORK_CELL_STATE : uint8_t{
     NUM_STATES
 };
 
+static const std::string WORK_CELL_STATE_NAMES[static_cast<uint8_t>(WORK_CELL_STATE::NUM_STATES)] = {
+    "STARTUP",
+    "READY_FOR_ROBOT",
+    "ROBOT_ENTERING",
+    "PROCESSING",
+    "ROBOT_EXITING"
+};
+
 class WorkCellState;
 
 class WorkCellStateMachine
