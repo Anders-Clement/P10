@@ -12,49 +12,40 @@
 namespace nav2_costmap_2d
 {
 
-
 class DynamicObstacleLayer : public nav2_costmap_2d::Layer, public nav2_costmap_2d::Costmap2D
-{   
-    public:
-    DynamicObstacleLayer();
-    
-    virtual void onInitialize();
-    
-    virtual void updateBounds(
-    double robot_x, double robot_y, double robot_yaw, double * min_x,
-    double * min_y,
-    double * max_x,
-    double * max_y);
+{
+public:
+  DynamicObstacleLayer();
 
-    virtual void updateCosts(
-    nav2_costmap_2d::Costmap2D & master_grid,
-    int min_i, int min_j, int max_i, int max_j);
+  virtual void onInitialize();
 
-    virtual void reset(){
-        
-        return;
-    }
+  virtual void updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
+                            double* max_x, double* max_y);
 
-    virtual void onFootprintChanged();
+  virtual void updateCosts(nav2_costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j);
 
-    virtual bool isClearable() {return false;}
-    virtual void matchSize();
+  virtual void reset()
+  {
+    return;
+  }
 
-    virtual void DynamicObstacleCallback(geometry_msgs::msg::PoseArray::SharedPtr msg);
+  virtual void onFootprintChanged();
 
+  virtual bool isClearable()
+  {
+    return false;
+  }
+  virtual void matchSize();
+
+  virtual void DynamicObstacleCallback(geometry_msgs::msg::PoseArray::SharedPtr msg);
 
 private:
-
   double last_min_x_, last_min_y_, last_max_x_, last_max_y_;
-
-  // Indicates that the entire gradient should be recalculated next time.
-  bool need_recalculation_;
-    float update_;
-   std::string topic_;  
-    rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_;
-    std::map<std::string, geometry_msgs::msg::PoseArray> messageBuffer;
-    rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;
-
+  float update_;
+  std::string topic_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_;
+  std::map<std::string, geometry_msgs::msg::PoseArray> messageBuffer;
+  rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;
 };
-}
+}  // namespace nav2_costmap_2d
 #endif
