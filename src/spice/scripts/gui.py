@@ -49,17 +49,28 @@ class RobotManager:
         self.robots: list[sm_msg.Robot] = list()
 
     def check_new_robots(self, robots: list[sm_msg.Robot]):
+        self.robots = robots
+        return True
         # check if robots have been deregistered:
         new_robot_ids = [robot.id.id for robot in robots]
         robots_to_delete = [robot for robot in self.robots if robot.id.id not in new_robot_ids]
-        self.robots = [robot for robot in self.robots if robot not in robots_to_delete]
+        
+        if len(robots_to_delete) > 0:
+            self.robots = robots
+            return True
+        
+        #self.robots = [robot for robot in self.robots if robot not in robots_to_delete]
 
         # add new robots:
         known_ids = [robot.id.id for robot in self.robots]
         new_robots = [robot for robot in robots if robot.id.id not in known_ids]
-        self.robots += new_robots
+
+        if len(new_robots) > 0:
+            self.robots = robots
+            return True
+        #self.robots += new_robots
         
-        return len(robots_to_delete) > 0 or len(new_robots) > 0
+        return False
 
     def get_robot_infos(self) -> list[RobotInfo]:
         infos = list()
