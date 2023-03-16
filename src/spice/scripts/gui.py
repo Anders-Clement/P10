@@ -12,32 +12,6 @@ import dataclasses
 import spice_msgs.srv as sm_srv
 import spice_msgs.msg as sm_msg
 
-class ROBOT_STATE(enum.IntEnum):
-    MR_READY_FOR_JOB = sm_msg.RobotState.MR_READY_FOR_JOB
-    MR_PROCESSING_JOB = sm_msg.RobotState.MR_PROCESSING_JOB
-    WC_READY_FOR_ROBOTS = sm_msg.RobotState.WC_READY_FOR_ROBOTS
-    STARTUP = sm_msg.RobotState.STARTUP
-    ERROR = sm_msg.RobotState.ERROR
-
-class CARRIER_ROBOT_STATE(enum.IntEnum):
-    STARTUP = 0
-    READY_FOR_JOB = 1
-    FIND_WORKCELL = 2
-    MOVING = 3
-    REGISTER_WORK = 4
-    WAIT_IN_QUEUE = 5
-    READY_FOR_PROCESS = 6
-    PROCESS_DONE =7
-    EXIT_WORKCELL = 8
-    ERROR = 9
-
-class WORK_CELL_ROBOT_STATE(enum.IntEnum):
-    STARTUP = 0
-    READY_FOR_ROBOT = 1
-    ROBOT_ENTERING = 2
-    PROCESSING = 3
-    ROBOT_EXITING = 4
-    NUM_STATES = 5
 
 @dataclasses.dataclass
 class RobotInfo:
@@ -49,27 +23,11 @@ class RobotManager:
         self.robots: list[sm_msg.Robot] = list()
 
     def check_new_robots(self, robots: list[sm_msg.Robot]):
-        # check if robots have been deregistered:
-        new_robot_ids = [robot.id.id for robot in robots]
-        robots_to_delete = [robot for robot in self.robots if robot.id.id not in new_robot_ids]
-        self.robots = [robot for robot in self.robots if robot not in robots_to_delete]
-
-        # add new robots:
-        known_ids = [robot.id.id for robot in self.robots]
-        new_robots = [robot for robot in robots if robot.id.id not in known_ids]
-        self.robots += new_robots
-        
-        return len(robots_to_delete) > 0 or len(new_robots) > 0
+        self.robots = robots
+        return True
 
     def get_robot_infos(self) -> list[RobotInfo]:
-        infos = list()
-        for robot in self.robots:
-            if robot.id.robot_type.type == sm_msg.RobotType.CARRIER_ROBOT:
-                internal_state = CARRIER_ROBOT_STATE(robot.robot_state.internal_state)
-            else:
-                internal_state = WORK_CELL_ROBOT_STATE(robot.robot_state.internal_state)
-            infos.append(RobotInfo(robot.id.id, internal_state))
-        return infos
+        return [RobotInfo(robot.id.id, robot.robot_state.internal_state) for robot in self.robots]
 
 
 class Ui(Node):
@@ -98,6 +56,8 @@ class Ui(Node):
             self.frame.destroy()
         self.frame = ttk.Frame(self.root, padding=10)
         self.frame.grid()
+        self.num_robots_label = ttk.Label(self.frame, text="Number of robots: ?", padding=5)
+        self.num_robots_label.grid(column=0, row=0, rowspan=2)
 
     def loop(self):
         self.root.after(50, self.spin)
@@ -114,15 +74,12 @@ class Ui(Node):
     def get_robots_cb(self, future: rclpy.Future):
         result: sm_srv.GetRobots.Response = future.result()
         if self.robot_manager.check_new_robots(result.robots):
-            self.get_logger().debug('Got a change in robots or their states')
             robot_info = self.robot_manager.get_robot_infos()
             self.reset_gui_frame()
-
+            self.num_robots_label['text'] = 'Number of robots: ' + str(len(robot_info))
             for i, info in enumerate(robot_info):
-                name_label = ttk.Label(self.frame, text=info.name + ":", padding=5).grid(column=0, row=i)
-                state_label = ttk.Label(self.frame, text=info.state, padding=5).grid(column=1, row=i)
-                self.labels.append(name_label)
-                self.labels.append(state_label)
+                ttk.Label(self.frame, text=info.name + ":", padding=5).grid(column=0, row=i)
+                ttk.Label(self.frame, text=info.state, padding=5).grid(column=1, row=i)
 
         
 if __name__ == '__main__':

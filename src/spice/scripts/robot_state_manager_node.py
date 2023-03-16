@@ -24,10 +24,11 @@ class ROBOT_STATE(enum.IntEnum):
     MOVING = 3
     REGISTER_WORK = 4
     WAIT_IN_QUEUE = 5
-    READY_FOR_PROCESS = 6
-    PROCESS_DONE =7
-    EXIT_WORKCELL = 8
-    ERROR = 9
+    ENTER_WORKCELL = 6
+    READY_FOR_PROCESS = 7
+    PROCESS_DONE = 8
+    EXIT_WORKCELL = 9
+    ERROR = 10
    
 
 class RobotStateManager(Node):
@@ -41,6 +42,7 @@ class RobotStateManager(Node):
             raise Exception()
         self.id = Id(id=robot_ns, robot_type=RobotType(type=RobotType.CARRIER_ROBOT))
         self.current_work = None
+        self.current_work_cell_info = None
         self.task_tree = None
 
         qos = QoSProfile(
@@ -70,6 +72,7 @@ class RobotStateManager(Node):
             robot_state.MovingState(self),
             robot_state.ProcessRegisterWorkState(self),
             robot_state.ProcessWaitQueueState(self),
+            robot_state.EnterWorkCellState(self),
             robot_state.ProcessReadyForProcessingState(self),
             robot_state.ProcessProcessingDoneState(self),
             robot_state.ProcessExitWorkCellState(self),
@@ -92,22 +95,15 @@ class RobotStateManager(Node):
             self.get_logger().info(f'State transition from: {self.current_state.name} to {new_state.name}')
 
             def internal_robot_state_to_robot_state_msg_state(internal_state: ROBOT_STATE) -> RobotState:
-                robot_state_msg = RobotState(internal_state=internal_state.value)
+                robot_state_msg = RobotState(internal_state=internal_state.name)
                 if internal_state == ROBOT_STATE.STARTUP:
                     robot_state_msg.state=RobotState.STARTUP
                 elif internal_state == ROBOT_STATE.READY_FOR_JOB:
                     robot_state_msg.state=RobotState.MR_READY_FOR_JOB
-                elif internal_state == ROBOT_STATE.MOVING or \
-                        internal_state == ROBOT_STATE.REGISTER_WORK or \
-                        internal_state == ROBOT_STATE.WAIT_IN_QUEUE or \
-                        internal_state == ROBOT_STATE.READY_FOR_PROCESS or \
-                        internal_state == ROBOT_STATE.PROCESS_DONE or \
-                        internal_state == ROBOT_STATE.EXIT_WORKCELL:
-                    robot_state_msg.state=RobotState.MR_PROCESSING_JOB
                 elif internal_state == ROBOT_STATE.ERROR:
                     robot_state_msg.state=RobotState.ERROR
                 else:
-                    self.get_logger().error("Internal state is not published correctly")
+                    robot_state_msg.state=RobotState.MR_PROCESSING_JOB
                 return robot_state_msg
 
             event_msg = RobotStateTransition()

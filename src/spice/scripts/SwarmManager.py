@@ -103,7 +103,7 @@ class SwarmManager(Node):
         new_state = self.robots_dict[msg.id.id].robot_state
         self.robots_dict[msg.id.id].heartbeat_time = datetime.now()
 
-        self.get_logger().info(f'Got state transition event {msg} \n old robot_state: {old_state}, new robot_state: {new_state}')
+        self.get_logger().info(f'Got state transition event from: {msg.id.id} \n from state: {old_state.state}, to state: {new_state.state}')
 
     def get_robots_by_type_callback(self, request: GetRobotsByType.Request, response: GetRobotsByType.Response):
         if request.type.type == RobotType.WORK_CELL_ANY:
