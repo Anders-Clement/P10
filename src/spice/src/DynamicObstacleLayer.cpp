@@ -36,6 +36,7 @@ void DynamicObstacleLayer::onInitialize()
 
   need_recalculation_ = false;
   current_ = true;
+  RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN] initialized and subribed to topic: %s", topic_);
 }
 
 void DynamicObstacleLayer::DynamicObstacleCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
@@ -95,6 +96,8 @@ void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, 
 
   for (auto obstaclePoints : messageBuffer)
   {  // for msg in buffer update cost map
+    RCLCPP_INFO(logger_, "obstacle points proccesed with frame id: %s",obstaclePoints.second.header.frame_id);
+    
     if (nh_->now().seconds() - obstaclePoints.second.header.stamp.sec > 10.0)
     {  // check if msg time is within threshold
       continue;
@@ -102,13 +105,15 @@ void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, 
 
     for (auto pose : obstaclePoints.second.poses)
     {  // get pose index in master_grid
-
+      RCLCPP_INFO(logger_, "obstacle point at world position: x: %f y:%f z:%f",pose.position.x, pose.position.y, pose.position.z);
       unsigned int mx, my;
       if (master_grid.worldToMap(pose.position.x, pose.position.y, mx, my))
       {
+        RCLCPP_INFO(logger_, "obstacle was succesfully transformed to costmap");
         int index = master_grid.getIndex(mx, my);
         master_array[index] = LETHAL_OBSTACLE;
       }
+      else RCLCPP_INFO(logger_, "obstacle failed to transform to costmap");
     }
   }
 }
