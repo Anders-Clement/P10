@@ -24,10 +24,11 @@ class ROBOT_STATE(enum.IntEnum):
     MOVING = 3
     REGISTER_WORK = 4
     WAIT_IN_QUEUE = 5
-    READY_FOR_PROCESS = 6
-    PROCESS_DONE =7
-    EXIT_WORKCELL = 8
-    ERROR = 9
+    ENTER_WORKCELL = 6
+    READY_FOR_PROCESS = 7
+    PROCESS_DONE = 8
+    EXIT_WORKCELL = 9
+    ERROR = 10
    
 
 class RobotStateManager(Node):
@@ -41,6 +42,7 @@ class RobotStateManager(Node):
             raise Exception()
         self.id = Id(id=robot_ns, robot_type=RobotType(type=RobotType.CARRIER_ROBOT))
         self.current_work = None
+        self.current_work_cell_info = None
         self.task_tree = None
 
         qos = QoSProfile(
@@ -70,6 +72,7 @@ class RobotStateManager(Node):
             robot_state.MovingState(self),
             robot_state.ProcessRegisterWorkState(self),
             robot_state.ProcessWaitQueueState(self),
+            robot_state.EnterWorkCellState(self),
             robot_state.ProcessReadyForProcessingState(self),
             robot_state.ProcessProcessingDoneState(self),
             robot_state.ProcessExitWorkCellState(self),
