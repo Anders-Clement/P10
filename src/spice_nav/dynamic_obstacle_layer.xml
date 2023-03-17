@@ -1,5 +1,5 @@
 
-<library path="spice_core">
+<library path="spice_nav_core">
   <class type="nav2_costmap_2d::DynamicObstacleLayer" base_class_type="nav2_costmap_2d::Layer">
     <description>This is a small plugins that add dynamic obstacles to the robot costmap</description>
   </class>

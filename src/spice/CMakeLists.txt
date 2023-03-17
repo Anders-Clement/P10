@@ -25,9 +25,6 @@ find_package(spice_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
-
-
-
 include_directories(
   include
 )

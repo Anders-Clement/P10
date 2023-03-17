@@ -21,8 +21,8 @@ class DynamicObstacleAvoidance(Node):
     def __init__(self):
         super().__init__('dynamic_obstacle_avoidance')
         self.ns = os.getenv("ROBOT_NAMESPACE")
-        self.to_frame_rel = self.ns + '_odom' #Needs to match Global_frame_id in localcostmap in nav config
-
+        #self.to_frame_rel = self.ns + '_odom' #Needs to match Global_frame_id in localcostmap in nav config
+        self.to_frame_rel = 'map'
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.cli_getRobots= self.create_client(GetRobotsByType,'/get_robots_by_type')

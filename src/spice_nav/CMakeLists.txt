@@ -32,6 +32,9 @@ set(dep_pkgs
   nav2_costmap_2d
   pluginlib
   geometry_msgs
+  tf2_ros
+  tf2_msgs
+  tf2
   )
 
 add_library(${lib_name} SHARED
