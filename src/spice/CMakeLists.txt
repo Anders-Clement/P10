@@ -112,6 +112,7 @@ set(dep_pkgs
     nav2_costmap_2d
     pluginlib
     geometry_msgs
+    spice_msgs
     )
 
 
