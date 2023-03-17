@@ -29,6 +29,7 @@ include_directories(
 
 set(dep_pkgs
   rclcpp
+  spice_msgs
   nav2_costmap_2d
   pluginlib
   geometry_msgs
