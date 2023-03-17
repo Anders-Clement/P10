@@ -3,7 +3,7 @@
 #include "nav2_costmap_2d/footprint.hpp"
 #include "rclcpp/parameter_events_filter.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
-#include "spice/dynamic_obstacle_layer.hpp"
+#include "spice_nav/dynamic_obstacle_layer.hpp"
 
 using nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE;
 using nav2_costmap_2d::LETHAL_OBSTACLE;
@@ -36,7 +36,8 @@ void DynamicObstacleLayer::onInitialize()
 	
 	tf_buffer_ =
       std::make_unique<tf2_ros::Buffer>(nh_->get_clock());
-    tf_listener_ =
+    
+	tf_listener_ =
       std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
 	current_ = true;
