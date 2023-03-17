@@ -33,6 +33,11 @@ void DynamicObstacleLayer::onInitialize()
 
 	subscription_ = nh_->create_subscription<geometry_msgs::msg::PoseArray>(
 		topic_, 10, std::bind(&DynamicObstacleLayer::DynamicObstacleCallback, this, _1));
+	
+	tf_buffer_ =
+      std::make_unique<tf2_ros::Buffer>(nh_->get_clock());
+    tf_listener_ =
+      std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
 	current_ = true;
 	default_value_ = NO_INFORMATION;

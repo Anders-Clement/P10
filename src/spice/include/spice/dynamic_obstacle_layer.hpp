@@ -8,6 +8,9 @@
 #include "nav2_costmap_2d/layer.hpp"
 #include "nav2_costmap_2d/layered_costmap.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
+#include "tf2/exceptions.h"
+#include "tf2_ros/transform_listener.h"
+#include "tf2_ros/buffer.h"
 
 namespace nav2_costmap_2d
 {
@@ -40,12 +43,14 @@ public:
   virtual void DynamicObstacleCallback(geometry_msgs::msg::PoseArray::SharedPtr msg);
 
 private:
-  double last_min_x_, last_min_y_, last_max_x_, last_max_y_;
-  float update_;
-  std::string topic_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_;
-  std::map<std::string, geometry_msgs::msg::PoseArray> messageBuffer;
-  rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;
+    double last_min_x_, last_min_y_, last_max_x_, last_max_y_;
+    float update_;
+    std::string topic_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_;
+    std::map<std::string, geometry_msgs::msg::PoseArray> messageBuffer;
+    rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 };
 }  // namespace nav2_costmap_2d
 #endif
