@@ -66,7 +66,17 @@ void DynamicObstacleLayer::DynamicObstacleCallback(const geometry_msgs::msg::Pos
 	{	 // replace existing value;
 		messageBuffer[msg->header.frame_id] = poseArray;
 	}
-}
+	try{
+	tf_buffer_->lookupTransform("polybot04_base_link","polybot07_base_link", tf2::TimePointZero);
+	RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN]weei transformed stuff");
+	}	
+	catch(const tf2::TransformException & ex) {
+          RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN]did not transformed stuff because: %s",ex.what());
+          
+        }
+
+	
+}	
 
 void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
 										double* max_x, double* max_y)

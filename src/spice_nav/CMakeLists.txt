@@ -39,7 +39,6 @@ set(dep_pkgs
 
 add_library(${lib_name} SHARED
   src/DynamicObstacleLayer.cpp)
-include_directories(include)
 
 install(TARGETS ${lib_name}
   DESTINATION lib)
