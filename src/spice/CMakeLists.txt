@@ -99,6 +99,7 @@ install(TARGETS
     work_cell_allocator
     set_robot_task_poses
     DESTINATION lib/${PROJECT_NAME})
+    
 
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME})
@@ -123,10 +124,10 @@ install(PROGRAMS
   scripts/led_node.py
   scripts/SwarmManager.py
   scripts/robot_state_manager_node.py
-  scripts/dynamic_obstacle_avoidance.py
   scripts/work_tree.py
   scripts/gui.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
 
 ament_package()
