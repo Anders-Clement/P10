@@ -12,7 +12,7 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
 
-namespace nav2_costmap_2d
+namespace spice_nav_core
 {
 
 class DynamicObstacleLayer : public nav2_costmap_2d::Layer, public nav2_costmap_2d::Costmap2D
@@ -59,5 +59,5 @@ private:
     double ROBOT_RADIUS = 0.15;
     double ANGLE_INCREMENT;
 };
-}  // namespace nav2_costmap_2d
+}  // namespace spice_nav_core
 #endif
