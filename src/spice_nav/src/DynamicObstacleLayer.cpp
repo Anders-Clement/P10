@@ -75,21 +75,12 @@ void DynamicObstacleLayer::matchSize()
 
 void DynamicObstacleLayer::TFCallback(const tf2_msgs::msg::TFMessage::SharedPtr msg)
 {
-  for (auto tf : msg->transforms)
+  for (auto& tf : msg->transforms)
   {
 	if(tf.header.frame_id != "map"){
 		continue;
 	}
-
-	if (messageBuffer.find(tf.child_frame_id) == messageBuffer.end())
-	{  // frame id does not exist in buffer
-
-	  messageBuffer.insert({ tf.child_frame_id, tf });
-	}
-	else
-	{  // replace existing value;
-	  messageBuffer[tf.child_frame_id] = tf;
-	}
+	messageBuffer[tf.child_frame_id] = tf;
   }
 }
 
