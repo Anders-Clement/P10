@@ -65,7 +65,7 @@ if(BUILD_TESTING)
 endif()
 
 
-pluginlib_export_plugin_description_file(spice_nav_core plugin_descriptions.xml)
+pluginlib_export_plugin_description_file(${lib_name} plugin_descriptions.xml)
 ament_target_dependencies(${lib_name} ${dep_pkgs})
 
 ament_package()

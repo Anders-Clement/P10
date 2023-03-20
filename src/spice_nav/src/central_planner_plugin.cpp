@@ -45,7 +45,7 @@
 
 #include "spice_nav/central_planner.hpp"
 
-namespace spice_nav_core
+namespace nav2_core
 {
     using namespace std::chrono_literals;
 
@@ -110,7 +110,7 @@ nav_msgs::msg::Path CentralPlanner::createPlan(
     return response->plan;
 }
 
-}  // namespace spice_nav_core
+}  // namespace nav2_cores
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(spice_nav_core::CentralPlanner, nav2_core::GlobalPlanner)
+PLUGINLIB_EXPORT_CLASS(nav2_core::CentralPlanner, nav2_core::GlobalPlanner)
