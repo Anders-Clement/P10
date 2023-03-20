@@ -1,0 +1,18 @@
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence name="NavigateWithReplanning">
+      <DistanceController distance="1.0">
+        <ComputePathToPose goal="{goal}" path="{path}"/>
+      </DistanceController>
+      <Spin spin_dist="3.14"/>
+      <Wait wait_duration="2"/>
+      <Spin spin_dist="3.14"/>
+      <Wait wait_duration="2"/>
+      <Spin spin_dist="3.14"/>
+      <Wait wait_duration="2"/>
+      <Spin spin_dist="3.14"/>
+      <Wait wait_duration="2"/>
+      <FollowPath path="{path}"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>
