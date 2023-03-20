@@ -216,7 +216,7 @@ local_costmap:
           marking: True
           data_type: "LaserScan"
       dynamic_obstacle_layer:
-        plugin: "nav2_costmap_2d::DynamicObstacleLayer"
+        plugin: "spice_nav_core::DynamicObstacleLayer"
         enabled: True
         obstacle_points: 8.0
       static_layer:
