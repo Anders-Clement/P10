@@ -25,118 +25,138 @@ DynamicObstacleLayer::DynamicObstacleLayer()
 
 void DynamicObstacleLayer::onInitialize()
 {
-	nh_ = node_.lock();
-	declareParameter("enabled", rclcpp::ParameterValue(true));
-	declareParameter("topic", rclcpp::ParameterValue("dynamic_obstacle"));
-	nh_->get_parameter(name_ + "." + "enabled", enabled_);
-	nh_->get_parameter(name_ + "." + "topic", topic_);
+  nh_ = node_.lock();
+  declareParameter("enabled", rclcpp::ParameterValue(true));
+  declareParameter("topic", rclcpp::ParameterValue("/tf"));
+  declareParameter("obstacle_points", rclcpp::ParameterValue(8.0));
+  nh_->get_parameter(name_ + "." + "enabled", enabled_);
+  nh_->get_parameter(name_ + "." + "topic", topic_);
+  nh_->get_parameter(name_ + "." + "obstacle_points", obstacle_points_);
 
-	subscription_ = nh_->create_subscription<geometry_msgs::msg::PoseArray>(
-		topic_, 10, std::bind(&DynamicObstacleLayer::DynamicObstacleCallback, this, _1));
-	
-	tf_buffer_ =
-      std::make_unique<tf2_ros::Buffer>(nh_->get_clock());
-    
-	tf_listener_ =
-      std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  robot_name = getenv("ROBOT_NAMESPACE");
 
-	current_ = true;
-	default_value_ = NO_INFORMATION;
-	matchSize();
-	RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN] initialized and subribed to topic: %s", topic_);
+  subscription_ = nh_->create_subscription<tf2_msgs::msg::TFMessage>(
+	  topic_, 10, std::bind(&DynamicObstacleLayer::TFCallback, this, _1));
+
+  timer_ = nh_->create_wall_timer(5s, std::bind(&DynamicObstacleLayer::get_robots_on_timer_cb, this));
+  get_robots_cli = nh_->create_client<spice_msgs::srv::GetRobotsByType>("/get_robots_by_type");
+
+  ANGLE_INCREMENT = 2.0 * M_PI / obstacle_points_;
+  current_ = true;
+  default_value_ = NO_INFORMATION;
+  matchSize();
+  RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN] initialized");
+}
+
+void DynamicObstacleLayer::get_robots_on_timer_cb()
+{
+  if (!get_robots_cli->wait_for_service(1s))
+  {
+	RCLCPP_WARN(logger_, "Timeout on Swarm manager get_robots_by_type");
+	return;
+  }
+
+  auto get_robots_request = std::make_shared<spice_msgs::srv::GetRobotsByType::Request>();
+  get_robots_request->type.type = spice_msgs::msg::RobotType::CARRIER_ROBOT;
+
+  using ServiceResponseFuture = rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedFuture;
+
+  auto get_robots_cb = [this](ServiceResponseFuture future) { robot_list = future.get()->robots; };
+
+  auto futureResult = get_robots_cli->async_send_request(get_robots_request, get_robots_cb);
 }
 
 void DynamicObstacleLayer::matchSize()
 {
-	Costmap2D* master = layered_costmap_->getCostmap();
-	resizeMap(master->getSizeInCellsX(), master->getSizeInCellsY(), master->getResolution(), master->getOriginX(),
-				master->getOriginY());
+  Costmap2D* master = layered_costmap_->getCostmap();
+  resizeMap(master->getSizeInCellsX(), master->getSizeInCellsY(), master->getResolution(), master->getOriginX(),
+			master->getOriginY());
 }
 
-void DynamicObstacleLayer::DynamicObstacleCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
+void DynamicObstacleLayer::TFCallback(const tf2_msgs::msg::TFMessage::SharedPtr msg)
 {
-	geometry_msgs::msg::PoseArray poseArray = *msg;
-
-	if (messageBuffer.find(msg->header.frame_id) == messageBuffer.end())
-	{	 // frame id does not exist in map
-
-		messageBuffer.insert({ msg->header.frame_id, poseArray });
+  for (auto& tf : msg->transforms)
+  {
+	if(tf.header.frame_id != "map"){
+		continue;
 	}
-	else
-	{	 // replace existing value;
-		messageBuffer[msg->header.frame_id] = poseArray;
-	}
-	try{
-	tf_buffer_->lookupTransform("polybot04_base_link","polybot07_base_link", tf2::TimePointZero);
-	RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN]weei transformed stuff");
-	}	
-	catch(const tf2::TransformException & ex) {
-          RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN]did not transformed stuff because: %s",ex.what());
-          
-        }
-
-	
-}	
+	messageBuffer[tf.child_frame_id] = tf;
+  }
+}
 
 void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
 										double* max_x, double* max_y)
+{
+  double wx, wy;
+  matchSize();
+  geometry_msgs::msg::TransformStamped robot_tf;
+  for (auto const& robot : robot_list)
+  {
+	if (robot.id.id == robot_name)
 	{
-	double maxmx, minmx, minmy, maxmy;
-	matchSize();
+	  continue;
+	}
 
-	for (auto const& obstaclePoints : messageBuffer)
-	{
-		if (nh_->now().seconds() - obstaclePoints.second.header.stamp.sec > 10.0)
-		{  // check if msg time is within threshold
-		continue;
-		}
+	unsigned int mx, my;
+	
+	robot_tf = messageBuffer[robot.id.id + "_base_link"];
+	wx = robot_tf.transform.translation.x;
+	wy = robot_tf.transform.translation.y;
 
-		for (auto pose : obstaclePoints.second.poses)
+	if (worldToMap(wx, wy, mx, my))
+	  {
+		setCost(mx, my, LETHAL_OBSTACLE);
+		*min_x = std::min(wx, *min_x);
+		*min_y = std::min(wy, *min_y);
+		*max_x = std::max(wx, *max_x);
+		*max_y = std::max(wy, *max_y);
+	  }
+
+	  // put in additional points
+	  for (int i = 0; i < obstacle_points_; i++)
+	  {
+		wx = robot_tf.transform.translation.x + (ROBOT_RADIUS * std::cos(ANGLE_INCREMENT * i));
+		wy = robot_tf.transform.translation.y + (ROBOT_RADIUS * std::sin(ANGLE_INCREMENT * i));
+
+		if (worldToMap(wx, wy, mx, my))
 		{
-		unsigned int mx, my;
-		if (worldToMap(pose.position.x, pose.position.y, mx, my))
-		{
-			setCost(mx, my, LETHAL_OBSTACLE);
-		}
+		  setCost(mx, my, LETHAL_OBSTACLE);
 
-		minmx = std::min(pose.position.x, minmx);
-		minmy = std::min(pose.position.y, minmy);
-		maxmx = std::max(pose.position.x, maxmx);
-		maxmy = std::max(pose.position.y, maxmy);
+		  *min_x = std::min(wx, *min_x);
+		  *min_y = std::min(wy, *min_y);
+		  *max_x = std::max(wx, *max_x);
+		  *max_y = std::max(wy, *max_y);
 		}
 	}
-	*min_x = std::min(*min_x, minmx);
-	*min_y = std::min(*min_y, minmy);
-	*max_x = std::max(*max_x, maxmx);
-	*max_y = std::max(*max_y, maxmy);
+  }
 }
 
 void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i,
 									   int max_j)
 {
-	if (!enabled_)
-	{
-		return;
-	}
+  if (!enabled_)
+  {
+	return;
+  }
 
-	for (int j = min_j; j < max_j; j++)
+  for (int j = min_j; j < max_j; j++)
+  {
+	for (int i = min_i; i < max_i; i++)
 	{
-		for (int i = min_i; i < max_i; i++)
-		{
-		int index = getIndex(i, j);
-		if (costmap_[index] == NO_INFORMATION)
-		{
-			continue;
-		}
-		master_grid.setCost(i, j, costmap_[index]);
-		}
+	  int index = getIndex(i, j);
+	  if (costmap_[index] == NO_INFORMATION)
+	  {
+		continue;
+	  }
+	  master_grid.setCost(i, j, costmap_[index]);
 	}
+  }
 }
 
 void DynamicObstacleLayer::onFootprintChanged()
 {
-	RCLCPP_DEBUG(rclcpp::get_logger("nav2_costmap_2d"), "onFootprintChanged(): num footprint points: %lu",
-				layered_costmap_->getFootprint().size());
+  RCLCPP_DEBUG(rclcpp::get_logger("nav2_costmap_2d"), "onFootprintChanged(): num footprint points: %lu",
+			   layered_costmap_->getFootprint().size());
 }
 
 }  // namespace nav2_costmap_2d

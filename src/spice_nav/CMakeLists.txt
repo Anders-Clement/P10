@@ -29,6 +29,7 @@ include_directories(
 
 set(dep_pkgs
   rclcpp
+  spice_msgs
   nav2_costmap_2d
   pluginlib
   geometry_msgs
@@ -44,6 +45,11 @@ add_library(${lib_name} SHARED
 install(TARGETS ${lib_name}
   DESTINATION lib)
 
+install(
+  DIRECTORY launch config maps
+  DESTINATION share/${PROJECT_NAME}
+)
+
 
 
 if(BUILD_TESTING)
@@ -58,10 +64,6 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(PROGRAMS
-  scripts/dynamic_obstacle_avoidance.py
-  DESTINATION lib/${PROJECT_NAME}
-)
 
 pluginlib_export_plugin_description_file(spice_nav_core plugin_descriptions.xml)
 ament_target_dependencies(${lib_name} ${dep_pkgs})

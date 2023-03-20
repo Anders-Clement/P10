@@ -21,9 +21,11 @@
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-
+  <exec_depend>nav2_bringup</exec_depend>
   <export>
     <spice_nav_core plugin="${prefix}/plugin_descriptions.xml"/>
     <build_type>ament_cmake</build_type>
+    <exec_depend>nav2_bringup</exec_depend>
+    <exec_depend>slam_toolbox</exec_depend>
   </export>
 </package>
