@@ -110,7 +110,7 @@ nav_msgs::msg::Path CentralPlanner::createPlan(
     return response->plan;
 }
 
-}  // namespace nav2_cores
+}  // namespace nav2_core
 
 #include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(nav2_core::CentralPlanner, nav2_core::GlobalPlanner)
