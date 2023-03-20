@@ -12,7 +12,7 @@ using nav2_costmap_2d::NO_INFORMATION;
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
-namespace spice_nav_core
+namespace nav2_costmap_2d
 {
 
 DynamicObstacleLayer::DynamicObstacleLayer()
@@ -159,7 +159,7 @@ void DynamicObstacleLayer::onFootprintChanged()
 			   layered_costmap_->getFootprint().size());
 }
 
-}  // namespace spice_nav_core
+}  // namespace nav2_costmap_2d
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(spice_nav_core::DynamicObstacleLayer, nav2_costmap_2d::Layer)
+PLUGINLIB_EXPORT_CLASS(nav2_costmap_2d::DynamicObstacleLayer, nav2_costmap_2d::Layer)
