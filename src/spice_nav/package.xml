@@ -23,7 +23,7 @@
   <test_depend>ament_lint_common</test_depend>
 
   <export>
-    <costmap_2d plugin="${prefix}/dynamic_obstacle_layer.xml"/>
+    <spice_nav_core plugin="${prefix}/plugin_descriptions.xml"/>
     <build_type>ament_cmake</build_type>
   </export>
 </package>

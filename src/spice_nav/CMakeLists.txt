@@ -38,7 +38,8 @@ set(dep_pkgs
   )
 
 add_library(${lib_name} SHARED
-  src/DynamicObstacleLayer.cpp)
+  src/DynamicObstacleLayer.cpp
+  src/central_planner_plugin.cpp)
 
 install(TARGETS ${lib_name}
   DESTINATION lib)
@@ -62,7 +63,7 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-pluginlib_export_plugin_description_file(nav2_costmap_2d dynamic_obstacle_layer.xml)
+pluginlib_export_plugin_description_file(spice_nav_core plugin_descriptions.xml)
 ament_target_dependencies(${lib_name} ${dep_pkgs})
 
 ament_package()
