@@ -24,6 +24,7 @@ find_package(tf2_msgs REQUIRED)
 find_package(spice_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(nav_msgs REQUIRED)
 
 include_directories(
   include
@@ -89,6 +90,13 @@ ament_target_dependencies(
   std_srvs
   geometry_msgs
   tf2_ros
+)
+
+add_executable(central_path_planner src/central_path_planner.cpp)
+ament_target_dependencies(
+  central_path_planner
+  rclcpp
+  nav_msgs
 )
 
 install(TARGETS
