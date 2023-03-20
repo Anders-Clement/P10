@@ -31,7 +31,7 @@ def generate_launch_description():
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory('linorobot2_navigation'),
+                os.path.join(get_package_share_directory('spice_nav'),
                              'launch/navigation.launch.py')
             ),
             launch_arguments={

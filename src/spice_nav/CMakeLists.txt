@@ -44,6 +44,11 @@ add_library(${lib_name} SHARED
 install(TARGETS ${lib_name}
   DESTINATION lib)
 
+install(
+  DIRECTORY launch config maps
+  DESTINATION share/${PROJECT_NAME}
+)
+
 
 
 if(BUILD_TESTING)
@@ -58,10 +63,6 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(PROGRAMS
-  scripts/dynamic_obstacle_avoidance.py
-  DESTINATION lib/${PROJECT_NAME}
-)
 
 pluginlib_export_plugin_description_file(nav2_costmap_2d dynamic_obstacle_layer.xml)
 ament_target_dependencies(${lib_name} ${dep_pkgs})
