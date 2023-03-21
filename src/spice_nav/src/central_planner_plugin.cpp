@@ -121,11 +121,25 @@ nav_msgs::msg::Path CentralPlanner::createPlan(
     request->goal = goal;
     request->tolerance = goal_tolerance_;
     request->id.id = robot_namespace_;
+
+    auto start_time = node_->now();
     
     auto future = central_planner_client->async_send_request(request);
-    future.wait();
-    spice_msgs::srv::GetPlan::Response::SharedPtr response = future.get();
-    RCLCPP_INFO(node_->get_logger(), "Got path from central planner with %ld poses", response->plan.poses.size());
+    auto status = future.wait_for(1s);
+    if(status == std::future_status::timeout)
+    {
+      RCLCPP_ERROR(node_->get_logger(), "Central planner took too long! Aborting planning...");
+      return nav_msgs::msg::Path();
+    }
+
+    spice_msgs::srv::GetPlan::Response::SharedPtr response = future.get(); 
+         
+    auto duration = (node_->now()-start_time).nanoseconds()*10e-9;
+    RCLCPP_INFO(node_->get_logger(), 
+      "Got path from central planner with %ld poses in %f seconds", 
+      response->plan.poses.size(), 
+      duration);
+
     return response->plan;
 }
 
