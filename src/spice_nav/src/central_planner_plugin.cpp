@@ -104,12 +104,10 @@ nav_msgs::msg::Path CentralPlanner::createPlan(
     request->start = start;
     request->goal = goal;
     request->tolerance = goal_tolerance_;
-    // auto future = central_planner_client->async_send_request(request);
-    // RCLCPP_INFO(node_->get_logger(), "Send planning request");
-    // rclcpp::spin_until_future_complete(node_, future);
-    // auto response = future.get();
-    auto response = debug_straight_line_planner(request);
-    RCLCPP_INFO(node_->get_logger(), "Got response path with %d poses", response->plan.poses.size());
+    auto future = central_planner_client->async_send_request(request);
+    future.wait();
+    nav_msgs::srv::GetPlan::Response::SharedPtr response = future.get();
+    RCLCPP_INFO(node_->get_logger(), "Got path from central planner with %d poses", response->plan.poses.size());
     return response->plan;
 }
 
