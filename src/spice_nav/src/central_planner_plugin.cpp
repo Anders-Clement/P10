@@ -105,8 +105,10 @@ nav_msgs::msg::Path CentralPlanner::createPlan(
     request->goal = goal;
     request->tolerance = goal_tolerance_;
     auto future = central_planner_client->async_send_request(request);
+    RCLCPP_INFO(node_->get_logger(), "Send planning request");
     rclcpp::spin_until_future_complete(node_, future);
     auto response = future.get();
+    RCLCPP_INFO(node_->get_logger(), "Got response path with %d poses", response->plan.poses.size());
     return response->plan;
 }
 
