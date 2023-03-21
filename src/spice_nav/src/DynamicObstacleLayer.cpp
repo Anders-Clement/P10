@@ -98,8 +98,8 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 	}
 
 	unsigned int mx, my;
-	
-	robot_tf = messageBuffer[robot.id.id + "_base_link"];
+	try {
+	robot_tf = tf_->transform(messageBuffer[robot.id.id + "_base_link"], "odom");
 	wx = robot_tf.transform.translation.x;
 	wy = robot_tf.transform.translation.y;
 
@@ -128,6 +128,13 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 		  *max_y = std::max(wy, *max_y);
 		}
 	}
+	}
+	catch (const tf2::TransformException & ex) {
+          RCLCPP_INFO(logger_, "Could not transform to odom reason %s", ex);
+          return;
+        }
+
+
   }
 }
 
