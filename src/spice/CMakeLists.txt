@@ -106,6 +106,7 @@ install(TARGETS
     work_cell_simulator
     work_cell_allocator
     set_robot_task_poses
+    central_path_planner
     DESTINATION lib/${PROJECT_NAME})
     
 

@@ -7,6 +7,7 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
         "/get_plan", 
         std::bind(&CentralPathPlanner::get_plan_cb, this, std::placeholders::_1, std::placeholders::_2));
     m_global_frame = "map";
+    RCLCPP_INFO(get_logger(), "Central path planner is initialized");
 };
 
 void CentralPathPlanner::get_plan_cb(nav_msgs::srv::GetPlan::Request::SharedPtr request, nav_msgs::srv::GetPlan::Response::SharedPtr response)
@@ -26,7 +27,7 @@ void CentralPathPlanner::get_plan_cb(nav_msgs::srv::GetPlan::Request::SharedPtr 
         return;
     }
 
-    double interpolation_resolution = request->tolerance;
+    double interpolation_resolution = 0.05;//request->tolerance;
 
     response->plan.poses.clear();
     response->plan.header.stamp = now();
@@ -54,6 +55,7 @@ void CentralPathPlanner::get_plan_cb(nav_msgs::srv::GetPlan::Request::SharedPtr 
     }
 
     response->plan.poses.push_back(request->goal);
+    RCLCPP_INFO(get_logger(), "Created a plan with %d poses", response->plan.poses.size());
 }
 
 
