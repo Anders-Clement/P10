@@ -3,7 +3,4 @@
   <class type="nav2_costmap_2d::DynamicObstacleLayer" base_class_type="nav2_costmap_2d::Layer">
     <description>This is a small plugins that add dynamic obstacles to the robot costmap</description>
   </class>
-  <class type="nav2_core::CentralPlanner" base_class_type="nav2_core::GlobalPlanner">
-    <description>Planner pluging which receives plan from a central server instead of running locally.</description>
-  </class>
 </library>

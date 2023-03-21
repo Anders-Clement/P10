@@ -1,0 +1,5 @@
+<library path="spice_nav_central_planner">
+  <class name="spice_nav/CentralPlanner" type="spice_nav::CentralPlanner" base_class_type="nav2_core::GlobalPlanner">
+    <description>Plugin getting global plans from a centralized server.</description>
+  </class>
+</library>
