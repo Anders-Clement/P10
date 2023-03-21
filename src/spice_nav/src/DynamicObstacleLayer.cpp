@@ -33,15 +33,16 @@ void DynamicObstacleLayer::onInitialize()
   nh_->get_parameter(name_ + "." + "topic", topic_);
   nh_->get_parameter(name_ + "." + "obstacle_points", obstacle_points_);
 
+  transform_tolerance_ = tf2::durationFromSec(TF_TOLERANCE);
   robot_name = getenv("ROBOT_NAMESPACE");
+
+  global_frame_ = layered_costmap_->getGlobalFrameID();
 
   subscription_ = nh_->create_subscription<tf2_msgs::msg::TFMessage>(
 	  topic_, 10, std::bind(&DynamicObstacleLayer::TFCallback, this, _1));
 
   timer_ = nh_->create_wall_timer(5s, std::bind(&DynamicObstacleLayer::get_robots_on_timer_cb, this));
   get_robots_cli = nh_->create_client<spice_msgs::srv::GetRobotsByType>("/get_robots_by_type");
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(nh_->get_clock());
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   ANGLE_INCREMENT = 2.0 * M_PI / obstacle_points_;
   current_ = true;
@@ -92,7 +93,7 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 {
   double wx, wy;
   matchSize();
-  geometry_msgs::msg::TransformStamped robot_tf;
+  geometry_msgs::msg::TransformStamped in, out;
   for (auto const& robot : robot_list)
   {
 	if (robot.id.id == robot_name)
@@ -101,42 +102,46 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 	}
 
 	unsigned int mx, my;
-	try
+
+	// robot_tf = tf_buffer_->transform(messageBuffer[robot.id.id + "_base_link"], "odom");
+
+	if (!tf_->canTransform(in.header.frame_id, global_frame_, tf2_ros::fromMsg(in.header.stamp),
+						   tf2_ros::fromRclcpp(transform_tolerance_)))
 	{
-	  robot_tf = tf_buffer_->transform(messageBuffer[robot.id.id + "_base_link"], "odom");
-	  wx = robot_tf.transform.translation.x;
-	  wy = robot_tf.transform.translation.y;
+	  RCLCPP_INFO(logger_, "dynamic obstacle layer can't transform from %s to %s", global_frame_.c_str(),
+				  in.header.frame_id.c_str());
+	  continue;
+	}
+
+	tf_->transform(in, out, global_frame_, transform_tolerance_);
+
+	wx = out.transform.translation.x;
+	wy = out.transform.translation.y;
+
+	if (worldToMap(wx, wy, mx, my))
+	{
+	  setCost(mx, my, LETHAL_OBSTACLE);
+	  *min_x = std::min(wx, *min_x);
+	  *min_y = std::min(wy, *min_y);
+	  *max_x = std::max(wx, *max_x);
+	  *max_y = std::max(wy, *max_y);
+	}
+
+	// put in additional points
+	for (int i = 0; i < obstacle_points_; i++)
+	{
+	  wx = out.transform.translation.x + (ROBOT_RADIUS * std::cos(ANGLE_INCREMENT * i));
+	  wy = out.transform.translation.y + (ROBOT_RADIUS * std::sin(ANGLE_INCREMENT * i));
 
 	  if (worldToMap(wx, wy, mx, my))
 	  {
 		setCost(mx, my, LETHAL_OBSTACLE);
+
 		*min_x = std::min(wx, *min_x);
 		*min_y = std::min(wy, *min_y);
 		*max_x = std::max(wx, *max_x);
 		*max_y = std::max(wy, *max_y);
 	  }
-
-	  // put in additional points
-	  for (int i = 0; i < obstacle_points_; i++)
-	  {
-		wx = robot_tf.transform.translation.x + (ROBOT_RADIUS * std::cos(ANGLE_INCREMENT * i));
-		wy = robot_tf.transform.translation.y + (ROBOT_RADIUS * std::sin(ANGLE_INCREMENT * i));
-
-		if (worldToMap(wx, wy, mx, my))
-		{
-		  setCost(mx, my, LETHAL_OBSTACLE);
-
-		  *min_x = std::min(wx, *min_x);
-		  *min_y = std::min(wy, *min_y);
-		  *max_x = std::max(wx, *max_x);
-		  *max_y = std::max(wy, *max_y);
-		}
-	  }
-	}
-	catch (const tf2::TransformException& ex)
-	{
-	  RCLCPP_INFO(logger_, "Could not transform to odom reason %s", ex);
-	  return;
 	}
   }
 }

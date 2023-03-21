@@ -56,12 +56,13 @@ private:
     rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;
     rclcpp::TimerBase::SharedPtr timer_{nullptr};
     rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_robots_cli;
-    std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
-    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
     std::vector<spice_msgs::msg::Robot> robot_list; //list of all robots including workcell
+    tf2::Duration transform_tolerance_;
     std::string robot_name;
     double ROBOT_RADIUS = 0.15;
     double ANGLE_INCREMENT;
+    double TF_TOLERANCE = 10.0;
+    std::string global_frame_;
 };
 }  // namespace nav2_costmap_2d
 #endif
