@@ -7,11 +7,10 @@
       <Spin spin_dist="3.14"/>
       <Wait wait_duration="2"/>
       <Spin spin_dist="3.14"/>
-      <Wait wait_duration="2"/>
-      <Spin spin_dist="3.14"/>
-      <Wait wait_duration="2"/>
-      <Spin spin_dist="3.14"/>
-      <Wait wait_duration="2"/>
+      <WaitCondition>
+        <Wait wait_duration="2"/> 
+        <Spin spin_dist="6.28"/>
+      </WaitCondition/>
       <FollowPath path="{path}"/>
     </PipelineSequence>
   </BehaviorTree>
