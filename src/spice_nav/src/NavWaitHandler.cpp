@@ -32,7 +32,7 @@ public:
     {
         if (do_wait)
         {
-            return BT::NodeStatus::RUNNING;
+            return BT::NodeStatus::FAILURE;
         }
         else
         {

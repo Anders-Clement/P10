@@ -22,6 +22,7 @@ find_package(spice_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nav2_costmap_2d REQUIRED)
 find_package(pluginlib REQUIRED)
+find_package(behaviortree_cpp_v3 REQUIRED)
 
 include_directories(
   include
@@ -36,11 +37,11 @@ set(dep_pkgs
   tf2_ros
   tf2_msgs
   tf2
+  behaviortree_cpp_v3
   )
 
 add_library(${lib_name} SHARED
   src/DynamicObstacleLayer.cpp)
-
 
 install(TARGETS ${lib_name}
   DESTINATION lib)
@@ -49,7 +50,6 @@ install(
   DIRECTORY launch config maps
   DESTINATION share/${PROJECT_NAME}
 )
-
 
 
 
@@ -67,22 +67,14 @@ endif()
 
 
 pluginlib_export_plugin_description_file(nav2_costmap_2d dynamic_obstacle_layer.xml)
-
 ament_target_dependencies(${lib_name} ${dep_pkgs})
 
 ## NavWaitHandler Condition Node
-add_library( NavWaitHandlerConditionNode SHARED
-  src/NavWaitHandler.cpp
-)
-
+add_library( NavWaitHandlerConditionNode SHARED src/NavWaitHandler.cpp)
 ament_target_dependencies(NavWaitHandlerConditionNode ${dep_pkgs})
 target_compile_definitions(NavWaitHandlerConditionNode PRIVATE BT_PLUGIN_EXPORT) 
-
 install(TARGETS NavWaitHandlerConditionNode
-)
-
-ament_export_libraries(
-  NavWaitHandlerConditionNode
-)
+  DESTINATION lib)
+ament_export_libraries(NavWaitHandlerConditionNode)
 
 ament_package()
