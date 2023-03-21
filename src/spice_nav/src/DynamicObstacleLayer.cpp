@@ -40,6 +40,8 @@ void DynamicObstacleLayer::onInitialize()
 
   timer_ = nh_->create_wall_timer(5s, std::bind(&DynamicObstacleLayer::get_robots_on_timer_cb, this));
   get_robots_cli = nh_->create_client<spice_msgs::srv::GetRobotsByType>("/get_robots_by_type");
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(nh_->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   ANGLE_INCREMENT = 2.0 * M_PI / obstacle_points_;
   current_ = true;
@@ -77,8 +79,9 @@ void DynamicObstacleLayer::TFCallback(const tf2_msgs::msg::TFMessage::SharedPtr 
 {
   for (auto& tf : msg->transforms)
   {
-	if(tf.header.frame_id != "map"){
-		continue;
+	if (tf.header.frame_id != "map")
+	{
+	  continue;
 	}
 	messageBuffer[tf.child_frame_id] = tf;
   }
@@ -98,12 +101,13 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 	}
 
 	unsigned int mx, my;
-	try {
-	robot_tf = tf_->transform(messageBuffer[robot.id.id + "_base_link"], "odom");
-	wx = robot_tf.transform.translation.x;
-	wy = robot_tf.transform.translation.y;
+	try
+	{
+	  robot_tf = tf_buffer_->transform(messageBuffer[robot.id.id + "_base_link"], "odom");
+	  wx = robot_tf.transform.translation.x;
+	  wy = robot_tf.transform.translation.y;
 
-	if (worldToMap(wx, wy, mx, my))
+	  if (worldToMap(wx, wy, mx, my))
 	  {
 		setCost(mx, my, LETHAL_OBSTACLE);
 		*min_x = std::min(wx, *min_x);
@@ -127,14 +131,13 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 		  *max_x = std::max(wx, *max_x);
 		  *max_y = std::max(wy, *max_y);
 		}
+	  }
 	}
+	catch (const tf2::TransformException& ex)
+	{
+	  RCLCPP_INFO(logger_, "Could not transform to odom reason %s", ex);
+	  return;
 	}
-	catch (const tf2::TransformException & ex) {
-          RCLCPP_INFO(logger_, "Could not transform to odom reason %s", ex);
-          return;
-        }
-
-
   }
 }
 

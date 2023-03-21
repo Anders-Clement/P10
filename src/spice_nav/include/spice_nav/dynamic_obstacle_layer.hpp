@@ -9,6 +9,8 @@
 #include "nav2_costmap_2d/layered_costmap.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "tf2/exceptions.h"
+#include "tf2_ros/transform_listener.h"
+#include "tf2_ros/buffer.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
 
@@ -54,6 +56,8 @@ private:
     rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;
     rclcpp::TimerBase::SharedPtr timer_{nullptr};
     rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_robots_cli;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
     std::vector<spice_msgs::msg::Robot> robot_list; //list of all robots including workcell
     std::string robot_name;
     double ROBOT_RADIUS = 0.15;
