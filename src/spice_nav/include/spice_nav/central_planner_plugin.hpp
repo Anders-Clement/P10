@@ -53,7 +53,7 @@
 #include "nav2_util/robot_utils.hpp"
 #include "nav2_util/lifecycle_node.hpp"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
-#include "nav_msgs/srv/get_plan.hpp"
+#include "spice_msgs/srv/get_plan.hpp"
 
 namespace spice_nav
 {
@@ -84,16 +84,12 @@ public:
     const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal) override;
 
-  nav_msgs::srv::GetPlan::Response::SharedPtr debug_straight_line_planner(
-    nav_msgs::srv::GetPlan::Request::SharedPtr request);
-
-
 private:
   std::shared_ptr<tf2_ros::Buffer> tf_;
   nav2_util::LifecycleNode::SharedPtr node_;
   nav2_costmap_2d::Costmap2D * costmap_;
-  std::string global_frame_, name_;
-  rclcpp::Client<nav_msgs::srv::GetPlan>::SharedPtr central_planner_client;
+  std::string global_frame_, name_, robot_namespace_;
+  rclcpp::Client<spice_msgs::srv::GetPlan>::SharedPtr central_planner_client;
 
   double interpolation_resolution_;
   double goal_tolerance_;

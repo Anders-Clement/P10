@@ -92,11 +92,14 @@ ament_target_dependencies(
   tf2_ros
 )
 
-add_executable(central_path_planner src/central_path_planner.cpp)
+add_executable(central_path_planner 
+  src/central_path_planner.cpp
+  src/planners/straight_line_planner.cpp)
 ament_target_dependencies(
   central_path_planner
   rclcpp
   nav_msgs
+  spice_msgs
 )
 
 install(TARGETS
