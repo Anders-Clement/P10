@@ -92,11 +92,14 @@ ament_target_dependencies(
   tf2_ros
 )
 
-add_executable(central_path_planner src/central_path_planner.cpp)
+add_executable(central_path_planner 
+  src/central_path_planner.cpp
+  src/planners/straight_line_planner.cpp)
 ament_target_dependencies(
   central_path_planner
   rclcpp
   nav_msgs
+  spice_msgs
 )
 
 install(TARGETS
@@ -106,6 +109,7 @@ install(TARGETS
     work_cell_simulator
     work_cell_allocator
     set_robot_task_poses
+    central_path_planner
     DESTINATION lib/${PROJECT_NAME})
     
 

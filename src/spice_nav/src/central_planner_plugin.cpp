@@ -65,8 +65,23 @@ void CentralPlanner::configure(
     node_, name_ + ".interpolation_resolution", rclcpp::ParameterValue(
       0.1));
   node_->get_parameter(name_ + ".interpolation_resolution", interpolation_resolution_);
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name_ + ".tolerance", rclcpp::ParameterValue(
+      0.1));
+  node_->get_parameter(name_ + ".tolerance", goal_tolerance_);
 
-  central_planner_client = node_->create_client<nav_msgs::srv::GetPlan>("/get_plan");
+  char* ns = getenv("ROBOT_NAMESPACE");
+  if(!ns)
+  {
+    RCLCPP_ERROR(node_->get_logger(), 
+      "Failed to find ROBOT_NAMESPACE in environment, planner will be unable to fetch correct plans");
+  }
+  else
+  {
+      robot_namespace_ = {ns};
+  }
+
+  central_planner_client = node_->create_client<spice_msgs::srv::GetPlan>("/get_plan");
 }
 
 void CentralPlanner::cleanup()
@@ -74,6 +89,7 @@ void CentralPlanner::cleanup()
   RCLCPP_INFO(
     node_->get_logger(), "CleaningUp plugin %s of type NavfnPlanner",
     name_.c_str());
+    
 }
 
 void CentralPlanner::activate()
@@ -96,71 +112,21 @@ nav_msgs::msg::Path CentralPlanner::createPlan(
 {
     if(!central_planner_client->wait_for_service(1s))
     {
-        RCLCPP_WARN(node_->get_logger(), "Timeout on wait for central planner service");
+        RCLCPP_ERROR(node_->get_logger(), "Timeout on wait for central planner service");
         return nav_msgs::msg::Path();
     }
 
-    nav_msgs::srv::GetPlan::Request::SharedPtr request = std::make_shared<nav_msgs::srv::GetPlan::Request>();
+    spice_msgs::srv::GetPlan::Request::SharedPtr request = std::make_shared<spice_msgs::srv::GetPlan::Request>();
     request->start = start;
     request->goal = goal;
     request->tolerance = goal_tolerance_;
-    // auto future = central_planner_client->async_send_request(request);
-    // RCLCPP_INFO(node_->get_logger(), "Send planning request");
-    // rclcpp::spin_until_future_complete(node_, future);
-    // auto response = future.get();
-    auto response = debug_straight_line_planner(request);
-    RCLCPP_INFO(node_->get_logger(), "Got response path with %d poses", response->plan.poses.size());
+    request->id.id = robot_namespace_;
+    
+    auto future = central_planner_client->async_send_request(request);
+    future.wait();
+    spice_msgs::srv::GetPlan::Response::SharedPtr response = future.get();
+    RCLCPP_INFO(node_->get_logger(), "Got path from central planner with %ld poses", response->plan.poses.size());
     return response->plan;
-}
-
-nav_msgs::srv::GetPlan::Response::SharedPtr CentralPlanner::debug_straight_line_planner(nav_msgs::srv::GetPlan::Request::SharedPtr request)
-{
-  nav_msgs::srv::GetPlan::Response::SharedPtr response = std::make_shared<nav_msgs::srv::GetPlan::Response>();
-  // Checking if the goal and start state is in the global frame
-  if (request->start.header.frame_id != global_frame_) {
-      RCLCPP_ERROR(
-          node_->get_logger(), "Planner will only except start position from %s frame",
-          global_frame_.c_str());
-      return response;
-  }
-
-  if (request->goal.header.frame_id != global_frame_) {
-      RCLCPP_INFO(
-          node_->get_logger(), "Planner will only except goal position from %s frame",
-          global_frame_.c_str());
-      return response;
-  }
-
-  double interpolation_resolution = 0.05;//request->tolerance;
-
-  response->plan.poses.clear();
-  response->plan.header.stamp = node_->now();
-  response->plan.header.frame_id = global_frame_;
-  // calculating the number of loops for current value of interpolation_resolution_
-  int total_number_of_loop = std::hypot(
-      request->goal.pose.position.x - request->start.pose.position.x,
-      request->goal.pose.position.y - request->start.pose.position.y) /
-      interpolation_resolution;
-  double x_increment = (request->goal.pose.position.x - request->start.pose.position.x) / total_number_of_loop;
-  double y_increment = (request->goal.pose.position.y - request->start.pose.position.y) / total_number_of_loop;
-
-  for (int i = 0; i < total_number_of_loop; ++i) {
-      geometry_msgs::msg::PoseStamped pose;
-      pose.pose.position.x = request->start.pose.position.x + x_increment * i;
-      pose.pose.position.y = request->start.pose.position.y + y_increment * i;
-      pose.pose.position.z = 0.0;
-      pose.pose.orientation.x = 0.0;
-      pose.pose.orientation.y = 0.0;
-      pose.pose.orientation.z = 0.0;
-      pose.pose.orientation.w = 1.0;
-      pose.header.stamp = node_->now();
-      pose.header.frame_id = global_frame_;
-      response->plan.poses.push_back(pose);
-  }
-
-  response->plan.poses.push_back(request->goal);
-  RCLCPP_INFO(node_->get_logger(), "Created a plan with %d poses", response->plan.poses.size());
-  return response;
 }
 
 }  // namespace spice_nav
