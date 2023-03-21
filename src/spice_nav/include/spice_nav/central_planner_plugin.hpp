@@ -55,7 +55,7 @@
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
 #include "nav_msgs/srv/get_plan.hpp"
 
-namespace nav2_core
+namespace spice_nav
 {
 
 class CentralPlanner : public nav2_core::GlobalPlanner
@@ -95,6 +95,6 @@ private:
   double goal_tolerance_;
 };
 
-}  // namespace nav2_core
+}  // namespace spice_nav
 
 #endif  // SPICE_NAV_CENTRAL_PLANNER_PLUGIN_HPP
