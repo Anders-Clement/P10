@@ -94,6 +94,8 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
   double wx, wy;
   matchSize();
   geometry_msgs::msg::TransformStamped in, out;
+  unsigned int mx, my;
+
   for (auto const& robot : robot_list)
   {
 	if (robot.id.id == robot_name)
@@ -101,9 +103,12 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 	  continue;
 	}
 
-	unsigned int mx, my;
-
-	// robot_tf = tf_buffer_->transform(messageBuffer[robot.id.id + "_base_link"], "odom");
+	if (messageBuffer[robot.id.id + "_base_link"].header.frame_id == "")
+	{
+	  continue;
+	}
+	
+	in = messageBuffer[robot.id.id + "_base_link"];
 
 	if (!tf_->canTransform(in.header.frame_id, global_frame_, tf2_ros::fromMsg(in.header.stamp),
 						   tf2_ros::fromRclcpp(transform_tolerance_)))
