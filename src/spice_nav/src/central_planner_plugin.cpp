@@ -121,14 +121,14 @@ nav_msgs::srv::GetPlan::Response::SharedPtr CentralPlanner::debug_straight_line_
       RCLCPP_ERROR(
           node_->get_logger(), "Planner will only except start position from %s frame",
           global_frame_.c_str());
-      return;
+      return response;
   }
 
   if (request->goal.header.frame_id != global_frame_) {
       RCLCPP_INFO(
           node_->get_logger(), "Planner will only except goal position from %s frame",
           global_frame_.c_str());
-      return;
+      return response;
   }
 
   double interpolation_resolution = 0.05;//request->tolerance;

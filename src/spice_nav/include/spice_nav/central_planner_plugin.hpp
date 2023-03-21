@@ -84,7 +84,7 @@ public:
     const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal) override;
 
-  nav_msgs::srv::GetPlan::Response::SharedPtr CentralPlanner::debug_straight_line_planner(
+  nav_msgs::srv::GetPlan::Response::SharedPtr debug_straight_line_planner(
     nav_msgs::srv::GetPlan::Request::SharedPtr request);
 
 
