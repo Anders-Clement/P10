@@ -119,8 +119,8 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 
 	tf_->transform(in, out, global_frame_, transform_tolerance_);
 
-	wx = out.transform.translation.x;
-	wy = out.transform.translation.y;
+	wx = -out.transform.translation.x; //works by inverting signs 
+	wy = -out.transform.translation.y;
 
 	if (worldToMap(wx, wy, mx, my))
 	{
