@@ -11,14 +11,19 @@
                         </ReactiveFallback>
                     </RecoveryNode>
                 </RateController>
-                <!-- <Spin spin_dist="6.28"/> -->
-                <RecoveryNode number_of_retries="1" name="FollowPath">
-                    <FollowPath path="{path}" controller_id="FollowPath"/>
-                    <ReactiveFallback name="FollowPathRecoveryFallback">
-                        <GoalUpdated/>
-                        <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
-                    </ReactiveFallback>
-                </RecoveryNode>
+                <PipelineSequence name="WaitOrFollowPath">
+                    <RecoveryNode number_of_retries="100" name="WaitConditionRecoveryNode">
+                        <WaitCondition/>
+                        <Wait wait_duration="2"/>
+                    </RecoveryNode>
+                    <RecoveryNode number_of_retries="1" name="FollowPath">
+                        <FollowPath path="{path}" controller_id="FollowPath"/>
+                        <ReactiveFallback name="FollowPathRecoveryFallback">
+                            <GoalUpdated/>
+                            <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+                        </ReactiveFallback>
+                    </RecoveryNode>
+                </PipelineSequence>
             </PipelineSequence>
             <ReactiveFallback name="RecoveryFallback">
                 <GoalUpdated/>
