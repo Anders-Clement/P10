@@ -2,7 +2,6 @@
 #include "nav2_costmap_2d/costmap_math.hpp"
 #include "nav2_costmap_2d/footprint.hpp"
 #include "rclcpp/parameter_events_filter.hpp"
-#include "geometry_msgs/msg/pose_array.hpp"
 #include "spice_nav/dynamic_obstacle_layer.hpp"
 
 using nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE;

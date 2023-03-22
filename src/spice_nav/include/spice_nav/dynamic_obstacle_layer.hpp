@@ -13,6 +13,7 @@
 #include "tf2_ros/buffer.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 namespace nav2_costmap_2d
 {
@@ -63,6 +64,7 @@ private:
     double ANGLE_INCREMENT;
     double TF_TOLERANCE = 10.0;
     std::string global_frame_;
+    
 };
 }  // namespace nav2_costmap_2d
 #endif
