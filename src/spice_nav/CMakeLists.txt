@@ -70,7 +70,7 @@ pluginlib_export_plugin_description_file(nav2_costmap_2d dynamic_obstacle_layer.
 ament_target_dependencies(${lib_name} ${dep_pkgs})
 
 ## NavWaitHandler Condition Node
-add_library( NavWaitHandlerConditionNode SHARED src/NavWaitHandler.cpp)
+add_library( NavWaitHandlerConditionNode SHARED src/NavWaitConditionNode.cpp)
 ament_target_dependencies(NavWaitHandlerConditionNode ${dep_pkgs})
 target_compile_definitions(NavWaitHandlerConditionNode PRIVATE BT_PLUGIN_EXPORT) 
 install(TARGETS NavWaitHandlerConditionNode
