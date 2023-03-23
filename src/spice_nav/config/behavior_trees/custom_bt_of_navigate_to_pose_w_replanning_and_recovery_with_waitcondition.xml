@@ -1,6 +1,6 @@
 <root main_tree_to_execute="MainTree">
     <BehaviorTree ID="MainTree">
-        <RecoveryNode number_of_retries="1" name="CheckWaitcondition">
+        <RecoveryNode number_of_retries="100000" name="CheckWaitcondition">
             <PipelineSequence name="WaitOrDoPipeline">
                 <WaitCondition/>
                 <RecoveryNode number_of_retries="6" name="NavigateRecovery">

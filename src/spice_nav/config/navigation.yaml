@@ -67,7 +67,7 @@ bt_navigator:
     enable_groot_monitoring: True
     groot_zmq_publisher_port: 1666
     groot_zmq_server_port: 1667
-    default_nav_to_pose_bt_xml: "/home/ubuntu/P10/src/spice_nav/config/behavior_trees/custom_bt3.xml"
+    default_nav_to_pose_bt_xml: "/home/ubuntu/P10/src/spice_nav/config/behavior_trees/custom_bt_of_navigate_to_pose_w_replanning_and_recovery_with_waitcondition.xml"
     plugin_lib_names:
     - NavWaitHandlerConditionNode
     - nav2_compute_path_to_pose_action_bt_node
