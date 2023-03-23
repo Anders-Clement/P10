@@ -25,6 +25,7 @@ find_package(spice_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(nav2_costmap_2d REQUIRED)
 
 include_directories(
   include
@@ -92,14 +93,19 @@ ament_target_dependencies(
   tf2_ros
 )
 
-add_executable(central_path_planner 
+set(CENTRAL_PLANNER_SOURCES
   src/central_path_planner.cpp
-  src/planners/straight_line_planner.cpp)
+  src/planners/straight_line_planner.cpp
+  src/costmaps/global_costmap.cpp
+  )
+
+add_executable(central_path_planner ${CENTRAL_PLANNER_SOURCES})
 ament_target_dependencies(
   central_path_planner
   rclcpp
   nav_msgs
   spice_msgs
+  nav2_costmap_2d
 )
 
 install(TARGETS
