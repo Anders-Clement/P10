@@ -6,6 +6,7 @@ Costmap::Costmap(CentralPathPlanner& central_path_planner) : m_central_path_plan
         "/polybot05/global_costmap/costmap",
         10,
         std::bind(&Costmap::global_costmap_cb, this, std::placeholders::_1));
+    m_global_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>();
 };
 
 void Costmap::global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg)

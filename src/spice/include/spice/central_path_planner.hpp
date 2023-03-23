@@ -13,6 +13,7 @@ class CentralPathPlanner : public rclcpp::Node
 {
 public:
     CentralPathPlanner();
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> get_costmap(spice_msgs::msg::Id id);
 
 private:
     void get_plan_cb(spice_msgs::srv::GetPlan::Request::SharedPtr request, spice_msgs::srv::GetPlan::Response::SharedPtr response);

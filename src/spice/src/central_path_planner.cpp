@@ -1,5 +1,5 @@
 #include "spice/central_path_planner.hpp"
-#include "spice/planners/straight_line_planner.hpp"
+#include "spice/planners/a_star_planner.hpp"
 #include "spice/costmaps/global_costmap.hpp"
 
 CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
@@ -10,7 +10,7 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
     m_global_frame = "map";
     m_tolerance = 0.05;
 
-    m_planner = std::make_unique<StraightLinePlanner>(*this);
+    m_planner = std::make_unique<AStarPlanner>(*this);
     m_costmap = std::make_unique<GlobalCostmap>(*this);
 
     RCLCPP_INFO(get_logger(), "Central path planner is initialized");
@@ -39,6 +39,12 @@ void CentralPathPlanner::get_plan_cb(
 
     RCLCPP_INFO(get_logger(), "Created a plan with %ld poses", response->plan.poses.size());
 }
+
+std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spice_msgs::msg::Id id)
+{
+    return m_costmap->get_costmap(id);
+}
+
 
 
 int main(int argc, char** argv)
