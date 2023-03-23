@@ -1,6 +1,6 @@
 #include "spice/central_path_planner.hpp"
 #include "spice/planners/straight_line_planner.hpp"
-
+#include "spice/costmaps/global_costmap.hpp"
 
 CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
 {
@@ -10,6 +10,9 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
     m_global_frame = "map";
     m_tolerance = 0.05;
 
+    m_planner = std::make_unique<StraightLinePlanner>(*this);
+    m_costmap = std::make_unique<GlobalCostmap>(*this);
+
     RCLCPP_INFO(get_logger(), "Central path planner is initialized");
 };
 
@@ -17,10 +20,6 @@ void CentralPathPlanner::get_plan_cb(
     spice_msgs::srv::GetPlan::Request::SharedPtr request,
     spice_msgs::srv::GetPlan::Response::SharedPtr response)
 {
-    if(!planner)
-    {
-        planner = std::make_unique<StraightLinePlanner>(shared_from_this());
-    }
     // Checking if the goal and start state is in the global frame
     if (request->start.header.frame_id != m_global_frame) {
         RCLCPP_ERROR(
@@ -36,7 +35,7 @@ void CentralPathPlanner::get_plan_cb(
         return;
     }
     
-    response->plan = planner->get_plan(request->start, request->goal, m_tolerance, request->id);
+    response->plan = m_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
 
     RCLCPP_INFO(get_logger(), "Created a plan with %ld poses", response->plan.poses.size());
 }

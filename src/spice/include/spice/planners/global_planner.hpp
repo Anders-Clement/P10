@@ -5,10 +5,15 @@
 #include "nav_msgs/msg/path.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "spice_msgs/msg/id.hpp"
+#include "spice/central_path_planner.hpp"
+
+class CentralPathPlanner;
 
 class GlobalPlanner
 {
 public:
+    GlobalPlanner() = delete;
+    GlobalPlanner(CentralPathPlanner& central_path_planner);
     // Planning function, poses have been sanity checked
     // should return path from start pose to goal pose within the given tolerance
     virtual nav_msgs::msg::Path get_plan(
@@ -19,7 +24,7 @@ public:
 
 protected:
     std::string m_global_frame = "map";
-    rclcpp::Node::SharedPtr m_node;
+    CentralPathPlanner& m_central_path_planner;
 };
 
 #endif // GLOBAL_PLANNER_HPP
