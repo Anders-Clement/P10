@@ -95,7 +95,9 @@ ament_target_dependencies(
 
 set(CENTRAL_PLANNER_SOURCES
   src/central_path_planner.cpp
+  src/planners/global_planner.cpp
   src/planners/straight_line_planner.cpp
+  src/costmaps/costmap.cpp
   src/costmaps/global_costmap.cpp
   )
 

@@ -9,7 +9,7 @@ nav_msgs::msg::Path StraightLinePlanner::get_plan(
     spice_msgs::msg::Id id)
 {
     nav_msgs::msg::Path plan;
-    plan.header.stamp = m_node->now();
+    plan.header.stamp = m_central_path_planner.now();
     plan.header.frame_id = m_global_frame;
     // calculating the number of loops for current value of interpolation_resolution_
     int total_number_of_loop = std::hypot(
@@ -28,7 +28,7 @@ nav_msgs::msg::Path StraightLinePlanner::get_plan(
         pose.pose.orientation.y = 0.0;
         pose.pose.orientation.z = 0.0;
         pose.pose.orientation.w = 1.0;
-        pose.header.stamp = m_node->now();
+        pose.header.stamp = m_central_path_planner.now();
         pose.header.frame_id = m_global_frame;
         plan.poses.push_back(pose);
     }
