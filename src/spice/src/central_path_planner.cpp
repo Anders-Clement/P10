@@ -34,10 +34,11 @@ void CentralPathPlanner::get_plan_cb(
             m_global_frame.c_str());
         return;
     }
-    
+    auto start_time = now();
     response->plan = m_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
+    auto duration = (now()-start_time).nanoseconds()*10e-9;
 
-    RCLCPP_INFO(get_logger(), "Created a plan with %ld poses", response->plan.poses.size());
+    RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms", response->plan.poses.size(), duration);
 }
 
 std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spice_msgs::msg::Id id)
