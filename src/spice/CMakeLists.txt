@@ -24,6 +24,8 @@ find_package(tf2_msgs REQUIRED)
 find_package(spice_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(nav2_costmap_2d REQUIRED)
 
 include_directories(
   include
@@ -91,6 +93,25 @@ ament_target_dependencies(
   tf2_ros
 )
 
+set(CENTRAL_PLANNER_SOURCES
+  src/central_path_planner.cpp
+  src/planners/global_planner.cpp
+  src/planners/straight_line_planner.cpp
+  src/planners/a_star_planner.cpp
+  src/planners/navfn.cpp
+  src/costmaps/costmap.cpp
+  src/costmaps/global_costmap.cpp
+  )
+
+add_executable(central_path_planner ${CENTRAL_PLANNER_SOURCES})
+ament_target_dependencies(
+  central_path_planner
+  rclcpp
+  nav_msgs
+  spice_msgs
+  nav2_costmap_2d
+)
+
 install(TARGETS
     robot_tf_relay
     robot_tf_pose
@@ -98,6 +119,7 @@ install(TARGETS
     work_cell_simulator
     work_cell_allocator
     set_robot_task_poses
+    central_path_planner
     DESTINATION lib/${PROJECT_NAME})
     
 

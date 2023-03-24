@@ -22,9 +22,10 @@
   <test_depend>ament_lint_common</test_depend>
   <exec_depend>nav2_bringup</exec_depend>
   <export>
-    <costmap_2d plugin="${prefix}/dynamic_obstacle_layer.xml"/>
+    <spice_nav_core plugin="${prefix}/dynamic_obstacle_layer.xml"/>
     <build_type>ament_cmake</build_type>
     <exec_depend>nav2_bringup</exec_depend>
     <exec_depend>slam_toolbox</exec_depend>
+    <spice_nav_central_planner plugin="${prefix}/global_planner_plugin.xml" />
   </export>
 </package>

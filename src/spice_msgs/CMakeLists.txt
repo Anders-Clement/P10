@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 
 set(msg_files
   "msg/LedOutput.msg"
@@ -33,12 +34,13 @@ set(srv_files
   "srv/RegisterWork.srv"
   "srv/GetRobotsByState.srv"
   "srv/GetRobotsByType.srv"
+  "srv/GetPlan.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}
   ${srv_files}  
-  DEPENDENCIES geometry_msgs 
+  DEPENDENCIES geometry_msgs nav_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)

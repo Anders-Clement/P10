@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(spice_nav)
 
-set(lib_name ${PROJECT_NAME}_core)
-
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -23,11 +21,15 @@ find_package(spice_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nav2_costmap_2d REQUIRED)
 find_package(pluginlib REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(behaviortree_cpp_v3 REQUIRED)
 
 include_directories(
   include
 )
+
+set(costmap_lib_name ${PROJECT_NAME}_core)
+set(central_planner_lib_name ${PROJECT_NAME}_central_planner)
 
 set(dep_pkgs
   rclcpp
@@ -38,22 +40,25 @@ set(dep_pkgs
   tf2_ros
   tf2_msgs
   tf2
+  nav_msgs
   behaviortree_cpp_v3
   tf2_geometry_msgs
   )
 
-add_library(${lib_name} SHARED
+add_library(${costmap_lib_name} SHARED
   src/DynamicObstacleLayer.cpp)
+install(TARGETS ${costmap_lib_name}
+  DESTINATION lib)
 
-install(TARGETS ${lib_name}
+add_library(${central_planner_lib_name} SHARED
+  src/central_planner_plugin.cpp)
+install(TARGETS ${central_planner_lib_name}
   DESTINATION lib)
 
 install(
   DIRECTORY launch config maps
   DESTINATION share/${PROJECT_NAME}
 )
-
-
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -69,7 +74,10 @@ endif()
 
 
 pluginlib_export_plugin_description_file(nav2_costmap_2d dynamic_obstacle_layer.xml)
-ament_target_dependencies(${lib_name} ${dep_pkgs})
+ament_target_dependencies(${costmap_lib_name} ${dep_pkgs})
+
+pluginlib_export_plugin_description_file(nav2_core global_planner_plugin.xml)
+ament_target_dependencies(${central_planner_lib_name} ${dep_pkgs})
 
 ## NavWaitHandler Condition Node
 add_library( NavWaitHandlerConditionNode SHARED src/NavWaitConditionNode.cpp)
