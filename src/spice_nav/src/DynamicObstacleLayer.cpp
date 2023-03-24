@@ -2,6 +2,7 @@
 #include "nav2_costmap_2d/costmap_math.hpp"
 #include "nav2_costmap_2d/footprint.hpp"
 #include "rclcpp/parameter_events_filter.hpp"
+#include "geometry_msgs/msg/pose_array.hpp"
 #include "spice_nav/dynamic_obstacle_layer.hpp"
 
 using nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE;
@@ -32,10 +33,7 @@ void DynamicObstacleLayer::onInitialize()
   nh_->get_parameter(name_ + "." + "topic", topic_);
   nh_->get_parameter(name_ + "." + "obstacle_points", obstacle_points_);
 
-  transform_tolerance_ = tf2::durationFromSec(TF_TOLERANCE);
   robot_name = getenv("ROBOT_NAMESPACE");
-
-  global_frame_ = layered_costmap_->getGlobalFrameID();
 
   subscription_ = nh_->create_subscription<tf2_msgs::msg::TFMessage>(
 	  topic_, 10, std::bind(&DynamicObstacleLayer::TFCallback, this, _1));
@@ -79,9 +77,8 @@ void DynamicObstacleLayer::TFCallback(const tf2_msgs::msg::TFMessage::SharedPtr 
 {
   for (auto& tf : msg->transforms)
   {
-	if (tf.header.frame_id != "map")
-	{
-	  continue;
+	if(tf.header.frame_id != "map"){
+		continue;
 	}
 	messageBuffer[tf.child_frame_id] = tf;
   }
@@ -92,9 +89,7 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 {
   double wx, wy;
   matchSize();
-  geometry_msgs::msg::TransformStamped in, out;
-  unsigned int mx, my;
-
+  geometry_msgs::msg::TransformStamped robot_tf;
   for (auto const& robot : robot_list)
   {
 	if (robot.id.id == robot_name)
@@ -102,50 +97,36 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 	  continue;
 	}
 
-	if (messageBuffer[robot.id.id + "_base_link"].header.frame_id == "")
-	{
-	  continue;
-	}
+	unsigned int mx, my;
 	
-	in = messageBuffer[robot.id.id + "_base_link"];
-
-	if (!tf_->canTransform(in.header.frame_id, global_frame_, tf2_ros::fromMsg(in.header.stamp),
-						   tf2_ros::fromRclcpp(transform_tolerance_)))
-	{
-	  RCLCPP_INFO(logger_, "dynamic obstacle layer can't transform from %s to %s", global_frame_.c_str(),
-				  in.header.frame_id.c_str());
-	  continue;
-	}
-
-	tf_->transform(in, out, global_frame_, transform_tolerance_);
-
-	wx = -out.transform.translation.x; //works by inverting signs 
-	wy = -out.transform.translation.y;
+	robot_tf = messageBuffer[robot.id.id + "_base_link"];
+	wx = robot_tf.transform.translation.x;
+	wy = robot_tf.transform.translation.y;
 
 	if (worldToMap(wx, wy, mx, my))
-	{
-	  setCost(mx, my, LETHAL_OBSTACLE);
-	  *min_x = std::min(wx, *min_x);
-	  *min_y = std::min(wy, *min_y);
-	  *max_x = std::max(wx, *max_x);
-	  *max_y = std::max(wy, *max_y);
-	}
-
-	// put in additional points
-	for (int i = 0; i < obstacle_points_; i++)
-	{
-	  wx = out.transform.translation.x + (ROBOT_RADIUS * std::cos(ANGLE_INCREMENT * i));
-	  wy = out.transform.translation.y + (ROBOT_RADIUS * std::sin(ANGLE_INCREMENT * i));
-
-	  if (worldToMap(wx, wy, mx, my))
 	  {
 		setCost(mx, my, LETHAL_OBSTACLE);
-
 		*min_x = std::min(wx, *min_x);
 		*min_y = std::min(wy, *min_y);
 		*max_x = std::max(wx, *max_x);
 		*max_y = std::max(wy, *max_y);
 	  }
+
+	  // put in additional points
+	  for (int i = 0; i < obstacle_points_; i++)
+	  {
+		wx = robot_tf.transform.translation.x + (ROBOT_RADIUS * std::cos(ANGLE_INCREMENT * i));
+		wy = robot_tf.transform.translation.y + (ROBOT_RADIUS * std::sin(ANGLE_INCREMENT * i));
+
+		if (worldToMap(wx, wy, mx, my))
+		{
+		  setCost(mx, my, LETHAL_OBSTACLE);
+
+		  *min_x = std::min(wx, *min_x);
+		  *min_y = std::min(wy, *min_y);
+		  *max_x = std::max(wx, *max_x);
+		  *max_y = std::max(wy, *max_y);
+		}
 	}
   }
 }

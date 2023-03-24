@@ -50,7 +50,20 @@ def generate_launch_description():
                 root_key=robot_ns,
                 param_rewrites=slam_param_substitutions,
                 convert_types=True)
-
+        ns_slam=GroupAction(actions=[
+            PushRosNamespace(robot_ns),
+            Node(
+                parameters=[
+                    slam_config,
+                    {'use_sim_time': LaunchConfiguration("sim")}
+                ],
+                package='slam_toolbox',
+                executable='async_slam_toolbox_node',
+                name='slam_toolbox',
+                output='screen',
+                remappings=remappings
+            )
+        ])
         return LaunchDescription(
             [
                 DeclareLaunchArgument(
@@ -58,20 +71,8 @@ def generate_launch_description():
                     default_value='false',
                     description='Enable use_sime_time to true'
                 ),
-                GroupAction(actions=[
-                    PushRosNamespace(robot_ns),
-                    Node(
-                        parameters=[
-                            slam_config,
-                            {'use_sim_time': LaunchConfiguration("sim")}
-                        ],
-                        package='slam_toolbox',
-                        executable='async_slam_toolbox_node',
-                        name='slam_toolbox',
-                        output='screen',
-                        remappings=remappings
-                    )
-                ])
+
+                ns_slam
             ])
     else:
         slam_config = slam_config_path
@@ -93,5 +94,6 @@ def generate_launch_description():
                 name='slam_toolbox',
                 output='screen',
                 remappings=remappings
-            )
+            ),
+
         ])

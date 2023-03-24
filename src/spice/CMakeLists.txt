@@ -99,6 +99,7 @@ set(CENTRAL_PLANNER_SOURCES
   src/planners/straight_line_planner.cpp
   src/planners/a_star_planner.cpp
   src/planners/navfn.cpp
+  src/costmaps/prioritized_costmap.cpp
   src/costmaps/costmap.cpp
   src/costmaps/global_costmap.cpp
   )
