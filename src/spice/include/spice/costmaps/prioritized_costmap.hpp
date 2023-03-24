@@ -12,7 +12,7 @@ public:
     PrioritizedCostmap(CentralPathPlanner& central_path_planner);
 
     virtual void get_robots_on_timer_cb();
-
+    
     virtual std::shared_ptr<nav2_costmap_2d::Costmap2D> calcPrioritizedCostMap(spice_msgs::msg::Id robotId);
 
     virtual void inflateCostMap(int loopsLeft, int maxLoops, nav2_costmap_2d::Costmap2D& costmap, std::vector<std::vector<unsigned int>> costpositions);
