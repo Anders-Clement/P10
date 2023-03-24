@@ -44,8 +44,10 @@ void CentralPathPlanner::get_plan_cb(
     RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms", response->plan.poses.size(), duration);
 }
 
-std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spice_msgs::msg::Id id)
+std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spice_msgs::msg::Id& id)
 {
+    RCLCPP_INFO(
+            get_logger(), "Returning DUMB DUMB costmap for robot: %s", id.id.c_str());
     return m_costmap->get_costmap(id);
 }
 

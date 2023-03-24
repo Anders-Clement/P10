@@ -20,7 +20,7 @@ public:
 private:
     rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_robots_cli;
     rclcpp::TimerBase::SharedPtr get_ready_robots_timer{nullptr};
-    std::vector<std::string> robots;
+    std::vector<spice_msgs::msg::Id> robots;
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmapPub;
     double MAP_RESOLUTION = 0.05;
     double INFLATION_RADIOUS = 0.35;

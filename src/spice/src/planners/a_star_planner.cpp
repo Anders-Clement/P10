@@ -37,6 +37,8 @@ nav_msgs::msg::Path AStarPlanner::get_plan(
     double goal_tolerance,
     spice_msgs::msg::Id id)
 {
+      RCLCPP_INFO(
+            m_central_path_planner.get_logger(), "Got planning request from robot: %s", id.id.c_str());
     m_costmap = m_central_path_planner.get_costmap(id);
     if(!m_navfn_planner)
     {
@@ -62,10 +64,8 @@ nav_msgs::msg::Path AStarPlanner::create_plan(
     geometry_msgs::msg::PoseStamped goal,
     double goal_tolerance)
 {
-    auto costmap = m_central_path_planner.get_costmap(spice_msgs::msg::Id());
-
     unsigned int mx_start, my_start, mx_goal, my_goal;
-    if (!costmap->worldToMap(start.pose.position.x, start.pose.position.y, mx_start, my_start)) {
+    if (!m_costmap->worldToMap(start.pose.position.x, start.pose.position.y, mx_start, my_start)) {
         std::string error = {
                 "Start Coordinates of(" + std::to_string(start.pose.position.x) + ", " +
                 std::to_string(start.pose.position.y) + ") was outside bounds"};
@@ -73,7 +73,7 @@ nav_msgs::msg::Path AStarPlanner::create_plan(
         throw std::exception();
     }
 
-    if (!costmap->worldToMap(goal.pose.position.x, goal.pose.position.y, mx_goal, my_goal)) {
+    if (!m_costmap->worldToMap(goal.pose.position.x, goal.pose.position.y, mx_goal, my_goal)) {
         std::string error = {
                 "Goal Coordinates of(" + std::to_string(goal.pose.position.x) + ", " +
                 std::to_string(goal.pose.position.y) + ") was outside bounds"};
@@ -81,7 +81,7 @@ nav_msgs::msg::Path AStarPlanner::create_plan(
         throw std::exception();
     }
 
-    if (costmap->getCost(mx_start, my_start) == nav2_costmap_2d::LETHAL_OBSTACLE) {
+    if (m_costmap->getCost(mx_start, my_start) == nav2_costmap_2d::LETHAL_OBSTACLE) {
         std::string error =  {
                 "Start Coordinates of(" + std::to_string(start.pose.position.x) + ", " +
                 std::to_string(start.pose.position.y) + ") was in lethal cost"};
@@ -89,7 +89,7 @@ nav_msgs::msg::Path AStarPlanner::create_plan(
         throw std::exception();
     }
 
-    if (goal_tolerance == 0 && costmap->getCost(mx_goal, my_goal) == nav2_costmap_2d::LETHAL_OBSTACLE) {
+    if (goal_tolerance == 0 && m_costmap->getCost(mx_goal, my_goal) == nav2_costmap_2d::LETHAL_OBSTACLE) {
         std::string error = {
                 "Goal Coordinates of(" + std::to_string(goal.pose.position.x) + ", " +
                 std::to_string(goal.pose.position.y) + ") was in lethal cost"};
@@ -97,13 +97,13 @@ nav_msgs::msg::Path AStarPlanner::create_plan(
         throw std::exception();
     }
 
-    // If costmap has changed, update planner based on the new costmap size
-    if (m_navfn_planner->nx != static_cast<int>(costmap->getSizeInCellsX()) ||
-        m_navfn_planner->ny != static_cast<int>(costmap->getSizeInCellsY()))
+    // If costmap has changed, update planner based on the new m_m_costmap size
+    if (m_navfn_planner->nx != static_cast<int>(m_costmap->getSizeInCellsX()) ||
+        m_navfn_planner->ny != static_cast<int>(m_costmap->getSizeInCellsY()))
     {
         m_navfn_planner->setNavArr(
-        costmap->getSizeInCellsX(),
-        costmap->getSizeInCellsY());
+        m_costmap->getSizeInCellsX(),
+        m_costmap->getSizeInCellsY());
     }
 
     nav_msgs::msg::Path path;
