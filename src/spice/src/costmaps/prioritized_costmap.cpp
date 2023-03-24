@@ -10,6 +10,7 @@ PrioritizedCostmap::PrioritizedCostmap(CentralPathPlanner& central_path_planner)
   get_robots_cli = m_central_path_planner.create_client<spice_msgs::srv::GetRobotsByType>("get_robots_by_type");
   get_ready_robots_timer = 
   		m_central_path_planner.create_wall_timer(1s, std::bind(&PrioritizedCostmap::get_robots_on_timer_cb, this));
+	m_costmapPub = m_central_path_planner.create_publisher<nav_msgs::msg::OccupancyGrid>("/prioritized_costmap", 10);
 };
 
 // get current full costmap, of map + any other layers added for a robot Id
@@ -46,13 +47,29 @@ void PrioritizedCostmap::get_robots_on_timer_cb()
 
 std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedCostMap(spice_msgs::msg::Id robotId)
 {
-  std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap;
-  *costmap = *m_global_costmap;
+  std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
 
   for (auto it : robots)  // robots ordered according to priority
   {
 	if (it == robotId.id)
 	{
+
+		nav_msgs::msg::OccupancyGrid occGrid;
+		occGrid.header.frame_id = "map";
+		occGrid.header.stamp = m_central_path_planner.now();
+		occGrid.info.width = costmap->getSizeInCellsX();
+		occGrid.info.height = costmap->getSizeInCellsY();
+		occGrid.info.origin.position.x = costmap->getOriginX();
+		occGrid.info.origin.position.y = costmap->getOriginY();
+		occGrid.info.resolution = costmap->getResolution();
+		occGrid.info.map_load_time = m_central_path_planner.now();
+		occGrid.data.resize(costmap->getSizeInCellsX()*costmap->getSizeInCellsY());
+		unsigned char* grid = costmap->getCharMap();
+		for(unsigned int i = 0; i < costmap->getSizeInCellsX()*costmap->getSizeInCellsY(); i++){
+			occGrid.data[i] = *grid++;
+		}
+		m_costmapPub->publish(occGrid);
+
 	  return costmap;
 	}
 
@@ -84,7 +101,7 @@ void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costma
 {
   std::vector<std::vector<unsigned int>> nextcosts;
   unsigned int mx, my;
-  unsigned char cost; // = nav2_costmap_2d::LETHAL_OBSTACLE / (maxLoops - loopsLeft);
+  unsigned char cost = nav2_costmap_2d::LETHAL_OBSTACLE / (maxLoops - loopsLeft);
 
   if (loopsLeft > 0)
   {

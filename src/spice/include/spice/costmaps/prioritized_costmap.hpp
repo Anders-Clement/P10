@@ -1,6 +1,7 @@
 #include "spice/costmaps/costmap.hpp"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
 #include "spice_msgs/msg/robot.hpp"
+#include "nav2_costmap_2d/costmap_2d_publisher.hpp"
 
 class PrioritizedCostmap : public Costmap
 {
@@ -20,6 +21,7 @@ private:
     rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_robots_cli;
     rclcpp::TimerBase::SharedPtr get_ready_robots_timer{nullptr};
     std::vector<std::string> robots;
+    rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmapPub;
     double MAP_RESOLUTION = 0.05;
     double INFLATION_RADIOUS = 0.35;
 };
