@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "spice/costmaps/prioritized_costmap.hpp"
 #include "nav_msgs/msg/path.hpp"
+#include "nav2_costmap_2d/inflation_layer.hpp"
 
 using namespace std::chrono_literals;
 
@@ -56,7 +57,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	  return costmap;
 	}
 
-	nav_msgs::msg::Path robotPath = m_central_path_planner.get_robot_plan(it.first);
+	nav_msgs::msg::Path robotPath = m_central_path_planner.get_robot_plan(robotId);
 	std::vector<std::vector<unsigned int>> costpositions;
 
 	for (auto pose : robotPath.poses)
@@ -77,7 +78,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
   }
 }
 
-void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costmap_2d::Costmap2D& costmap,
+void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costmap_2d::Costmap2D & costmap,
 										std::vector<std::vector<unsigned int>> costpositions)
 {
   std::vector<std::vector<unsigned int>> nextcosts;
@@ -102,9 +103,8 @@ void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costma
 		}
 	  }
 	}
+	loopsLeft--;
+  	inflateCostMap(loopsLeft, maxLoops, costmap, nextcosts);
   }
-
-  loopsLeft--;
-  inflateCostMap(loopsLeft, maxLoops, costmap, nextcosts);
   return;
 }
