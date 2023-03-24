@@ -52,6 +52,7 @@ def generate_launch_description():
     #              https://github.com/ros2/launch_ros/issues/56
     remappings = [('/tf', 'tf'),
                   ('/tf_static', 'tf_static'),
+                  ('/global_tf', '/tf'),
                   ('/scan', ['/',LaunchConfiguration('namespace'),'/scan'])]
 
     # Create our own temporary YAML files that include substitutions
@@ -142,7 +143,7 @@ def generate_launch_description():
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(launch_dir,
-                                                       'localization.launch.py')),
+                                                       'nav_localization.launch.py')),
             condition=IfCondition(PythonExpression(['not ', slam])),
             launch_arguments={'namespace': namespace,
                               'map': map_yaml_file,

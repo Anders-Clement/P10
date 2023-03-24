@@ -1,10 +1,13 @@
+#ifndef STRAIGHT_LINE_PLANNER_HPP
+#define STRAIGHT_LINE_PLANNER_HPP
+
 #include "spice/planners/global_planner.hpp"
 
 class StraightLinePlanner : public GlobalPlanner
 {
 public:
     StraightLinePlanner() = delete;
-    StraightLinePlanner(rclcpp::Node::SharedPtr node) {m_node = node;};
+    StraightLinePlanner(CentralPathPlanner& central_path_planner) : GlobalPlanner(central_path_planner) {};
 
     nav_msgs::msg::Path get_plan(
         geometry_msgs::msg::PoseStamped start, 
@@ -12,3 +15,5 @@ public:
         double goal_tolerance,
         spice_msgs::msg::Id id) override;
 };
+
+#endif // STRAIGHT_LINE_PLANNER_HPP
