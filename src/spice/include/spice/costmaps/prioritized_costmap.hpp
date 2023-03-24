@@ -1,9 +1,6 @@
-#include "map.hpp"
 #include "spice/costmaps/costmap.hpp"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
 #include "spice_msgs/msg/robot.hpp"
-
-
 
 class PrioritizedCostmap : public Costmap
 {
@@ -17,7 +14,6 @@ public:
 
     virtual void inflateCostMap(int loopsLeft, int maxLoops, nav2_costmap_2d::Costmap2D& costmap, std::vector<std::vector<unsigned int>> costpositions);
     
-
     // get current full costmap, of map + any other layers added for a robot Id
     std::shared_ptr<nav2_costmap_2d::Costmap2D> get_costmap(spice_msgs::msg::Id id) override;
 private:

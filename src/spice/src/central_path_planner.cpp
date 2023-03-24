@@ -1,6 +1,7 @@
 #include "spice/central_path_planner.hpp"
 #include "spice/planners/a_star_planner.hpp"
 #include "spice/costmaps/global_costmap.hpp"
+#include "spice/costmaps/prioritized_costmap.hpp"
 
 CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
 {
@@ -11,7 +12,7 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
     m_tolerance = 0.05;
 
     m_planner = std::make_unique<AStarPlanner>(*this);
-    m_costmap = std::make_unique<GlobalCostmap>(*this);
+    m_costmap = std::make_unique<PrioritizedCostmap>(*this);
 
     RCLCPP_INFO(get_logger(), "Central path planner is initialized");
 };

@@ -15,7 +15,7 @@ PrioritizedCostmap::PrioritizedCostmap(CentralPathPlanner& central_path_planner)
 // get current full costmap, of map + any other layers added for a robot Id
 std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::get_costmap(spice_msgs::msg::Id id)
 {
-  if (std::find(robots.begin(), robots.end(), id) != robots.end())
+  if (std::find(robots.begin(), robots.end(), id.id) != robots.end())
   {
 	return calcPrioritizedCostMap(id);
   }
@@ -56,7 +56,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	  return costmap;
 	}
 
-	nav_msgs::msg::Path robotPath = m_central_path_planner.get_robot_plan(it.first);
+	nav_msgs::msg::Path robotPath = m_central_path_planner.get_last_plan_by_id(robotId);
 	std::vector<std::vector<unsigned int>> costpositions;
 
 	for (auto pose : robotPath.poses)
@@ -70,11 +70,13 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 		  costpositions.push_back({ mx, my });
 		}
 	  }
+
 	}
 
 	int number_of_loops = ceil(INFLATION_RADIOUS / MAP_RESOLUTION);
 	inflateCostMap(number_of_loops, number_of_loops, *costmap, costpositions);
   }
+  	return nullptr; // if loop through all robots without returning map
 }
 
 void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costmap_2d::Costmap2D& costmap,
@@ -82,7 +84,7 @@ void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costma
 {
   std::vector<std::vector<unsigned int>> nextcosts;
   unsigned int mx, my;
-  unsigned char cost = nav2_costmap_2d::LETHAL_OBSTACLE / (maxLoops - loopsLeft);
+  unsigned char cost; // = nav2_costmap_2d::LETHAL_OBSTACLE / (maxLoops - loopsLeft);
 
   if (loopsLeft > 0)
   {
@@ -102,9 +104,10 @@ void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costma
 		}
 	  }
 	}
+	loopsLeft--;
+  	inflateCostMap(loopsLeft, maxLoops, costmap, nextcosts);
   }
 
-  loopsLeft--;
-  inflateCostMap(loopsLeft, maxLoops, costmap, nextcosts);
+
   return;
 }
