@@ -13,7 +13,7 @@ public:
 
     virtual void get_robots_on_timer_cb();
 
-    virtual void calcPrioritizedCostMap(spice_msgs::msg::Id robotId);
+    virtual std::shared_ptr<nav2_costmap_2d::Costmap2D> calcPrioritizedCostMap(spice_msgs::msg::Id robotId);
 
     virtual void inflateCostMap(int loopsLeft, int maxLoops, nav2_costmap_2d::Costmap2D& costmap, std::vector<std::vector<unsigned int>> costpositions);
     
@@ -23,7 +23,7 @@ public:
 private:
     rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_robots_cli;
     rclcpp::TimerBase::SharedPtr get_ready_robots_timer{nullptr};
-    std::vector<spice_msgs::msg::Robot> robots;
-    std::map<spice_msgs::msg::Id, std::shared_ptr<nav2_costmap_2d::Costmap2D>> robotCostMaps;
-    std::map<spice_msgs::msg::Id, std::shared_ptr<nav2_costmap_2d::Costmap2D>> prevRobotCostMaps;
+    std::vector<std::string> robots;
+    double MAP_RESOLUTION = 0.05;
+    double INFLATION_RADIOUS = 0.35;
 };
