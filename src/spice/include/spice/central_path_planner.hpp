@@ -9,6 +9,13 @@
 #include "spice/planners/global_planner.hpp"
 #include "spice/costmaps/costmap.hpp"
 
+struct robot_plan{
+    nav_msgs::msg::Path plan;
+    geometry_msgs::msg::PoseStamped start;
+    geometry_msgs::msg::PoseStamped goal;
+
+};
+
 class Costmap;
 class GlobalPlanner;
 
@@ -17,7 +24,7 @@ class CentralPathPlanner : public rclcpp::Node
 public:
     CentralPathPlanner();
     std::shared_ptr<nav2_costmap_2d::Costmap2D> get_costmap(spice_msgs::msg::Id id);
-    nav_msgs::msg::Path& get_last_plan_by_id(spice_msgs::msg::Id id);
+    robot_plan& get_last_plan_by_id(spice_msgs::msg::Id id);
 
 private:
     void get_plan_cb(spice_msgs::srv::GetPlan::Request::SharedPtr request, spice_msgs::srv::GetPlan::Response::SharedPtr response);
@@ -25,7 +32,7 @@ private:
     std::unique_ptr<GlobalPlanner> m_planner;
     std::unique_ptr<Costmap> m_costmap;
     rclcpp::Service<spice_msgs::srv::GetPlan>::SharedPtr m_planner_service;
-    std::unordered_map<std::string, nav_msgs::msg::Path> m_planned_paths;
+    std::unordered_map<std::string, robot_plan> m_planned_paths;
     std::string m_global_frame;
     double m_tolerance;
 };

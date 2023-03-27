@@ -22,7 +22,7 @@ from launch.substitutions import PathJoinSubstitution, LaunchConfiguration
 from launch_ros.substitutions import FindPackageShare
 from launch.actions import DeclareLaunchArgument
 
-DEFAULT_MAP_NAME = 'C4.yaml'  # change to the name.yaml of the default map here
+DEFAULT_MAP_NAME = 'canteen.yaml'  # change to the name.yaml of the default map here
 
 
 def generate_launch_description():

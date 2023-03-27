@@ -37,8 +37,9 @@ void CentralPathPlanner::get_plan_cb(
     auto start_time = now();
     response->plan = m_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
     auto duration = (now()-start_time).nanoseconds()*10e-9;
-
-    m_planned_paths[request->id.id] = response->plan;
+    m_planned_paths[request->id.id].start = request->start;
+    m_planned_paths[request->id.id].goal = request->goal;
+    m_planned_paths[request->id.id].plan = response->plan;
 
     RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms", response->plan.poses.size(), duration);
 }
@@ -48,7 +49,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spic
     return m_costmap->get_costmap(id);
 }
 
-nav_msgs::msg::Path& CentralPathPlanner::get_last_plan_by_id(spice_msgs::msg::Id id)
+robot_plan& CentralPathPlanner::get_last_plan_by_id(spice_msgs::msg::Id id)
 {
     return m_planned_paths[id.id];
 }

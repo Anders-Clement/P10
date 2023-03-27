@@ -24,4 +24,5 @@ private:
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmapPub;
     double MAP_RESOLUTION = 0.05;
     double INFLATION_RADIOUS = 0.35;
+    double ROBOT_RADIUS = 0.15;
 };
