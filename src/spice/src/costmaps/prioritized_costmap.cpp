@@ -68,7 +68,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 		for(int i = -(int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i < (int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i++)
 		{
 			for (int j = -(int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); j < (int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); j++){
-				costmap->setCost(std::max(i,0), std::max(j,0),nav2_costmap_2d::FREE_SPACE);
+				costmap->setCost(std::max(i+r_mx,(unsigned int)0), std::max(j+r_my,(unsigned int)0),nav2_costmap_2d::FREE_SPACE);
 			}
 		}
 		
