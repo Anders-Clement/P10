@@ -16,6 +16,7 @@ find_package(rclcpp REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(spice_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nav2_costmap_2d REQUIRED)
@@ -77,5 +78,13 @@ ament_target_dependencies(${costmap_lib_name} ${dep_pkgs})
 
 pluginlib_export_plugin_description_file(nav2_core global_planner_plugin.xml)
 ament_target_dependencies(${central_planner_lib_name} ${dep_pkgs})
+
+## NavWaitHandler Condition Node
+add_library( NavWaitHandlerConditionNode SHARED src/NavWaitConditionNode.cpp)
+ament_target_dependencies(NavWaitHandlerConditionNode ${dep_pkgs})
+target_compile_definitions(NavWaitHandlerConditionNode PRIVATE BT_PLUGIN_EXPORT) 
+install(TARGETS NavWaitHandlerConditionNode
+  DESTINATION lib)
+ament_export_libraries(NavWaitHandlerConditionNode)
 
 ament_package()

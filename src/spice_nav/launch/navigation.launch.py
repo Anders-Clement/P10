@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import os
-from launch import LaunchDescription, LaunchContext
+from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -25,16 +25,16 @@ MAP_NAME='C4' #change to the name of your own map here
 
 def generate_launch_description():
 
-    nav2_launch_path = PathJoinSubstitution(
-        [FindPackageShare('spice_nav'), 'launch', 'bringup.launch.py']
-    )
+    map_yaml_file = LaunchConfiguration('map')
 
-    default_map_path = PathJoinSubstitution(
-        [FindPackageShare('spice_nav'), 'maps', f'{MAP_NAME}.yaml']
+    nav2_launch_path = PathJoinSubstitution(
+        [FindPackageShare('spice_nav'),
+         'launch', 'nav_bringup.launch.py']
     )
 
     nav2_config_path = PathJoinSubstitution(
-        [FindPackageShare('spice_nav'), 'config', 'navigation.yaml']
+        [FindPackageShare('spice_nav'),
+         'config', 'navigation.yaml']
     )
 
     robot_ns = os.environ.get('ROBOT_NAMESPACE')
@@ -48,27 +48,30 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            name='sim', 
+            name='sim',
             default_value='false',
             description='Enable use_sime_time to true'
         ),
 
-       DeclareLaunchArgument(
-            name='map', 
-            default_value=default_map_path,
-            description='Navigation map path'
+        DeclareLaunchArgument(
+            name='map',
+            default_value=PathJoinSubstitution(
+                [FindPackageShare('spice_nav'), 'maps', 'C4.yaml']
+            ),
+            description='Map yaml file'
         ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch_path),
             launch_arguments={
-                'map': LaunchConfiguration("map"),
+                'map': map_yaml_file,
                 'use_sim_time': LaunchConfiguration("sim"),
-                'namespace' : robot_ns,
-                'use_namespace' : use_namespace,
-                'use_composition' : 'True',
+                'namespace': robot_ns,
+                'use_namespace': use_namespace,
+                'use_composition': 'True',
                 'params_file': nav2_config_path,
-                'autostart': 'True'
+                'namespace' : robot_ns,
+                'autostart' : 'True'
             }.items()
         )
     ])

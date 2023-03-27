@@ -1,7 +1,6 @@
 #include "spice/central_path_planner.hpp"
 #include "spice/planners/a_star_planner.hpp"
 #include "spice/costmaps/global_costmap.hpp"
-#include "spice/costmaps/prioritized_costmap.hpp"
 
 CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
 {
@@ -12,7 +11,7 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
     m_tolerance = 0.05;
 
     m_planner = std::make_unique<AStarPlanner>(*this);
-    m_costmap = std::make_unique<PrioritizedCostmap>(*this);
+    m_costmap = std::make_unique<GlobalCostmap>(*this);
 
     RCLCPP_INFO(get_logger(), "Central path planner is initialized");
 };
@@ -44,10 +43,8 @@ void CentralPathPlanner::get_plan_cb(
     RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms", response->plan.poses.size(), duration);
 }
 
-std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spice_msgs::msg::Id& id)
+std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spice_msgs::msg::Id id)
 {
-    RCLCPP_INFO(
-            get_logger(), "Returning DUMB DUMB costmap for robot: %s", id.id.c_str());
     return m_costmap->get_costmap(id);
 }
 
