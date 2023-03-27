@@ -9,7 +9,7 @@ from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
 
-MAP_NAME = 'C4.yaml' # Change name of map here
+MAP_NAME = 'canteen.yaml' # Change name of map here
 
 def generate_launch_description():
 
