@@ -32,7 +32,7 @@ def generate_launch_description():
     bringup_dir = get_package_share_directory('spice_nav')
 
     namespace = LaunchConfiguration('namespace')
-    map_yaml_file = LaunchConfiguration('map')
+    map_path = LaunchConfiguration('map_path')
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart = LaunchConfiguration('autostart')
     params_file = LaunchConfiguration('params_file')
@@ -56,7 +56,7 @@ def generate_launch_description():
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {
         'use_sim_time': use_sim_time,
-        'yaml_filename': map_yaml_file}
+        'yaml_filename': map_path}
 
     configured_params = RewrittenYaml(
         source_file=params_file,
@@ -87,7 +87,7 @@ def generate_launch_description():
         description='Top-level namespace')
 
     declare_map_yaml_cmd = DeclareLaunchArgument(
-        'map',
+        'map_path',
         description='Full path to map yaml file to load')
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
@@ -163,7 +163,7 @@ def generate_launch_description():
                 package='nav2_map_server',
                 plugin='nav2_map_server::MapServer',
                 name='map_server',
-                parameters=[params['map_server']['ros__parameters'], {'yaml_filename': map_yaml_file}],
+                parameters=[params['map_server']['ros__parameters'], {'yaml_filename': map_path}],
                 remappings=remappings),
             ComposableNode(
                 package='nav2_amcl',

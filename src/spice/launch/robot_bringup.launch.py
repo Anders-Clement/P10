@@ -19,18 +19,30 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
+DEFAULT_MAP_NAME = 'C4.yaml' # change to the name.yaml of the default map here
 
 def generate_launch_description():
-    map_yaml_file = LaunchConfiguration('map')
+    map_name = LaunchConfiguration('map')
+    map_path = LaunchConfiguration('map_path')
+
+    default_map_path = PathJoinSubstitution(
+        [FindPackageShare('spice_nav'), 'maps', map_name]
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument(
             name='map',
-            default_value=PathJoinSubstitution(
-                [FindPackageShare('linorobot2_navigation'), 'maps', 'C4.yaml']
-            ),
-            description='Map yaml file'
+            default_value = DEFAULT_MAP_NAME,
+            description='Map name.yaml'
         ),
+
+        DeclareLaunchArgument(
+            name='map_path',
+            default_value = default_map_path,
+            description='Map path'
+        ),
+
+
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('linorobot2_bringup'),
@@ -43,7 +55,7 @@ def generate_launch_description():
                              'launch/navigation.launch.py')
             ),
             launch_arguments={
-                'map': map_yaml_file
+                'map_path': map_path
             }.items()
         ),
     ])

@@ -36,7 +36,7 @@ def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
     use_namespace = LaunchConfiguration('use_namespace')
     slam = LaunchConfiguration('slam')
-    map_yaml_file = LaunchConfiguration('map')
+    map_path = LaunchConfiguration('map_path')
     use_sim_time = LaunchConfiguration('use_sim_time')
     params_file = LaunchConfiguration('params_file')
     autostart = LaunchConfiguration('autostart')
@@ -58,7 +58,7 @@ def generate_launch_description():
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {
         'use_sim_time': use_sim_time,
-        'yaml_filename': map_yaml_file}
+        'yaml_filename': map_path}
 
     configured_params = RewrittenYaml(
         source_file=params_file,
@@ -85,7 +85,7 @@ def generate_launch_description():
         description='Whether run a SLAM')
 
     declare_map_yaml_cmd = DeclareLaunchArgument(
-        'map',
+        'map_path',
         description='Full path to map yaml file to load')
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
@@ -146,7 +146,7 @@ def generate_launch_description():
                                                        'nav_localization.launch.py')),
             condition=IfCondition(PythonExpression(['not ', slam])),
             launch_arguments={'namespace': namespace,
-                              'map': map_yaml_file,
+                              'map_path': map_path,
                               'use_sim_time': use_sim_time,
                               'autostart': autostart,
                               'params_file': params_file,

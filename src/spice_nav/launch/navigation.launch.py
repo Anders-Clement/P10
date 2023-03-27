@@ -21,11 +21,16 @@ from launch.conditions import IfCondition
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 
-MAP_NAME='C4' #change to the name of your own map here
+DEFAULT_MAP_NAME = 'C4.yaml' # change to the name.yaml of the default map here
 
 def generate_launch_description():
 
-    map_yaml_file = LaunchConfiguration('map')
+    map_name = LaunchConfiguration('map')
+    map_path = LaunchConfiguration('map_path')
+
+    default_map_path = PathJoinSubstitution(
+        [FindPackageShare('spice_nav'), 'maps', map_name]
+    )
 
     nav2_launch_path = PathJoinSubstitution(
         [FindPackageShare('spice_nav'),
@@ -55,16 +60,20 @@ def generate_launch_description():
 
         DeclareLaunchArgument(
             name='map',
-            default_value=PathJoinSubstitution(
-                [FindPackageShare('spice_nav'), 'maps', 'C4.yaml']
-            ),
-            description='Map yaml file'
+            default_value = DEFAULT_MAP_NAME,
+            description='Map name.yaml'
+        ),
+
+        DeclareLaunchArgument(
+            name='map_path',
+            default_value = default_map_path,
+            description='Map path'
         ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch_path),
             launch_arguments={
-                'map': map_yaml_file,
+                'map_path': map_path,
                 'use_sim_time': LaunchConfiguration("sim"),
                 'namespace': robot_ns,
                 'use_namespace': use_namespace,
