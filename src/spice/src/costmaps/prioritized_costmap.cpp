@@ -11,26 +11,17 @@ PrioritizedCostmap::PrioritizedCostmap(CentralPathPlanner& central_path_planner)
   get_ready_robots_timer = 
   		m_central_path_planner.create_wall_timer(1s, std::bind(&PrioritizedCostmap::get_robots_on_timer_cb, this));
 	m_costmapPub = m_central_path_planner.create_publisher<nav_msgs::msg::OccupancyGrid>("/prioritized_costmap", 10);
+	
 };
 
 // get current full costmap, of map + any other layers added for a robot Id
 std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::get_costmap(spice_msgs::msg::Id id)
 {
-// 	auto is_target_robot = [id](spice_msgs::msg::Id const& other_id)
-// 	{
-// 		return other_id.id == id.id;
-// 	};
-//   if (std::find(robots.begin(), robots.end(), is_target_robot) != robots.end())
-//   {
-// 	return calcPrioritizedCostMap(id);
-//   }
-
 	for(auto& robot: robots)
 	{
 		if (robot.id == id.id)
 			return calcPrioritizedCostMap(id);
 	}
-
 	RCLCPP_WARN(m_central_path_planner.get_logger(), "Cant find robot with id: %s", id.id.c_str());
 	return std::make_shared<nav2_costmap_2d::Costmap2D>();
 }
@@ -66,9 +57,22 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	RCLCPP_WARN(m_central_path_planner.get_logger(), "calc costmap for id: %s", robotId.id.c_str());
   for (auto it : robots)  // robots ordered according to priority
   {
+	robot_plan cur_robot_plan = m_central_path_planner.get_last_plan_by_id(it);
 	if (it.id == robotId.id)
 	{
-
+		
+		//clear costmap around robot
+		geometry_msgs::msg::PoseStamped robot_pose = cur_robot_plan.start;
+		unsigned int r_mx, r_my;
+		costmap->worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
+		for(int i = -(int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i < (int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i++)
+		{
+			for (int j = -(int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); j < (int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); j++){
+				costmap->setCost(std::max(i,0), std::max(j,0),nav2_costmap_2d::FREE_SPACE);
+			}
+		}
+		
+		
 		nav_msgs::msg::OccupancyGrid occGrid;
 		occGrid.header.frame_id = "map";
 		occGrid.header.stamp = m_central_path_planner.now();
@@ -88,11 +92,11 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	  return costmap;
 	}
 
-	nav_msgs::msg::Path robotPath = m_central_path_planner.get_last_plan_by_id(it);
+
 	std::vector<std::vector<unsigned int>> costpositions;
 		RCLCPP_WARN(m_central_path_planner.get_logger(), "got last robot plan for robot: %s", it.id.c_str());
 
-	for (auto pose : robotPath.poses)
+	for (auto pose : cur_robot_plan.plan.poses)
 	{
 
 	  unsigned int mx, my;
