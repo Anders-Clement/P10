@@ -133,8 +133,8 @@ def generate_launch_description():
         #     shell=True
         # ),  
 
-    # Option B if the other crashed is to have this (and maybe change lifecyclenodes to nodes)
-        # lifecycleManager that activates the noted and then dies insead
+    # Option B if option A sucks/crashes/fails to activate
+        # lifecycleManager activates the notes and then dies
         Node(
             package='nav2_lifecycle_manager',
             executable='lifecycle_manager',
