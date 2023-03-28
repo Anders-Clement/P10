@@ -81,18 +81,18 @@ private:
           std::string fromFrameRel = workcell.id.id;
           try
           {
-            // t = tf_buffer_->lookupTransform(
-            // toFrameRel, fromFrameRel,
-            // tf2::TimePointZero);
-            // float dist = sqrt(std::pow(t.transform.translation.x, 2) + std::pow(t.transform.translation.y, 2) + std::pow(t.transform.translation.z, 2));
+            t = tf_buffer_->lookupTransform(
+            toFrameRel, fromFrameRel,
+            tf2::TimePointZero);
+            float dist = sqrt(std::pow(t.transform.translation.x, 2) + std::pow(t.transform.translation.y, 2) + std::pow(t.transform.translation.z, 2));
 
-            // if (dist < minDist)
-            // {
+            if (dist < minDist)
+            {
               
             workcellType = workcell.id;
-            // minDist = dist;
+            minDist = dist;
             goal = tf_buffer_->lookupTransform("map", fromFrameRel, tf2::TimePointZero);
-            // }
+            }
           }
           catch (const tf2::TransformException &ex)
           {
