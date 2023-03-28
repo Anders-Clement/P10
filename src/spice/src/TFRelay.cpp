@@ -23,10 +23,14 @@ public:
       std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ =
       std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    
+    rclcpp::QoS qos(
+      rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_sensor_data)
+      );
 
-    // Create turtle2 velocity publisher
+    // Create tf publisher
     publisher_ =
-      this->create_publisher<tf2_msgs::msg::TFMessage>("to_tf_global", 100);
+      this->create_publisher<tf2_msgs::msg::TFMessage>("to_tf_global", qos);
 
     // Call on_timer function every second
     timer_ = this->create_wall_timer(
