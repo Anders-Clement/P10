@@ -34,7 +34,9 @@ void DynamicObstacleLayer::onInitialize()
 
   transform_tolerance_ = tf2::durationFromSec(TF_TOLERANCE);
   robot_name = getenv("ROBOT_NAMESPACE");
+  
   rclcpp::QoS QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_sensor_data));
+  QoS.reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
 
   global_frame_ = layered_costmap_->getGlobalFrameID();
 
