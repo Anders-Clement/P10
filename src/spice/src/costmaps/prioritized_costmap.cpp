@@ -42,10 +42,10 @@ void PrioritizedCostmap::get_robots_on_timer_cb()
 	  robots.push_back(robot.id);
 	}
 	std::sort(robots.begin(), robots.end(), [](const spice_msgs::msg::Id& a, const spice_msgs::msg::Id& b){return a.id < b.id;});
-	for (auto it : robots)  // robots ordered according to priority
-  	{
-		RCLCPP_WARN(m_central_path_planner.get_logger(), "robot: %s", it.id.c_str());
-	}
+	// for (auto it : robots)  // robots ordered according to priority
+  	// {
+	// 	RCLCPP_WARN(m_central_path_planner.get_logger(), "robot: %s", it.id.c_str());
+	// }
   };
 
   auto futureResult = get_robots_cli->async_send_request(get_robots_request, get_robots_cb);
