@@ -34,11 +34,12 @@ void DynamicObstacleLayer::onInitialize()
 
   transform_tolerance_ = tf2::durationFromSec(TF_TOLERANCE);
   robot_name = getenv("ROBOT_NAMESPACE");
+  rclcpp::QoS QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_sensor_data));
 
   global_frame_ = layered_costmap_->getGlobalFrameID();
 
   subscription_ = nh_->create_subscription<tf2_msgs::msg::TFMessage>(
-	  topic_, 10, std::bind(&DynamicObstacleLayer::TFCallback, this, _1));
+	  topic_, QoS, std::bind(&DynamicObstacleLayer::TFCallback, this, _1));
 
   timer_ = nh_->create_wall_timer(5s, std::bind(&DynamicObstacleLayer::get_robots_on_timer_cb, this));
   get_robots_cli = nh_->create_client<spice_msgs::srv::GetRobotsByType>("/get_robots_by_type");

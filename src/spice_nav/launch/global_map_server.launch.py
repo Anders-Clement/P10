@@ -98,53 +98,51 @@ def generate_launch_description():
 
     ## Option A
         ## Global map server configure and activated
-        ExecuteProcess(
-            cmd=[[
-                FindExecutable(name='ros2'),
-                " service call ",
-                "/global_map_server/change_state ",
-                "lifecycle_msgs/srv/ChangeState ",
-                '"{transition: {id: 1}}"',
-                '&&',
-                FindExecutable(name='ros2'),
-                " service call ",
-                "/global_map_server/change_state ",
-                "lifecycle_msgs/srv/ChangeState ",
-                '"{transition: {id: 3}}"',
-            ]],
-            shell=True
-        ),  
+        # ExecuteProcess(
+        #     cmd=[[
+        #         FindExecutable(name='ros2'),
+        #         " service call ",
+        #         "/global_map_server/change_state ",
+        #         "lifecycle_msgs/srv/ChangeState ",
+        #         '"{transition: {id: 1}}"',
+        #         '&&',
+        #         FindExecutable(name='ros2'),
+        #         " service call ",
+        #         "/global_map_server/change_state ",
+        #         "lifecycle_msgs/srv/ChangeState ",
+        #         '"{transition: {id: 3}}"',
+        #     ]],
+        #     shell=True
+        # ),  
 
-        ## Global costmap configure and activated
-        ExecuteProcess(
-            cmd=[[
-                FindExecutable(name='ros2'),
-                " service call ",
-                "/costmap/costmap/change_state ",
-                "lifecycle_msgs/srv/ChangeState ",
-                '"{transition: {id: 1}}"',
-                '&&',
-                FindExecutable(name='ros2'),
-                " service call ",
-                "/costmap/costmap/change_state ",
-                "lifecycle_msgs/srv/ChangeState ",
-                '"{transition: {id: 3}}"',
-            ]],
-            shell=True
-        ),  
+        # ## Global costmap configure and activated
+        # ExecuteProcess(
+        #     cmd=[[
+        #         FindExecutable(name='ros2'),
+        #         " service call ",
+        #         "/costmap/costmap/change_state ",
+        #         "lifecycle_msgs/srv/ChangeState ",
+        #         '"{transition: {id: 1}}"',
+        #         '&&',
+        #         FindExecutable(name='ros2'),
+        #         " service call ",
+        #         "/costmap/costmap/change_state ",
+        #         "lifecycle_msgs/srv/ChangeState ",
+        #         '"{transition: {id: 3}}"',
+        #     ]],
+        #     shell=True
+        # ),  
 
-    ## Option B if the other crashed is to have this (and maybe change lifecyclenodes to nodes)
-        ## lifecycleManager that activates the noted and then dies insead
-        # Node(
-        #     package='nav2_lifecycle_manager',
-        #     executable='lifecycle_manager',
-        #     name='lifecycle_manager_localization',
-        #     output='screen',
-        #     arguments=['--ros-args', '--log-level', log_level],
-        #     parameters=[
-        #         {'use_sim_time': use_sim_time},
-        #         {'autostart': autostart},
-        #         {'node_names': [costmap_node, map_server_node]}]
-        # )
+    # Option B if the other crashed is to have this (and maybe change lifecyclenodes to nodes)
+        # lifecycleManager that activates the noted and then dies insead
+        Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager_global_map',
+            output='screen',
+            arguments=['--ros-args', '--log-level', log_level],
+            parameters=[{'use_sim_time': use_sim_time},
+                        {'autostart': autostart},
+                        {'node_names': ['global_map_server','costmap/costmap']}]),
     ])
     
