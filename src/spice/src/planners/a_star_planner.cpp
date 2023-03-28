@@ -37,8 +37,8 @@ nav_msgs::msg::Path AStarPlanner::get_plan(
     double goal_tolerance,
     spice_msgs::msg::Id id)
 {
-      RCLCPP_INFO(
-            m_central_path_planner.get_logger(), "Got planning request from robot: %s", id.id.c_str());
+      // RCLCPP_INFO(
+      //       m_central_path_planner.get_logger(), "Got planning request from robot: %s", id.id.c_str());
     m_costmap = m_central_path_planner.get_costmap(id);
     if(!m_navfn_planner)
     {

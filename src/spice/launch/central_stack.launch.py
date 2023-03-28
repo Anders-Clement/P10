@@ -21,6 +21,24 @@ def generate_launch_description():
             name='work_cell_allocator'
         ),
 
+        Node(
+            package='spice',
+            executable='task_allocator',
+            name='task_allocator'
+        ),
+
+        Node(
+            package='spice',
+            executable='work_cell_simulator',
+            name='work_cell_simulator'
+        ),
+
+        Node(
+            package='spice',
+            executable='central_path_planner',
+            name='central_path_planner'
+        ),
+
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(
