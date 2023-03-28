@@ -22,7 +22,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::get_costmap(spic
 		if (robot.id == id.id)
 			return calcPrioritizedCostMap(id);
 	}
-	RCLCPP_WARN(m_central_path_planner.get_logger(), "Cant find robot with id: %s", id.id.c_str());
+	RCLCPP_WARN(m_central_path_planner.get_logger(), "Cant find costmap for robot with id: %s", id.id.c_str());
 	return std::make_shared<nav2_costmap_2d::Costmap2D>();
 }
 
@@ -42,10 +42,10 @@ void PrioritizedCostmap::get_robots_on_timer_cb()
 	  robots.push_back(robot.id);
 	}
 	std::sort(robots.begin(), robots.end(), [](const spice_msgs::msg::Id& a, const spice_msgs::msg::Id& b){return a.id < b.id;});
-	for (auto it : robots)  // robots ordered according to priority
-  	{
-		RCLCPP_WARN(m_central_path_planner.get_logger(), "robot: %s", it.id.c_str());
-	}
+	// for (auto it : robots)  // robots ordered according to priority
+  	// {
+	// 	RCLCPP_WARN(m_central_path_planner.get_logger(), "robot: %s", it.id.c_str());
+	// }
   };
 
   auto futureResult = get_robots_cli->async_send_request(get_robots_request, get_robots_cb);
@@ -54,7 +54,7 @@ void PrioritizedCostmap::get_robots_on_timer_cb()
 std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedCostMap(spice_msgs::msg::Id robotId)
 {
   std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
-	RCLCPP_WARN(m_central_path_planner.get_logger(), "calc costmap for id: %s", robotId.id.c_str());
+	// RCLCPP_WARN(m_central_path_planner.get_logger(), "calc costmap for id: %s", robotId.id.c_str());
   for (auto it : robots)  // robots ordered according to priority
   {
 	robot_plan cur_robot_plan = m_central_path_planner.get_last_plan_by_id(it);
@@ -103,13 +103,13 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 			occGrid.data[i] = *grid++;
 		}
 		m_costmapPub->publish(occGrid);
-		RCLCPP_WARN(m_central_path_planner.get_logger(), "returning costmap for id: %s", robotId.id.c_str());
+		// RCLCPP_WARN(m_central_path_planner.get_logger(), "returning costmap for id: %s", robotId.id.c_str());
 	  return costmap;
 	}
 
 
 	std::vector<std::vector<unsigned int>> costpositions;
-		RCLCPP_WARN(m_central_path_planner.get_logger(), "got last robot plan for robot: %s", it.id.c_str());
+		// RCLCPP_WARN(m_central_path_planner.get_logger(), "got last robot plan for robot: %s", it.id.c_str());
 
 	for (auto pose : cur_robot_plan.plan.poses)
 	{
