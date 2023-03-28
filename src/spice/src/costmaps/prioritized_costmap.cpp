@@ -65,11 +65,24 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 		geometry_msgs::msg::PoseStamped robot_pose = cur_robot_plan.start;
 		unsigned int r_mx, r_my;
 		costmap->worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
-		for(int i = -(int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i < (int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i++)
+
+		// ensure cost map is not accessed outside of bounds (less than 0)
+		unsigned int start_x;
+		if(r_mx < ceil(ROBOT_RADIUS/MAP_RESOLUTION))
+			start_x = 0;
+		else
+			start_x = r_mx - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
+		
+		unsigned int start_y;
+		if(r_my < ceil(ROBOT_RADIUS/MAP_RESOLUTION))
+			start_y = 0;
+		else
+			start_y = r_my - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
+		
+		// clear cost map around the robot
+		for(unsigned int i = start_x; i < (unsigned int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i++)
 		{
-			for (int j = -(int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); j < (int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); j++){
-				
-				r_mx = std::max(i,0) + r_mx; r_my = std::max(j,0) + r_my;
+			for (unsigned int j = start_y; j < (unsigned int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); j++){
 				costmap->setCost(r_mx, r_my, nav2_costmap_2d::FREE_SPACE);
 			}
 		}
