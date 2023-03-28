@@ -7,8 +7,14 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
     m_planner_service = create_service<spice_msgs::srv::GetPlan>(
         "/get_plan", 
         std::bind(&CentralPathPlanner::get_plan_cb, this, std::placeholders::_1, std::placeholders::_2));
+    m_marker_array_publisher = create_publisher<visualization_msgs::msg::MarkerArray>("/planned_paths", 10);
+    m_debug_publish_timer = rclcpp::create_timer(this, 
+                                                get_clock(), 
+                                                rclcpp::Duration::from_seconds(1.0),
+                                                std::bind(&CentralPathPlanner::debug_publish_timer_cb, this));
+
     m_global_frame = "map";
-    m_tolerance = 0.05;
+    m_tolerance = 0.5;
 
     m_planner = std::make_unique<AStarPlanner>(*this);
     m_costmap = std::make_unique<PrioritizedCostmap>(*this);
@@ -53,6 +59,101 @@ robot_plan& CentralPathPlanner::get_last_plan_by_id(spice_msgs::msg::Id id)
 {
     return m_planned_paths[id.id];
 }
+
+
+// convenience function to return color from hue in range 0-360
+std_msgs::msg::ColorRGBA color_from_hue(int hue)
+{
+    double hh, p, q, t, ff;
+    long i;
+    std_msgs::msg::ColorRGBA out;
+    out.a = 1.0;
+    double saturation = 1.0;
+    double value = 1.0;
+
+    hh = hue;
+    if(hh >= 360.0) hh = 0.0;
+    hh /= 60.0;
+    i = (long)hh;
+    ff = hh - i;
+    p = value * (1.0 - saturation);
+    q = value * (1.0 - (saturation * ff));
+    t = value * (1.0 - (saturation * (1.0 - ff)));
+
+    switch(i) {
+    case 0:
+        out.r = value;
+        out.g = t;
+        out.b = p;
+        break;
+    case 1:
+        out.r = q;
+        out.g = value;
+        out.b = p;
+        break;
+    case 2:
+        out.r = p;
+        out.g = value;
+        out.b = t;
+        break;
+
+    case 3:
+        out.r = p;
+        out.g = q;
+        out.b = value;
+        break;
+    case 4:
+        out.r = t;
+        out.g = p;
+        out.b = value;
+        break;
+    case 5:
+    default:
+        out.r = value;
+        out.g = p;
+        out.b = q;
+        break;
+    }
+    return out;     
+}
+
+void CentralPathPlanner::debug_publish_timer_cb()
+{
+    visualization_msgs::msg::MarkerArray msg;
+
+    for(auto& path : m_planned_paths)
+    {
+        visualization_msgs::msg::Marker marker;
+        marker.action = 0;
+        marker.type = 4;
+        marker.scale.x = 0.05;
+        marker.lifetime = rclcpp::Duration::from_seconds(1.0);
+        marker.header.stamp = now();
+        marker.ns = path.first;
+        marker.id = 0;
+        marker.header.frame_id = path.second.plan.header.frame_id;
+
+        for(auto& pose : path.second.plan.poses)
+        {
+            geometry_msgs::msg::Point point;
+            point.x = pose.pose.position.x;
+            point.y = pose.pose.position.y;
+            point.z = pose.pose.position.z;
+            marker.points.push_back(point);
+        }
+        msg.markers.push_back(marker);
+    }
+
+    // add colors
+    for(unsigned int i = 0; i < msg.markers.size(); i++)
+    {
+        double hue = i*(msg.markers.size()/360.0);
+        msg.markers[i].color = color_from_hue(hue);
+    }
+
+    m_marker_array_publisher->publish(std::move(msg));
+}
+
 
 
 
