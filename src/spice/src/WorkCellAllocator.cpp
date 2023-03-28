@@ -10,6 +10,7 @@
 #include "tf2/exceptions.h"
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
+#include "tf2_ros/qos.hpp"
 #include "spice_msgs/srv/alloc_work_cell.hpp"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
 #include "spice_msgs/msg/robot.hpp"
@@ -22,12 +23,17 @@ class WorckCellAllocator : public rclcpp::Node
 public:
   WorckCellAllocator() : Node("work_cell_allocator")
   {
+
+    tf2_ros::DynamicListenerQoS QoS;
+     QoS.reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
+
     tf_buffer_ = 
     std::make_unique<tf2_ros::Buffer>(this->get_clock());
 
     tf_listener_ =
-     std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-
+     std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this, true, QoS);
+    
+    
     service = 
     create_service<spice_msgs::srv::AllocWorkCell>("allocate_work_cell", std::bind(&WorckCellAllocator::OnWorkCell, this,
     std::placeholders::_1, std::placeholders::_2));

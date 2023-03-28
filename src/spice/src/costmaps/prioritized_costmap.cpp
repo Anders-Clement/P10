@@ -54,7 +54,6 @@ void PrioritizedCostmap::get_robots_on_timer_cb()
 std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedCostMap(spice_msgs::msg::Id robotId)
 {
   std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
-	// RCLCPP_WARN(m_central_path_planner.get_logger(), "calc costmap for id: %s", robotId.id.c_str());
   for (auto it : robots)  // robots ordered according to priority
   {
 	robot_plan cur_robot_plan = m_central_path_planner.get_last_plan_by_id(it);
@@ -64,21 +63,21 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 		//clear costmap around robot
 		geometry_msgs::msg::PoseStamped robot_pose = cur_robot_plan.start;
 		unsigned int r_mx, r_my;
-		costmap->worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
 
-		// ensure cost map is not accessed outside of bounds (less than 0)
-		unsigned int start_x;
-		if(r_mx < ceil(ROBOT_RADIUS/MAP_RESOLUTION))
-			start_x = 0;
-		else
-			start_x = r_mx - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
-		
-		unsigned int start_y;
-		if(r_my < ceil(ROBOT_RADIUS/MAP_RESOLUTION))
-			start_y = 0;
-		else
-			start_y = r_my - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
-		
+		if(costmap->worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my)){
+					// ensure cost map is not accessed outside of bounds (less than 0)
+			unsigned int start_x;
+			if(r_mx < ceil(ROBOT_RADIUS/MAP_RESOLUTION))
+				start_x = 0;
+			else
+				start_x = r_mx - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
+			
+			unsigned int start_y;
+			if(r_my < ceil(ROBOT_RADIUS/MAP_RESOLUTION))
+				start_y = 0;
+			else
+				start_y = r_my - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
+			
 		// clear cost map around the robot
 		for(unsigned int i = start_x; i < (unsigned int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i++)
 		{
@@ -87,6 +86,13 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 			}
 		}
 		
+		}
+
+		else{
+			RCLCPP_WARN(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] could not transform from w space to m space, robot: %s at pose at x= %f, y= %f",robotId.id robot_pose.pose.position.x, robot_pose.pose.position.y);
+		}
+
+
 		
 		nav_msgs::msg::OccupancyGrid occGrid;
 		occGrid.header.frame_id = "map";
