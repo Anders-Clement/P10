@@ -10,6 +10,7 @@
 #include "tf2/exceptions.h"
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
+#include "tf2_ros/qos.hpp"
 #include "spice_msgs/srv/alloc_work_cell.hpp"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
 #include "spice_msgs/msg/robot.hpp"
@@ -22,12 +23,17 @@ class WorckCellAllocator : public rclcpp::Node
 public:
   WorckCellAllocator() : Node("work_cell_allocator")
   {
+
+    tf2_ros::DynamicListenerQoS QoS;
+     QoS.reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
+
     tf_buffer_ = 
-    std::make_unique<tf2_ros::Buffer>(this->get_clock());
+     std::make_unique<tf2_ros::Buffer>(this->get_clock());
 
     tf_listener_ =
-     std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-
+     std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this, true, QoS);
+    
+    
     service = 
     create_service<spice_msgs::srv::AllocWorkCell>("allocate_work_cell", std::bind(&WorckCellAllocator::OnWorkCell, this,
     std::placeholders::_1, std::placeholders::_2));
@@ -46,12 +52,12 @@ private:
 
     using ServiceResponseFuture = rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedFuture;
 
-    auto get_robots_cb = [this](ServiceResponseFuture future)
+    auto get_workcells_cb = [this](ServiceResponseFuture future)
     {
-      this->robots = future.get()->robots;
+      this->workcells = future.get()->robots;
     };
 
-    auto futureResult = get_robots_cli->async_send_request(get_robots_request, get_robots_cb);
+    auto futureResult = get_robots_cli->async_send_request(get_robots_request, get_workcells_cb);
   }
 
   // made client to get all ready robots and merges so type is avaialble e.g. work cell
@@ -68,11 +74,11 @@ private:
     geometry_msgs::msg::TransformStamped goal;
     spice_msgs::msg::Id workcellType;
 
-    for(auto robot : robots){
+    for(auto workcell : workcells){
       for(auto type : request.get()->robot_types ){ // check if robot is of requested type
-        if(type.type == robot.id.robot_type.type){
+        if(type.type == workcell.id.robot_type.type){
           
-          std::string fromFrameRel = robot.id.id;
+          std::string fromFrameRel = workcell.id.id;
           try
           {
             t = tf_buffer_->lookupTransform(
@@ -83,9 +89,9 @@ private:
             if (dist < minDist)
             {
               
-              workcellType = robot.id;
-              minDist = dist;
-              goal = tf_buffer_->lookupTransform("map", fromFrameRel, tf2::TimePointZero);
+            workcellType = workcell.id;
+            minDist = dist;
+            goal = tf_buffer_->lookupTransform("map", fromFrameRel, tf2::TimePointZero);
             }
           }
           catch (const tf2::TransformException &ex)
@@ -121,7 +127,7 @@ private:
   rclcpp::Service<spice_msgs::srv::AllocWorkCell>::SharedPtr service;
   rclcpp::TimerBase::SharedPtr get_ready_robots_timer{nullptr};
   rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_robots_cli;
-  std::vector<spice_msgs::msg::Robot> robots; //list of all robots including workcells
+  std::vector<spice_msgs::msg::Robot> workcells; //list of all robots including workcells
 };
 
 int main(int argc, char *argv[])
