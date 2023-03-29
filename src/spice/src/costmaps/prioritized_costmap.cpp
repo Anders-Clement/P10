@@ -66,30 +66,32 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 
 		if(costmap->worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my)){
 					// ensure cost map is not accessed outside of bounds (less than 0)
+			
 			unsigned int start_x;
 			if(r_mx < ceil(ROBOT_RADIUS/MAP_RESOLUTION))
-				start_x = 0;
+				start_x = -r_mx;
 			else
 				start_x = r_mx - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
 			
 			unsigned int start_y;
 			if(r_my < ceil(ROBOT_RADIUS/MAP_RESOLUTION))
-				start_y = 0;
+				start_y = -r_my;
 			else
 				start_y = r_my - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
-			
+		RCLCPP_WARN(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] trying to clear costmap around robot %s at pat pose x= %f, y= %f, map coordninates mx= %f, my=%f",robotId.id, robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
 		// clear cost map around the robot
+		
 		for(unsigned int i = start_x; i < (unsigned int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i++)
 		{
 			for (unsigned int j = start_y; j < (unsigned int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); j++){
-				costmap->setCost(r_mx, r_my, nav2_costmap_2d::FREE_SPACE);
+				costmap->setCost(r_mx + i, r_my + j, nav2_costmap_2d::FREE_SPACE);
 			}
 		}
 		
 		}
 
 		else{
-			RCLCPP_WARN(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] could not transform from w space to m space, robot: %s at pose at x= %f, y= %f",robotId.id robot_pose.pose.position.x, robot_pose.pose.position.y);
+			RCLCPP_WARN(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] could not transform from w space to m space, robot: %s at pose x= %f, y= %f",robotId.id, robot_pose.pose.position.x, robot_pose.pose.position.y);
 		}
 
 

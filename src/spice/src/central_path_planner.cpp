@@ -47,7 +47,7 @@ void CentralPathPlanner::get_plan_cb(
     m_planned_paths[request->id.id].goal = request->goal;
     m_planned_paths[request->id.id].plan = response->plan;
 
-    RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms", response->plan.poses.size(), duration);
+    //RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms", response->plan.poses.size(), duration);
 }
 
 std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spice_msgs::msg::Id id)
