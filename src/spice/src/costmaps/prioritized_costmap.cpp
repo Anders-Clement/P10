@@ -63,6 +63,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 		//clear costmap around robot
 		geometry_msgs::msg::PoseStamped robot_pose = cur_robot_plan.start;
 		unsigned int r_mx, r_my;
+		RCLCPP_INFO(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] robot pose header %s ", robot_pose.header.frame_id.c_str());
 
 		if(costmap->worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my)){
 					// ensure cost map is not accessed outside of bounds (less than 0)
@@ -78,7 +79,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 				start_y = -r_my;
 			else
 				start_y = r_my - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
-		RCLCPP_WARN(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] trying to clear costmap around robot %s at pat pose x= %f, y= %f, map coordninates mx= %f, my=%f",robotId.id, robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
+		RCLCPP_INFO(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] trying to clear costmap around robot at pat pose x= %f, y= %f, map coordninates mx= %f, my=%f", robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
 		// clear cost map around the robot
 		
 		for(unsigned int i = start_x; i < (unsigned int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i++)
