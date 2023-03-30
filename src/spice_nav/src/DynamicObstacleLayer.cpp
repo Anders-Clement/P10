@@ -142,7 +142,7 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 
 	  if (worldToMap(wx, wy, mx, my))
 	  {
-		setCost(mx, my, 150 /*LETHAL_OBSTACLE*/);
+		setCost(mx, my, LETHAL_OBSTACLE);
 
 		*min_x = std::min(wx, *min_x);
 		*min_y = std::min(wy, *min_y);
