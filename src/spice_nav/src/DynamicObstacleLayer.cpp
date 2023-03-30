@@ -28,13 +28,18 @@ void DynamicObstacleLayer::onInitialize()
   declareParameter("enabled", rclcpp::ParameterValue(true));
   declareParameter("topic", rclcpp::ParameterValue("/tf"));
   declareParameter("obstacle_points", rclcpp::ParameterValue(8.0));
+  declareParameter("inflation_radius", rclcpp::ParameterValue(0.5));
+  declareParameter("obstacle_cost", rclcpp::ParameterValue(LETHAL_OBSTACLE));
+
   nh_->get_parameter(name_ + "." + "enabled", enabled_);
   nh_->get_parameter(name_ + "." + "topic", topic_);
   nh_->get_parameter(name_ + "." + "obstacle_points", obstacle_points_);
+  nh_->get_parameter(name_ + "." + "inflation_radius", inflation_radius);
+  nh_->get_parameter(name_ + "." + "obstacle_cost", obstacle_cost);
 
   transform_tolerance_ = tf2::durationFromSec(TF_TOLERANCE);
   robot_name = getenv("ROBOT_NAMESPACE");
-  
+
   rclcpp::QoS QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_sensor_data));
   QoS.reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
 
@@ -109,7 +114,7 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 	{
 	  continue;
 	}
-	
+
 	in = messageBuffer[robot.id.id + "_base_link"];
 
 	if (!tf_->canTransform(in.header.frame_id, global_frame_, tf2_ros::fromMsg(in.header.stamp),
@@ -122,8 +127,10 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 
 	tf_->transform(in, out, global_frame_, transform_tolerance_);
 
-	wx = -out.transform.translation.x; //works by inverting signs 
+	wx = -out.transform.translation.x;	// works by inverting signs
 	wy = -out.transform.translation.y;
+
+	std::vector<std::vector<unsigned int>> costpositions;
 
 	if (worldToMap(wx, wy, mx, my))
 	{
@@ -132,6 +139,7 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 	  *min_y = std::min(wy, *min_y);
 	  *max_x = std::max(wx, *max_x);
 	  *max_y = std::max(wy, *max_y);
+	  costpositions.push_back({ mx, my });
 	}
 
 	// put in additional points
@@ -148,9 +156,58 @@ void DynamicObstacleLayer::updateBounds(double robot_x, double robot_y, double r
 		*min_y = std::min(wy, *min_y);
 		*max_x = std::max(wx, *max_x);
 		*max_y = std::max(wy, *max_y);
+		costpositions.push_back({ mx, my });
 	  }
 	}
+	
+	if(obstacle_cost < LETHAL_OBSTACLE){
+		int number_of_loops = ceil(inflation_radius / resolution_);
+		inflateDynObs(number_of_loops, number_of_loops, costpositions, min_x, min_y, max_x, max_y);
+	}
   }
+}
+
+void DynamicObstacleLayer::inflateDynObs(int loopsLeft, int maxLoops,
+										 std::vector<std::vector<unsigned int>> costpositions, double* min_x,
+										 double* min_y, double* max_x, double* max_y)
+{
+  std::vector<std::vector<unsigned int>> nextcosts;
+  unsigned int mx, my;
+  unsigned char cost = ceil(obstacle_cost / (1 + maxLoops - loopsLeft));
+
+  if (loopsLeft > 0)
+  {
+	for (auto it : costpositions)
+	{
+	  for (int i = -1; i <= 1; i += 2)
+	  {
+		for (int j = -1; j <= 1; j += 2)
+		{
+		  mx = it[0] + i;
+		  my = it[1] + j;
+
+		  if (mx > 0 && mx < getSizeInCellsX() && my > 0 && my < getSizeInCellsY())
+		  {
+			if (getCost(mx, my) < cost)
+			{
+			  setCost(mx, my, cost);
+			  nextcosts.push_back({ mx, my });
+
+			  double wx, wy;
+			  mapToWorld(mx, my, wx, wy);
+			  *min_x = std::min(wx, *min_x);
+			  *min_y = std::min(wy, *min_y);
+			  *max_x = std::max(wx, *max_x);
+			  *max_y = std::max(wy, *max_y);
+			}
+		  }
+		}
+	  }
+	}
+	loopsLeft--;
+	inflateDynObs(loopsLeft, maxLoops, nextcosts, min_x, min_y, max_x, max_y);
+  }
+  return;
 }
 
 void DynamicObstacleLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i,
