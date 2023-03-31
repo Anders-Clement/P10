@@ -62,7 +62,7 @@ robot_plan& CentralPathPlanner::get_last_plan_by_id(spice_msgs::msg::Id id)
 
 
 // convenience function to return color from hue in range 0-360
-std_msgs::msg::ColorRGBA color_from_hue(int hue)
+std_msgs::msg::ColorRGBA color_from_hue(double hue)
 {
     double hh, p, q, t, ff;
     long i;
@@ -147,7 +147,7 @@ void CentralPathPlanner::debug_publish_timer_cb()
     // add colors
     for(unsigned int i = 0; i < msg.markers.size(); i++)
     {
-        double hue = i*(msg.markers.size()/360.0);
+        double hue = (float)i*(360.0/(float)msg.markers.size());
         msg.markers[i].color = color_from_hue(hue);
     }
 
