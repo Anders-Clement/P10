@@ -8,4 +8,4 @@ export LINOROBOT2_LASER_SENSOR=rplidar
 export ROBOT_NAMESPACE=polybot0x
 export ROS_DOMAIN_ID=0
 
-ros2 launch spice robot_stack.launch.py
+ros2 launch linorobot2_bringup namespace_bringup.launch.py
