@@ -8,22 +8,21 @@ using namespace std::chrono_literals;
 PrioritizedCostmap::PrioritizedCostmap(CentralPathPlanner& central_path_planner) : Costmap(central_path_planner)
 {
   get_robots_cli = m_central_path_planner.create_client<spice_msgs::srv::GetRobotsByType>("get_robots_by_type");
-  get_ready_robots_timer = 
-  		m_central_path_planner.create_wall_timer(1s, std::bind(&PrioritizedCostmap::get_robots_on_timer_cb, this));
-	m_costmapPub = m_central_path_planner.create_publisher<nav_msgs::msg::OccupancyGrid>("/prioritized_costmap", 10);
-	
+  get_ready_robots_timer =
+	  m_central_path_planner.create_wall_timer(1s, std::bind(&PrioritizedCostmap::get_robots_on_timer_cb, this));
+  m_costmapPub = m_central_path_planner.create_publisher<nav_msgs::msg::OccupancyGrid>("/prioritized_costmap", 10);
 };
 
 // get current full costmap, of map + any other layers added for a robot Id
 std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::get_costmap(spice_msgs::msg::Id id)
 {
-	for(auto& robot: robots)
-	{
-		if (robot.id == id.id)
-			return calcPrioritizedCostMap(id);
-	}
-	RCLCPP_WARN(m_central_path_planner.get_logger(), "Cant find costmap for robot with id: %s", id.id.c_str());
-	return std::make_shared<nav2_costmap_2d::Costmap2D>();
+  for (auto& robot : robots)
+  {
+	if (robot.id == id.id)
+	  return calcPrioritizedCostMap(id);
+  }
+  RCLCPP_WARN(m_central_path_planner.get_logger(), "Cant find costmap for robot with id: %s", id.id.c_str());
+  return std::make_shared<nav2_costmap_2d::Costmap2D>();
 }
 
 void PrioritizedCostmap::get_robots_on_timer_cb()
@@ -38,14 +37,10 @@ void PrioritizedCostmap::get_robots_on_timer_cb()
 	auto result = future.get();
 	for (auto robot : result->robots)
 	{
-		
 	  robots.push_back(robot.id);
 	}
-	std::sort(robots.begin(), robots.end(), [](const spice_msgs::msg::Id& a, const spice_msgs::msg::Id& b){return a.id < b.id;});
-	// for (auto it : robots)  // robots ordered according to priority
-  	// {
-	// 	RCLCPP_WARN(m_central_path_planner.get_logger(), "robot: %s", it.id.c_str());
-	// }
+	std::sort(robots.begin(), robots.end(),
+			  [](const spice_msgs::msg::Id& a, const spice_msgs::msg::Id& b) { return a.id < b.id; });
   };
 
   auto futureResult = get_robots_cli->async_send_request(get_robots_request, get_robots_cb);
@@ -59,69 +54,94 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	robot_plan cur_robot_plan = m_central_path_planner.get_last_plan_by_id(it);
 	if (it.id == robotId.id)
 	{
-		
-		//clear costmap around robot
 		geometry_msgs::msg::PoseStamped robot_pose = cur_robot_plan.start;
 		unsigned int r_mx, r_my;
 
-		if(costmap->worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my)){
-					// ensure cost map is not accessed outside of bounds (less than 0)
-			
-			unsigned int start_x;
-			if(r_mx < ceil(ROBOT_RADIUS/MAP_RESOLUTION))
-				start_x = -r_mx;
-			else
-				start_x = r_mx - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
-			
-			unsigned int start_y;
-			if(r_my < ceil(ROBOT_RADIUS/MAP_RESOLUTION))
-				start_y = -r_my;
-			else
-				start_y = r_my - ceil(ROBOT_RADIUS/MAP_RESOLUTION);
-		RCLCPP_WARN(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] trying to clear costmap around robot %s at pat pose x= %f, y= %f, map coordninates mx= %f, my=%f",robotId.id, robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
+
+	  if (costmap->worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my))
+	  {
+		// ensure cost map is not accessed outside of bounds (less than 0, more than x,y max)
+
+		unsigned int start_x;
+		if (r_mx < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
+		  start_x = -r_mx;
+		else
+		  start_x = r_mx - ceil(ROBOT_RADIUS / MAP_RESOLUTION);
+
+		unsigned int start_y;
+		if (r_my < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
+		  start_y = -r_my;
+		else
+		  start_y = r_my - ceil(ROBOT_RADIUS / MAP_RESOLUTION);
+
+		unsigned int end_x;
+		if (costmap->getSizeInCellsX() - r_mx < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
+		  end_x = costmap->getSizeInCellsX() - r_mx;
+		else
+		   end_x = r_mx + ceil(ROBOT_RADIUS / MAP_RESOLUTION);
+
+		unsigned int end_y;
+		if (costmap->getSizeInCellsY() - r_my < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
+		  end_y = costmap->getSizeInCellsY() - r_my;
+		else
+		   end_y = r_my + ceil(ROBOT_RADIUS / MAP_RESOLUTION);
+
+		RCLCPP_INFO(m_central_path_planner.get_logger(),
+					"[PRIORITIZED COSTMAP] trying to clear costmap around robot %s at pose x= %f, y= %f, map "
+					"coordninates mx= %d, my=%d",
+					it.id.c_str(), robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
+		
+		RCLCPP_INFO(m_central_path_planner.get_logger(),
+					"[PRIORITIZED COSTMAP] clearing cost map from (start_x, start_y): (%d,%d) to (end_x, end_y):"
+					 "(%d,%d)", start_x, start_y, end_x, end_y);
+		
+		double temp_x, temp_y;
+
+		costmap->mapToWorld(r_mx, r_my, temp_x, temp_y);
+		RCLCPP_WARN(m_central_path_planner.get_logger(), "costmap origin x,y: %f, %f robot pose, map to world %f, %f ", costmap->getOriginX(), costmap->getOriginY(), temp_x, temp_y);
+		
 		// clear cost map around the robot
-		
-		for(unsigned int i = start_x; i < (unsigned int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); i++)
+
+		for (unsigned int i = start_x; i < end_x; i++)
 		{
-			for (unsigned int j = start_y; j < (unsigned int)ceil(ROBOT_RADIUS/MAP_RESOLUTION); j++){
-				costmap->setCost(r_mx + i, r_my + j, nav2_costmap_2d::FREE_SPACE);
-			}
+		  for (unsigned int j = start_y; j < end_y; j++)
+		  {
+			costmap->setCost(i, j, nav2_costmap_2d::FREE_SPACE);
+		  }
 		}
-		
-		}
+	  }
 
-		else{
-			RCLCPP_WARN(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] could not transform from w space to m space, robot: %s at pose x= %f, y= %f",robotId.id, robot_pose.pose.position.x, robot_pose.pose.position.y);
-		}
+	  else
+	  {
+		RCLCPP_WARN(m_central_path_planner.get_logger(),
+					"[PRIORITIZED COSTMAP] could not transform from w space to m space, robot: %s at pose x= %f, y= %f",
+					robotId.id.c_str(), robot_pose.pose.position.x, robot_pose.pose.position.y);
+	  }
 
-
-		
-		nav_msgs::msg::OccupancyGrid occGrid;
-		occGrid.header.frame_id = "map";
-		occGrid.header.stamp = m_central_path_planner.now();
-		occGrid.info.width = costmap->getSizeInCellsX();
-		occGrid.info.height = costmap->getSizeInCellsY();
-		occGrid.info.origin.position.x = costmap->getOriginX();
-		occGrid.info.origin.position.y = costmap->getOriginY();
-		occGrid.info.resolution = costmap->getResolution();
-		occGrid.info.map_load_time = m_central_path_planner.now();
-		occGrid.data.resize(costmap->getSizeInCellsX()*costmap->getSizeInCellsY());
-		unsigned char* grid = costmap->getCharMap();
-		for(unsigned int i = 0; i < costmap->getSizeInCellsX()*costmap->getSizeInCellsY(); i++){
-			occGrid.data[i] = *grid++;
-		}
-		m_costmapPub->publish(occGrid);
-		// RCLCPP_WARN(m_central_path_planner.get_logger(), "returning costmap for id: %s", robotId.id.c_str());
+	nav_msgs::msg::OccupancyGrid occGrid;
+	  occGrid.header.frame_id = "map";
+	  occGrid.header.stamp = m_central_path_planner.now();
+	  occGrid.info.width = costmap->getSizeInCellsX();
+	  occGrid.info.height = costmap->getSizeInCellsY();
+	  occGrid.info.origin.position.x = costmap->getOriginX();
+	  occGrid.info.origin.position.y = costmap->getOriginY();
+	  occGrid.info.resolution = costmap->getResolution();
+	  occGrid.info.map_load_time = m_central_path_planner.now();
+	  occGrid.data.resize(costmap->getSizeInCellsX() * costmap->getSizeInCellsY());
+	  unsigned char* grid = costmap->getCharMap();
+	  for (unsigned int i = 0; i < costmap->getSizeInCellsX() * costmap->getSizeInCellsY(); i++)
+	  {
+		occGrid.data[i] = *grid++;
+	  }
+	  m_costmapPub->publish(occGrid);
+	  
 	  return costmap;
 	}
 
-
 	std::vector<std::vector<unsigned int>> costpositions;
-		// RCLCPP_WARN(m_central_path_planner.get_logger(), "got last robot plan for robot: %s", it.id.c_str());
 
 	for (auto pose : cur_robot_plan.plan.poses)
 	{
-
 	  unsigned int mx, my;
 	  if (costmap->worldToMap(pose.pose.position.x, pose.pose.position.y, mx, my))
 	  {
@@ -131,15 +151,14 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 		  costpositions.push_back({ mx, my });
 		}
 	  }
-
 	}
-		//RCLCPP_WARN(m_central_path_planner.get_logger(), "done placing putting robot path in costmap ");
 
 	int number_of_loops = ceil(INFLATION_RADIOUS / MAP_RESOLUTION);
 	inflateCostMap(number_of_loops, number_of_loops, *costmap, costpositions);
+
   }
-		RCLCPP_WARN(m_central_path_planner.get_logger(), "went through all robots and got no machting id");
-  	return std::make_shared<nav2_costmap_2d::Costmap2D>(); // if loop through all robots without returning map
+  RCLCPP_WARN(m_central_path_planner.get_logger(), "went through all robots and got no machting id");
+  return std::make_shared<nav2_costmap_2d::Costmap2D>();  // if loop through all robots without returning map
 }
 
 void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costmap_2d::Costmap2D& costmap,
@@ -168,9 +187,8 @@ void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costma
 	  }
 	}
 	loopsLeft--;
-  	inflateCostMap(loopsLeft, maxLoops, costmap, nextcosts);
+	inflateCostMap(loopsLeft, maxLoops, costmap, nextcosts);
   }
-
 
   return;
 }
