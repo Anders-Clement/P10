@@ -22,7 +22,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=ubuntu
-ExecStart=/usr/bin/sudo /usr/bin/bash /home/ubuntu/P10/bringup.sh
+ExecStart=/usr/bin/bash /home/ubuntu/P10/bringup.sh
 
 [Install]
 WantedBy=multi-user.target' >> /lib/systemd/system/bringup.service"
