@@ -13,4 +13,6 @@ export ROS_PYTHON_VERSION=3
 export ROS_LOCALHOST_ONLY=0
 export ROS_DISTRO=humble
 
+printenv | grep ROS
+
 ros2 launch linorobot2_bringup namespace_bringup.launch.py
