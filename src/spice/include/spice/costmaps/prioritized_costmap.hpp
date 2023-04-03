@@ -14,6 +14,10 @@ public:
     virtual std::shared_ptr<nav2_costmap_2d::Costmap2D> calcPrioritizedCostMap(spice_msgs::msg::Id robotId);
 
     virtual void inflateCostMap(int loopsLeft, int maxLoops, nav2_costmap_2d::Costmap2D& costmap, std::vector<std::vector<unsigned int>> costpositions);
+
+    virtual void calcRobotPriorities();
+
+    virtual void PlanFailed(spice_msgs::msg::Id robot);
     
     // get current full costmap, of map + any other layers added for a robot Id
     std::shared_ptr<nav2_costmap_2d::Costmap2D> get_costmap(spice_msgs::msg::Id id) override;
@@ -22,7 +26,12 @@ private:
     rclcpp::TimerBase::SharedPtr get_ready_robots_timer{nullptr};
     std::vector<spice_msgs::msg::Id> robots;
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmapPub;
+    spice_msgs::msg::Id firstPrioRobot;
     double MAP_RESOLUTION = 0.05;
     double INFLATION_RADIOUS = 0.35;
     double ROBOT_RADIUS = 0.2;
+    int future_lookup = 0;
+    int PRIORITY_SCHEME = 0;
+    int FUTURE_LOOKUP = 0;
+    int PRIORITY_OPTIONS = 2;
 };

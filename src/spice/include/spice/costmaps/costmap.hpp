@@ -17,6 +17,9 @@ public:
     Costmap(CentralPathPlanner& central_path_planner);
     // get current full costmap, of map + any other layers added for a robot Id
     virtual std::shared_ptr<nav2_costmap_2d::Costmap2D> get_costmap(spice_msgs::msg::Id id) = 0;
+    virtual void PlanFailed(spice_msgs::msg::Id robot){
+        return;
+    }
 
 protected:
     // map + inflation

@@ -50,6 +50,10 @@ void CentralPathPlanner::get_plan_cb(
     auto duration = (now()-start_time).nanoseconds()*10e-9;
     m_planned_paths[request->id.id].plan = response->plan;
 
+    if(response->plan.poses.size() == 0){
+        RCLCPP_WARN(get_logger(), "[CENTRAL_PLANNER]failed to create a plan with more than 0 poses");
+        m_costmap->PlanFailed(request->id);
+    }
     //RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms", response->plan.poses.size(), duration);
 }
 
