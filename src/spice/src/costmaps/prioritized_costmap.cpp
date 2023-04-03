@@ -198,7 +198,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	int index = 0;
 	for (auto pose : cur_robot_plan.plan.poses)
 	{
-	  if (index > future_lookup && future_lookup != 0)
+	  if (index > FUTURE_LOOKUP && FUTURE_LOOKUP != 0)
 	  {
 		break;
 	  }

@@ -30,7 +30,6 @@ private:
     double MAP_RESOLUTION = 0.05;
     double INFLATION_RADIOUS = 0.35;
     double ROBOT_RADIUS = 0.2;
-    int future_lookup = 0;
     int PRIORITY_SCHEME = 0;
     int FUTURE_LOOKUP = 0;
     int PRIORITY_OPTIONS = 2;
