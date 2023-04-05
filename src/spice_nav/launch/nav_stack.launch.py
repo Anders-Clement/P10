@@ -20,11 +20,12 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoinSubstitution
 from launch_ros.actions import LoadComposableNodes
 from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode
 from nav2_common.launch import RewrittenYaml
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
@@ -54,21 +55,31 @@ def generate_launch_description():
     # https://github.com/ros/robot_state_publisher/pull/30
     # TODO(orduno) Substitute with `PushNodeRemapping`
     #              https://github.com/ros2/launch_ros/issues/56
-    remappings = [('/tf', 'tf'),
-                  ('/tf_static', 'tf_static'),
-                  ('/global_tf', '/tf'),
-                  ('/scan', ['/',LaunchConfiguration('namespace'),'/scan'])]
+    remappings = [
+        ('/tf', 'tf'),
+        ('/tf_static', 'tf_static'),
+        ('/global_tf', '/tf'),
+        ('/scan', ['/',LaunchConfiguration('namespace'),'/scan'])
+    ]
+    
+    default_nav_bt_path = PathJoinSubstitution(
+        [FindPackageShare('spice_nav'), 'config','behavior_trees','custom_bt_of_navigate_to_pose_w_replanning_and_recovery_with_waitcondition.xml']
+    )
 
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {
         'use_sim_time': use_sim_time,
-        'autostart': autostart}
+        'autostart': autostart,
+        'default_nav_to_pose_bt_xml': default_nav_bt_path
+    }
+    
 
     configured_params = RewrittenYaml(
-            source_file=params_file,
-            root_key=namespace,
-            param_rewrites=param_substitutions,
-            convert_types=True)
+        source_file=params_file,
+        root_key=namespace,
+        param_rewrites=param_substitutions,
+        convert_types=True
+    )
 
     stdout_linebuf_envvar = SetEnvironmentVariable(
         'RCUTILS_LOGGING_BUFFERED_STREAM', '1')
@@ -118,7 +129,7 @@ def generate_launch_description():
                 respawn=use_respawn,
                 respawn_delay=2.0,
                 parameters=[configured_params],
-                arguments=['--ros-args', '--log-level', log_level],
+                arguments=['--ros-args', '--log-level', log_level, namespace],
                 remappings=remappings + [('cmd_vel', 'cmd_vel_nav')]
             ),
             Node(
@@ -236,7 +247,8 @@ def generate_launch_description():
                 package='nav2_bt_navigator',
                 plugin='nav2_bt_navigator::BtNavigator',
                 name='bt_navigator',
-                parameters=[params['bt_navigator']['ros__parameters']],
+                parameters=[params['bt_navigator']['ros__parameters'],
+                            {'default_nav_to_pose_bt_xml': default_nav_bt_path}],
                 remappings=remappings),
             ComposableNode(
                 package='nav2_waypoint_follower',

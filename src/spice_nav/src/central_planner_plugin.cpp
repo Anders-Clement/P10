@@ -70,15 +70,14 @@ void CentralPlanner::configure(
       0.1));
   node_->get_parameter(name_ + ".tolerance", goal_tolerance_);
 
-  char* ns = getenv("ROBOT_NAMESPACE");
-  if(!ns)
+  robot_namespace_ = std::string(node_->get_namespace()).substr(std::string(node_->get_namespace()).rfind('/')+1);
+
+
+  // char* ns = getenv("ROBOT_NAMESPACE");
+  if(robot_namespace_ == "")
   {
     RCLCPP_ERROR(node_->get_logger(), 
-      "Failed to find ROBOT_NAMESPACE in environment, planner will be unable to fetch correct plans");
-  }
-  else
-  {
-      robot_namespace_ = {ns};
+      "ROBOT_NAMESPACE is empty, planner will be unable to fetch correct plans");
   }
 
   central_planner_client = node_->create_client<spice_msgs::srv::GetPlan>("/get_plan");
