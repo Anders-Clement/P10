@@ -2,6 +2,7 @@
 
 import os
 import enum
+import sys
 
 import rclpy
 from rclpy.node import Node
@@ -36,9 +37,10 @@ class RobotStateManager(Node):
     
     def __init__(self) -> None:
         super().__init__('robot_state_manager_node')
-        robot_ns = os.environ.get('ROBOT_NAMESPACE')
+        #robot_ns = os.environ.get('ROBOT_NAMESPACE')
+        robot_ns = self.get_namespace()[1:]
         if robot_ns is None:
-            print('Could not get robot namespace from the environment')
+            self.get_logger().error('Could not get robot namespace')
             raise Exception()
         self.id = Id(id=robot_ns, robot_type=RobotType(type=RobotType.CARRIER_ROBOT))
         self.current_work = None
@@ -153,7 +155,6 @@ class RobotStateManager(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-
     robot_state_manager_node = RobotStateManager()
 
     rclpy.spin(robot_state_manager_node)
