@@ -17,7 +17,13 @@ public:
   PoseRelay()
   : Node("robot_pose_relayer")
   {
-    prefix_ = this->declare_parameter<std::string>("prefix", getenv("ROBOT_NAMESPACE"));
+    // prefix_ = this->declare_parameter<std::string>("prefix", getenv("ROBOT_NAMESPACE"));
+    prefix_ = std::string(this->get_namespace()).substr(1,std::string(this->get_namespace()).rfind('/')-1);
+    if(prefix_ == "")
+    {
+      RCLCPP_ERROR(this->get_logger(), 
+        "ROBOT_NAMESPACE is empty, tf_relay cannot relay tf");
+    }
 
     tf_buffer_ =
       std::make_unique<tf2_ros::Buffer>(this->get_clock());
