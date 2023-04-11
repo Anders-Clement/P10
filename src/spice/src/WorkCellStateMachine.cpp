@@ -1,6 +1,7 @@
 #include <string>
 #include <rclcpp/node.hpp>
 #include <optional>
+#include "tf2/LinearMath/Matrix3x3.h"
 #include "spice_msgs/msg/robot_type.hpp"
 #include "spice_msgs/msg/task.hpp"
 #include "spice/work_cell_state_machine.hpp"
@@ -156,12 +157,39 @@ void WorkCellStateMachine::deactivate_heartbeat()
 void WorkCellStateMachine::publish_transform()
 {
     geometry_msgs::msg::TransformStamped t;
-
+    // publish center of cell
     t.header.stamp = m_nodehandle.get_clock()->now();
     t.header.frame_id = "map";
     t.child_frame_id = get_work_cell_id().id;
     t.transform = m_transform;
     m_tf_static_broadcaster->sendTransform(t);
+
+    // get rotation of cell in order to find entry and exit points
+    tf2::Quaternion q(
+        m_transform.rotation.x,
+        m_transform.rotation.y,
+        m_transform.rotation.z,
+        m_transform.rotation.w);
+    tf2::Matrix3x3 m(q);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+
+    const double STEP_DISTANCE = .25;
+    double x_offset = STEP_DISTANCE*cos(yaw);
+    double y_offset = STEP_DISTANCE*sin(yaw);
+
+    // publish transform for entry to cell
+    t.transform.translation.x = m_transform.translation.x - x_offset;
+    t.transform.translation.y = m_transform.translation.y - y_offset;
+    t.child_frame_id = get_work_cell_id().id + "_entry";
+    m_tf_static_broadcaster->sendTransform(t);
+
+    // publish transform for exit of cell
+    t.transform.translation.x = m_transform.translation.x + x_offset;
+    t.transform.translation.y = m_transform.translation.y + y_offset;
+    t.child_frame_id = get_work_cell_id().id + "_exit";
+    m_tf_static_broadcaster->sendTransform(t);
+
 }
 
 spice_msgs::msg::RobotState WorkCellStateMachine::internal_state_to_robot_state(WORK_CELL_STATE state)
