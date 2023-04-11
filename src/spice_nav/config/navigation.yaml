@@ -223,7 +223,7 @@ local_costmap:
       dynamic_obstacle_layer:
         plugin: "nav2_costmap_2d::DynamicObstacleLayer"
         enabled: True
-        obstacle_points: 8.0
+        obstacle_points: 32.0
         topic: /global_tf
       static_layer:
         map_subscribe_transient_local: True
