@@ -33,7 +33,14 @@ void DynamicObstacleLayer::onInitialize()
   nh_->get_parameter(name_ + "." + "obstacle_points", obstacle_points_);
 
   transform_tolerance_ = tf2::durationFromSec(TF_TOLERANCE);
-  robot_name = getenv("ROBOT_NAMESPACE");
+
+  robot_name = std::string(nh_->get_namespace()).substr(1,std::string(nh_->get_namespace()).rfind('/')-1);
+  if(robot_name == "")
+  {
+    RCLCPP_ERROR(logger_, 
+      "ROBOT_NAMESPACE is empty, planner will be unable to fetch correct plans");
+  }
+  //robot_name = getenv("ROBOT_NAMESPACE");
   
   rclcpp::QoS QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_sensor_data));
   QoS.reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
