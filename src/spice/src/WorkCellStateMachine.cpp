@@ -165,28 +165,34 @@ void WorkCellStateMachine::publish_transform()
     m_tf_static_broadcaster->sendTransform(t);
 
     // get rotation of cell in order to find entry and exit points
-    tf2::Quaternion q(
-        m_transform.rotation.x,
-        m_transform.rotation.y,
-        m_transform.rotation.z,
-        m_transform.rotation.w);
-    tf2::Matrix3x3 m(q);
-    double roll, pitch, yaw;
-    m.getRPY(roll, pitch, yaw);
+    // tf2::Quaternion q(
+    //     m_transform.rotation.x,
+    //     m_transform.rotation.y,
+    //     m_transform.rotation.z,
+    //     m_transform.rotation.w);
+    // tf2::Matrix3x3 m(q);
+    // double roll, pitch, yaw;
+    // m.getRPY(roll, pitch, yaw);
 
     const double STEP_DISTANCE = .25;
-    double x_offset = STEP_DISTANCE*cos(yaw);
-    double y_offset = STEP_DISTANCE*sin(yaw);
+    // double x_offset = STEP_DISTANCE*cos(yaw);
+    // double y_offset = STEP_DISTANCE*sin(yaw);
 
+
+    t.header.frame_id = get_work_cell_id().id;
+    t.transform.rotation.x = 0;
+    t.transform.rotation.y = 0;
+    t.transform.rotation.z = 0;
+    t.transform.rotation.w = 1;
+    t.transform.translation.y = 0;
+    
     // publish transform for entry to cell
-    t.transform.translation.x = m_transform.translation.x - x_offset;
-    t.transform.translation.y = m_transform.translation.y - y_offset;
+    t.transform.translation.x = -STEP_DISTANCE;
     t.child_frame_id = get_work_cell_id().id + "_entry";
     m_tf_static_broadcaster->sendTransform(t);
 
     // publish transform for exit of cell
-    t.transform.translation.x = m_transform.translation.x + x_offset;
-    t.transform.translation.y = m_transform.translation.y + y_offset;
+    t.transform.translation.x = STEP_DISTANCE;
     t.child_frame_id = get_work_cell_id().id + "_exit";
     m_tf_static_broadcaster->sendTransform(t);
 

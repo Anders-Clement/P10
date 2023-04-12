@@ -55,10 +55,10 @@ public:
         poses[3].translation.y = 3.0031487941741943;
         poses[3].translation.z = 0;
 
-        poses[4].rotation.w = 0.2830619845919701;
+        poses[4].rotation.w = 0.276281;
         poses[4].rotation.x = 0;
         poses[4].rotation.y = 0;
-        poses[4].rotation.z = 0.9591016175978723;
+        poses[4].rotation.z = 0.961077;
         poses[4].translation.x = -10.81999397277832;
         poses[4].translation.y = 1.1732733249664307;
         poses[4].translation.z = 0;
