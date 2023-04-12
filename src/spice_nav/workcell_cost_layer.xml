@@ -1,0 +1,6 @@
+
+<library path="spice_nav_core">
+  <class type="nav2_costmap_2d::WorkcellCostLayer" base_class_type="nav2_costmap_2d::Layer">
+    <description>This is a small plugins that adds workcell costs to global costmap </description>
+  </class>
+</library>

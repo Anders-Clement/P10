@@ -46,7 +46,9 @@ set(dep_pkgs
   )
 
 add_library(${costmap_lib_name} SHARED
-  src/DynamicObstacleLayer.cpp)
+  src/DynamicObstacleLayer.cpp
+  src/workcell_cost_layer.cpp)
+
 install(TARGETS ${costmap_lib_name}
   DESTINATION lib)
 
@@ -74,6 +76,7 @@ endif()
 
 
 pluginlib_export_plugin_description_file(nav2_costmap_2d dynamic_obstacle_layer.xml)
+pluginlib_export_plugin_description_file(nav2_costmap_2d workcell_cost_layer.xml)
 ament_target_dependencies(${costmap_lib_name} ${dep_pkgs})
 
 pluginlib_export_plugin_description_file(nav2_core global_planner_plugin.xml)

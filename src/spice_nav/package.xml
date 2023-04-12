@@ -23,6 +23,7 @@
   <exec_depend>nav2_bringup</exec_depend>
   <export>
     <spice_nav_core plugin="${prefix}/dynamic_obstacle_layer.xml"/>
+    <spice_nav_core plugin="${prefix}/workcell_cost_layer.xml"/>
     <build_type>ament_cmake</build_type>
     <exec_depend>nav2_bringup</exec_depend>
     <exec_depend>slam_toolbox</exec_depend>
