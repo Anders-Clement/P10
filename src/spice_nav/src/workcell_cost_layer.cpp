@@ -28,8 +28,6 @@ namespace nav2_costmap_2d
         nh_->get_parameter(name_ + "." + "enabled", enabled_);
         nh_->get_parameter(name_ + "." + "shape", shape_);
         nh_->get_parameter(name_ + "." + "cost", cost_);
-        
-
 
         transform_tolerance_ = tf2::durationFromSec(TF_TOLERANCE);
 
@@ -90,7 +88,6 @@ namespace nav2_costmap_2d
 
         for (auto const &workcell : workcell_list)
         {
-
             try
             {
                 workcell_entry = tf_buffer_->lookupTransform(global_frame_, workcell.id.id + "_entry", tf2::TimePointZero);
@@ -120,7 +117,7 @@ namespace nav2_costmap_2d
             exit_wy = zero_rot_exit.getY();
 
             if (!worldToMap(entry_wx, entry_wy, entry_mx, entry_my) || !worldToMap(exit_wx, exit_wy, exit_mx, exit_my));
-                continue;
+            continue;
 
             unsigned int mx, my;
             std::vector<std::vector<double>> obstacle_points;
@@ -134,7 +131,6 @@ namespace nav2_costmap_2d
                     obstacle_points.push_back({entry_wx - ROBOT_RADIUS, it_wy});
                     it_wy += 0.2; // obstacle resolution less than costmap resolution to prevent gaps
                 }
-                
             }
             else if (shape_ == 1)
             { // square:
@@ -146,16 +142,25 @@ namespace nav2_costmap_2d
                     obstacle_points.push_back({entry_wx - ROBOT_RADIUS, it_wy});
                     it_wy += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
                 }
-                while(it_wx < entry_wx + ROBOT_RADIUS){
-                    
+                while (it_wx < entry_wx + ROBOT_RADIUS)
+                {
+
                     obstacle_points.push_back({it_wx, entry_wy});
                     obstacle_points.push_back({it_wx, exit_wy});
                     it_wy += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
                 }
             }
-            else if(shape_ == 2)
-            {//circle
 
+            else if (shape_ == 2)
+            { // circle
+                double c_wx = (exit_wx + entry_wx) / 2;
+                double c_wy = (exit_wy + entry_wy) / 2;
+                double r_w = c_wy - entry_wy;
+
+                for (double it = 0; it < 2 * M_PI; it += M_PI / 100)
+                {
+                    obstacle_points.push_back({c_wx + r_w * cos(it), c_wy + r_w * sin(it)});
+                }
             }
             else
             {
