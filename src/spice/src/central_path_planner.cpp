@@ -179,15 +179,17 @@ void CentralPathPlanner::debug_publish_timer_cb()
         visualization_msgs::msg::Marker goal_marker;
         goal_marker.action = 0;
         goal_marker.type = 2;
-        marker.scale.x = 0.1;
-        marker.scale.y = 0.1;
-        marker.scale.z = 0.1;
-        marker.lifetime = rclcpp::Duration::from_seconds(1.0);
-        marker.header.stamp = now();
-        marker.ns = path.first;
-        marker.id = 1;
-        marker.header.frame_id = path.second.plan.header.frame_id;
-        marker.color = color;
+        goal_marker.scale.x = 0.1;
+        goal_marker.scale.y = 0.1;
+        goal_marker.scale.z = 0.1;
+        goal_marker.lifetime = rclcpp::Duration::from_seconds(1.0);
+        goal_marker.header.stamp = now();
+        goal_marker.ns = path.first;
+        goal_marker.id = 1;
+        goal_marker.header.frame_id = path.second.plan.header.frame_id;
+        goal_marker.color = color;
+
+        msg.markers.push_back(goal_marker);
     }
 
     m_marker_array_publisher->publish(std::move(msg));
