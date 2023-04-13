@@ -24,7 +24,7 @@ namespace nav2_costmap_2d
         nh_ = node_.lock();
         declareParameter("enabled", rclcpp::ParameterValue(true));
         declareParameter("shape", rclcpp::ParameterValue(0));
-        declareParameter("cost", rclcpp::ParameterValue(255));
+        declareParameter("cost", rclcpp::ParameterValue(254));
         nh_->get_parameter(name_ + "." + "enabled", enabled_);
         nh_->get_parameter(name_ + "." + "shape", shape_);
         nh_->get_parameter(name_ + "." + "cost", cost_);
@@ -51,7 +51,7 @@ namespace nav2_costmap_2d
         current_ = true;
         default_value_ = NO_INFORMATION;
         matchSize();
-        RCLCPP_INFO(logger_, "[DYNAMIC OBSTACLE PLUGIN] initialized");
+        RCLCPP_INFO(logger_, "[WorkcellCostLayer] initialized");
     }
 
     void WorkcellCostLayer::get_robots_on_timer_cb()
@@ -61,7 +61,6 @@ namespace nav2_costmap_2d
             RCLCPP_WARN(logger_, "Timeout on Swarm manager get_robots_by_type");
             return;
         }
-
         auto get_robots_request = std::make_shared<spice_msgs::srv::GetRobotsByType::Request>();
         get_robots_request->type.type = spice_msgs::msg::RobotType::WORK_CELL_ANY;
 
@@ -80,7 +79,7 @@ namespace nav2_costmap_2d
                   master->getOriginY());
     }
 
-    void WorkcellCostLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double *min_x, double *min_y,
+    void WorkcellCostLayer::updateBounds(double /*robot_x*/, double /*robot_y*/, double /*robot_yaw*/, double *min_x, double *min_y,
                                          double *max_x, double *max_y)
     {
         matchSize();
@@ -95,9 +94,8 @@ namespace nav2_costmap_2d
             }
             catch (const tf2::TransformException &ex)
             {
-                /*RCLCPP_INFO(
-                    //this->get_logger(), "Could not transform %s to %s: %s",
-                    toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());*/
+                RCLCPP_INFO(
+                    nh_->get_logger(), "[WorkcellCostLayer]failed transform");
                 continue;
             }
 
@@ -115,38 +113,36 @@ namespace nav2_costmap_2d
             entry_wy = zero_rot_entry.getY();
             exit_wx = zero_rot_exit.getX(); // same as entry_wx when rotated(?)
             exit_wy = zero_rot_exit.getY();
-
-            if (!worldToMap(entry_wx, entry_wy, entry_mx, entry_my) || !worldToMap(exit_wx, exit_wy, exit_mx, exit_my));
-            continue;
-
+        
             unsigned int mx, my;
             std::vector<std::vector<double>> obstacle_points;
             if (shape_ == 0)
             { // tunnel
-                double it_wy = entry_wy;
+                double it_wx = entry_wx;
 
-                while (it_wy < exit_wy)
+                while (it_wx < exit_wx)
                 {
-                    obstacle_points.push_back({entry_wx + ROBOT_RADIUS, it_wy});
-                    obstacle_points.push_back({entry_wx - ROBOT_RADIUS, it_wy});
-                    it_wy += 0.2; // obstacle resolution less than costmap resolution to prevent gaps
+                    obstacle_points.push_back({it_wx, entry_wy+ ROBOT_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy - ROBOT_RADIUS});
+                    it_wx += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
+                                        
                 }
             }
             else if (shape_ == 1)
             { // square:
-                double it_wy = entry_wy;
-                double it_wx = entry_wx - ROBOT_RADIUS;
-                while (it_wy < exit_wy)
+                double it_wx = entry_wx;
+                double it_wy = entry_wy - ROBOT_RADIUS;
+                while (it_wx < exit_wx)
                 {
-                    obstacle_points.push_back({entry_wx + ROBOT_RADIUS, it_wy});
-                    obstacle_points.push_back({entry_wx - ROBOT_RADIUS, it_wy});
-                    it_wy += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
+                    obstacle_points.push_back({it_wx, entry_wy + ROBOT_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy - ROBOT_RADIUS});
+                    it_wx += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
                 }
-                while (it_wx < entry_wx + ROBOT_RADIUS)
+                while (it_wy < entry_wy + ROBOT_RADIUS)
                 {
 
-                    obstacle_points.push_back({it_wx, entry_wy});
-                    obstacle_points.push_back({it_wx, exit_wy});
+                    obstacle_points.push_back({entry_wx, it_wy});
+                    obstacle_points.push_back({exit_wx, it_wy});
                     it_wy += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
                 }
             }
@@ -155,7 +151,7 @@ namespace nav2_costmap_2d
             { // circle
                 double c_wx = (exit_wx + entry_wx) / 2;
                 double c_wy = (exit_wy + entry_wy) / 2;
-                double r_w = c_wy - entry_wy;
+                double r_w = c_wx-entry_wx;
 
                 for (double it = 0; it < 2 * M_PI; it += M_PI / 100)
                 {
@@ -165,7 +161,7 @@ namespace nav2_costmap_2d
             else
             {
                 RCLCPP_WARN(
-                    nh_->get_logger(), "Current shape is not viable");
+                    nh_->get_logger(), "[WorkcellCostLayer]Current shape is not viable");
                 return;
             }
 
@@ -182,6 +178,10 @@ namespace nav2_costmap_2d
                     *min_y = std::min(tfPoint.getY(), *min_y);
                     *max_x = std::max(tfPoint.getX(), *max_x);
                     *max_y = std::max(tfPoint.getY(), *max_y);
+                }
+                else{
+                    RCLCPP_WARN(
+                    nh_->get_logger(), "[WorkcellCostLayer]could not transform tunnel point to costmap domain");
                 }
             }
         }
