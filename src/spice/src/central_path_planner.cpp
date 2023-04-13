@@ -44,10 +44,9 @@ void CentralPathPlanner::get_plan_cb(
     }
     auto start_time = now();
 
-    robot_plan cur_robot_plan;
-    
-    cur_robot_plan.start = request->start;
-    cur_robot_plan.goal = request->goal;
+    // set start and goal here, as it is used by some costmaps during planning    
+    m_planned_paths[request->id.id].start = request->start;
+    m_planned_paths[request->id.id].goal = request->goal;
 
     std::string planner_type = "Unknown";
     
@@ -68,10 +67,9 @@ void CentralPathPlanner::get_plan_cb(
     }
     
     auto duration = (now()-start_time).nanoseconds()*10e-9;
-    cur_robot_plan.plan = response->plan;
-    cur_robot_plan.timestamp = now();
+    m_planned_paths[request->id.id].plan = response->plan;
+    m_planned_paths[request->id.id].timestamp = now();
 
-    m_planned_paths[request->id.id] = cur_robot_plan;
     RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s", 
         response->plan.poses.size(), duration, planner_type.c_str());
 }
@@ -81,10 +79,12 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spic
     return m_costmap->get_costmap(id);
 }
 
-robot_plan& CentralPathPlanner::get_last_plan_by_id(spice_msgs::msg::Id id)
+std::optional<robot_plan> CentralPathPlanner::get_last_plan_by_id(spice_msgs::msg::Id id)
 {
     if(m_planned_paths.find(id.id) != m_planned_paths.end())
-        return m_planned_paths.at(id.id);
+        return std::optional<robot_plan>{m_planned_paths.at(id.id)};
+    else
+        return {};
 }
 
 
