@@ -60,6 +60,7 @@ private:
     double ROBOT_RADIUS = 0.25;
     double TF_TOLERANCE = 10.0;
     std::string global_frame_;
+    double OFFSET = 0.25;
     
 };
 }  // namespace nav2_costmap_2d

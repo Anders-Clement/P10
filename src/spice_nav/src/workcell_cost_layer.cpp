@@ -109,12 +109,10 @@ namespace nav2_costmap_2d
             auto inv_m = rot_m.inverse();
             auto zero_rot_entry = inv_m * entry_pos;
             auto zero_rot_exit = inv_m * exit_pos;
-            entry_wx = zero_rot_entry.getX();
-            entry_wx +=  entry_wx*(2.0/3.0);
+            entry_wx = zero_rot_entry.getX() + OFFSET;
             entry_wy = zero_rot_entry.getY();
-            exit_wx = zero_rot_exit.getX() * 2.0/3.0;
-            exit_wx -= entry_wx * (2.0/3.0);  
-            exit_wy = zero_rot_exit.getY() ;
+            exit_wx = zero_rot_exit.getX() - OFFSET;
+            exit_wy = zero_rot_exit.getY();
         
             unsigned int mx, my;
             std::vector<std::vector<double>> obstacle_points;
