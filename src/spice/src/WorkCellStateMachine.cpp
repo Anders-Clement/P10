@@ -110,7 +110,7 @@ void WorkCellStateMachine::on_register_robot(
     to_translation.setY(m_transform.translation.y);
     to_translation.setZ(m_transform.translation.z);
 
-    tf2::Vector3 from_to_trans = from_translation + to_translation;
+    tf2::Vector3 from_to_trans = to_rot*from_translation + to_translation;
 
     geometry_msgs::msg::Pose exit_pose;
     exit_pose.position.x = from_to_trans.getX();
