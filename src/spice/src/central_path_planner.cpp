@@ -188,7 +188,7 @@ void CentralPathPlanner::debug_publish_timer_cb()
         goal_marker.id = 1;
         goal_marker.header.frame_id = path.second.plan.header.frame_id;
         goal_marker.color = color;
-        goal_marker.pose = path.second.plan.poses.back().pose;
+        goal_marker.pose = path.second.goal.pose;
 
         msg.markers.push_back(goal_marker);
     }
