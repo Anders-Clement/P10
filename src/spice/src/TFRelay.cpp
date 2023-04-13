@@ -33,7 +33,7 @@ public:
     rclcpp::QoS qos(
       rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_sensor_data)
       );
-    qos.reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT);
+    qos.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
 
     // Create tf publisher
     publisher_ =
