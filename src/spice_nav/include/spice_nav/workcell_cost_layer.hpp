@@ -57,7 +57,7 @@ private:
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
     tf2::Duration transform_tolerance_;
-    double ROBOT_RADIUS = 0.15;
+    double ROBOT_RADIUS = 0.25;
     double TF_TOLERANCE = 10.0;
     std::string global_frame_;
     

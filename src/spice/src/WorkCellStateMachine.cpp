@@ -28,7 +28,7 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
     );
     m_tf_static_broadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(m_nodehandle);
 
-    const double STEP_DISTANCE = .25;
+    const double STEP_DISTANCE = .5;
     
     m_entry_transform.translation.x = -STEP_DISTANCE;
     m_exit_transform.translation.x = STEP_DISTANCE;    
