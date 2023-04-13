@@ -39,10 +39,12 @@ amcl:
     z_short: 0.05
     scan_topic: scan
     set_initial_pose: true
+    #A4
+    initial_pose: {x: 0.334819, y: 1.26002, z: 0.0, yaw: -1.53545}
     # CANTEEN:
     # initial_pose: {x: 0.7, y: 0.6, z: 0.0, yaw: -0.3}
     # C4:
-    initial_pose: {x: 18.0804, y: 7.08578, z: 0.0, yaw: 1.63992}
+    #initial_pose: {x: 18.0804, y: 7.08578, z: 0.0, yaw: 1.63992}
 
 amcl_map_client:
   ros__parameters:
