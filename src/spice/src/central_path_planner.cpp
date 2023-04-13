@@ -11,7 +11,7 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
     m_marker_array_publisher = create_publisher<visualization_msgs::msg::MarkerArray>("/planned_paths", 10);
     m_debug_publish_timer = rclcpp::create_timer(this, 
                                                 get_clock(), 
-                                                rclcpp::Duration::from_seconds(1.0),
+                                                rclcpp::Duration::from_seconds(DEBUG_PUBLISH_TIME),
                                                 std::bind(&CentralPathPlanner::debug_publish_timer_cb, this));
 
     m_global_frame = "map";
@@ -67,6 +67,7 @@ void CentralPathPlanner::get_plan_cb(
     
     auto duration = (now()-start_time).nanoseconds()*10e-9;
     m_planned_paths[request->id.id].plan = response->plan;
+    m_planned_paths[request->id.id].timestamp = now();
 
     RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s", 
         response->plan.poses.size(), duration, planner_type.c_str());
@@ -142,9 +143,15 @@ std_msgs::msg::ColorRGBA color_from_hue(double hue)
 void CentralPathPlanner::debug_publish_timer_cb()
 {
     visualization_msgs::msg::MarkerArray msg;
-
+    rclcpp::Time current_time = now();
     for(auto& path : m_planned_paths)
     {
+        auto age = current_time - path.second.timestamp;
+        if(age.seconds() > DEBUG_PUBLISH_TIME*2.0)
+        {   
+            path.second.plan.poses.clear();
+            continue;
+        }
         visualization_msgs::msg::Marker marker;
         marker.action = 0;
         marker.type = 4;

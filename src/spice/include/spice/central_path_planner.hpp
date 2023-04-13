@@ -10,6 +10,8 @@
 #include "spice/planners/global_planner.hpp"
 #include "spice/costmaps/costmap.hpp"
 
+#define DEBUG_PUBLISH_TIME 1.0
+
 struct robot_plan{
     nav_msgs::msg::Path plan;
     geometry_msgs::msg::PoseStamped start;
