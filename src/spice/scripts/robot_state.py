@@ -381,6 +381,7 @@ class ProcessReadyForProcessingState(RobotStateTemplate):
         self.robot_ready_process_client = self.sm.create_client(
                     Trigger, '/'+self.sm.current_task.workcell_id.id + "/robot_ready_for_processing")
         self.timer = self.sm.create_timer(5.0, self.robot_ready_process)
+        self.robot_ready_process_future = None
 
     def robot_ready_process(self):
         if not self.robot_ready_process_client.wait_for_service(timeout_sec=1.0):
