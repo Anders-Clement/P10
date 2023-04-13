@@ -14,6 +14,7 @@ struct robot_plan{
     nav_msgs::msg::Path plan;
     geometry_msgs::msg::PoseStamped start;
     geometry_msgs::msg::PoseStamped goal;
+    rclcpp::Time timestamp;
 
 };
 
@@ -30,7 +31,8 @@ public:
 private:
     void get_plan_cb(spice_msgs::srv::GetPlan::Request::SharedPtr request, spice_msgs::srv::GetPlan::Response::SharedPtr response);
     void debug_publish_timer_cb();
-    std::unique_ptr<GlobalPlanner> m_planner;
+    std::unique_ptr<GlobalPlanner> m_straight_line_planner;
+    std::unique_ptr<GlobalPlanner> m_a_star_planner;
     std::unique_ptr<Costmap> m_costmap;
     rclcpp::Service<spice_msgs::srv::GetPlan>::SharedPtr m_planner_service;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr m_marker_array_publisher;

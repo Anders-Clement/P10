@@ -67,6 +67,8 @@ private:
     std::string m_work_cell_name;
     spice_msgs::msg::RobotType::_type_type m_robot_type;
     geometry_msgs::msg::Transform m_transform;
+    geometry_msgs::msg::Transform m_entry_transform;
+    geometry_msgs::msg::Transform m_exit_transform;
     std::vector<std::shared_ptr<WorkCellState>> m_states;
     WORK_CELL_STATE m_current_state;
     std::shared_ptr<tf2_ros::StaticTransformBroadcaster> m_tf_static_broadcaster;

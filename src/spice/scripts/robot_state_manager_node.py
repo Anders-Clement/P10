@@ -13,7 +13,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoS
 from nav2_msgs.action import NavigateToPose
 
 from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType
-from spice_msgs.srv import Heartbeat, RobotTask
+from spice_msgs.srv import Heartbeat, RobotTask, SetPlannerType
 from work_tree import WorkTree, Vertex
 import robot_state
 
@@ -62,6 +62,7 @@ class RobotStateManager(Node):
         self.heartbeat_future = None
 
         self.navigation_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        self.change_planner_type_client = self.create_client(SetPlannerType, "set_planner_type")
 
         self.allocate_task_server = self.create_service(
             RobotTask, 'allocate_task', self.allocate_task_cb)

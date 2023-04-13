@@ -2,5 +2,6 @@ geometry_msgs/PoseStamped start
 geometry_msgs/PoseStamped goal
 float32 tolerance
 Id id
+PlannerType planner_type
 ---
 nav_msgs/Path plan

@@ -1,0 +1,3 @@
+uint8 PLANNER_A_STAR = 0
+uint8 PLANNER_STRAIGHT_LINE = 1
+uint8 type

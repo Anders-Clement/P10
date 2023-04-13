@@ -1,4 +1,5 @@
 #include "spice/central_path_planner.hpp"
+#include "spice/planners/straight_line_planner.hpp"
 #include "spice/planners/a_star_planner.hpp"
 #include "spice/costmaps/prioritized_costmap.hpp"
 
@@ -16,7 +17,8 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
     m_global_frame = "map";
     m_tolerance = 0.5;
 
-    m_planner = std::make_unique<AStarPlanner>(*this);
+    m_a_star_planner = std::make_unique<AStarPlanner>(*this);
+    m_straight_line_planner = std::make_unique<StraightLinePlanner>(*this);
     m_costmap = std::make_unique<PrioritizedCostmap>(*this);
 
     RCLCPP_INFO(get_logger(), "Central path planner is initialized");
@@ -44,13 +46,30 @@ void CentralPathPlanner::get_plan_cb(
     
     m_planned_paths[request->id.id].start = request->start;
     m_planned_paths[request->id.id].goal = request->goal;
+
+    std::string planner_type = "Unknown";
     
-    response->plan = m_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
+    if(request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_A_STAR)
+    {
+        response->plan = m_a_star_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
+        planner_type = "A*";
+    }
+    else if (request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_STRAIGHT_LINE)
+    {
+        response->plan = m_a_star_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
+        planner_type = "Straight line planner";
+    }
+    else
+    {
+        RCLCPP_WARN(get_logger(), "Received request to plan with unknown planner: %d", request->planner_type.type);
+        response->plan = nav_msgs::msg::Path();
+    }
     
     auto duration = (now()-start_time).nanoseconds()*10e-9;
     m_planned_paths[request->id.id].plan = response->plan;
 
-    //RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms", response->plan.poses.size(), duration);
+    RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s", 
+        response->plan.poses.size(), duration, planner_type.c_str());
 }
 
 std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spice_msgs::msg::Id id)
