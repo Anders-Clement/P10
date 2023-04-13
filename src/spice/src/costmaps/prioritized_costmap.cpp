@@ -51,6 +51,8 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
   std::shared_ptr<nav2_costmap_2d::Costmap2D> master_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
   
   nav2_costmap_2d::Costmap2D costmap;
+  costmap.setDefaultValue(nav2_costmap_2d::FREE_SPACE);
+  costmap.resizeMap(master_costmap->getSizeInCellsX(), master_costmap->getSizeInCellsY(), master_costmap->getResolution(), master_costmap->getOriginX(), master_costmap->getOriginY());
   
   for (auto it : robots)  // robots ordered according to priority
   {
