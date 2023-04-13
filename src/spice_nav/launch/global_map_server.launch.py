@@ -9,7 +9,7 @@ from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
 
-MAP_NAME = 'C4.yaml' # Change name of map here
+MAP_NAME = 'A4.yaml' # Change name of map here
 
 def generate_launch_description():
 
@@ -65,81 +65,39 @@ def generate_launch_description():
     )
 
 
-    ## Nodes
-    map_server_node = LifecycleNode(
-        package='nav2_map_server',
-        executable='map_server',
-        name='global_map_server',
-        namespace="",
-        output='screen',
-        respawn=use_respawn,
-        respawn_delay=2.0,
-        parameters=[configured_params],
-        arguments=['--ros-args', '--log-level', log_level]
-    )
-
-    costmap_node = LifecycleNode(
-        package='nav2_costmap_2d',
-        executable='nav2_costmap_2d',
-        name='global_costmap',
-        namespace="",
-        parameters=[configured_params],
-        arguments=['--ros-args', '--log-level', log_level]
-    )
 
     return LaunchDescription([
         declare_use_respawn_cmd,
         declare_log_level_cmd,
         declare_use_sim_time_cmd,
         declare_autostart_cmd,
-    
-        map_server_node,
-        costmap_node,
 
-    ## Option A
-        ## Global map server configure and activated
-        # ExecuteProcess(
-        #     cmd=[[
-        #         FindExecutable(name='ros2'),
-        #         " service call ",
-        #         "/global_map_server/change_state ",
-        #         "lifecycle_msgs/srv/ChangeState ",
-        #         '"{transition: {id: 1}}"',
-        #         '&&',
-        #         FindExecutable(name='ros2'),
-        #         " service call ",
-        #         "/global_map_server/change_state ",
-        #         "lifecycle_msgs/srv/ChangeState ",
-        #         '"{transition: {id: 3}}"',
-        #     ]],
-        #     shell=True
-        # ),  
+        Node(
+            package='nav2_map_server',
+            executable='map_server',
+            name='global_map_server',
+            output='screen',
+            respawn=use_respawn,
+            respawn_delay=2.0,
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level]
+        ),
 
-        # ## Global costmap configure and activated
-        # ExecuteProcess(
-        #     cmd=[[
-        #         FindExecutable(name='ros2'),
-        #         " service call ",
-        #         "/costmap/costmap/change_state ",
-        #         "lifecycle_msgs/srv/ChangeState ",
-        #         '"{transition: {id: 1}}"',
-        #         '&&',
-        #         FindExecutable(name='ros2'),
-        #         " service call ",
-        #         "/costmap/costmap/change_state ",
-        #         "lifecycle_msgs/srv/ChangeState ",
-        #         '"{transition: {id: 3}}"',
-        #     ]],
-        #     shell=True
-        # ),  
+        Node(
+            package='nav2_costmap_2d',
+            executable='nav2_costmap_2d',
+            name='global_costmap',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level]
+        ),
 
-    # Option B if option A sucks/crashes/fails to activate
+
         # lifecycleManager activates the notes and then dies
         Node(
             package='nav2_lifecycle_manager',
             executable='lifecycle_manager',
             name='lifecycle_manager_global_map',
-            output='screen',
+            output={'both': 'log'},
             arguments=['--ros-args', '--log-level', log_level],
             parameters=[{'use_sim_time': use_sim_time},
                         {'autostart': autostart},

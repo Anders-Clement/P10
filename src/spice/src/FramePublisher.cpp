@@ -24,7 +24,17 @@ public:
     //tf_listener_ =
      // std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
     
-    prefix = getenv("ROBOT_NAMESPACE");
+    // prefix = getenv("ROBOT_NAMESPACE");
+    prefix = std::string(this->get_namespace()).substr(1,std::string(this->get_namespace()).rfind('/')-1);
+    if(prefix == "")
+    {
+      RCLCPP_ERROR(this->get_logger(), 
+        "ROBOT_NAMESPACE is empty, planner will be unable to fetch correct plans");
+    }
+    RCLCPP_ERROR(this->get_logger(), 
+        "ns precut: %s",std::string(this->get_namespace()).c_str());
+    RCLCPP_ERROR(this->get_logger(), 
+        "ns cut: %s",prefix.c_str());
      
     subscription_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
       prefix+"/to_tf_global", 100, std::bind(&FramePublisher::tf_callback, this, _1));

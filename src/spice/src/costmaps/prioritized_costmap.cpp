@@ -118,7 +118,12 @@ void PrioritizedCostmap::calcRobotPriorities()
 
 std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedCostMap(spice_msgs::msg::Id robotId)
 {
-  std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
+  std::shared_ptr<nav2_costmap_2d::Costmap2D> master_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
+  
+  nav2_costmap_2d::Costmap2D costmap;
+  costmap.setDefaultValue(nav2_costmap_2d::FREE_SPACE);
+  costmap.resizeMap(master_costmap->getSizeInCellsX(), master_costmap->getSizeInCellsY(), master_costmap->getResolution(), master_costmap->getOriginX(), master_costmap->getOriginY());
+  
   for (auto it : robots)  // robots ordered according to priority
   {
 	robot_plan cur_robot_plan = m_central_path_planner.get_last_plan_by_id(it);
@@ -128,7 +133,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	  unsigned int r_mx, r_my;
 
 	  // get current robot w pose in order to clear costmap around it
-	  if (costmap->worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my))
+	  if (costmap.worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my))
 	  {
 		// ensure cost map is not accessed outside of bounds (less than 0, more than x,y max)
 		unsigned int start_x;
@@ -144,24 +149,38 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 		  start_y = r_my - ceil(ROBOT_RADIUS / MAP_RESOLUTION);
 
 		unsigned int end_x;
-		if (costmap->getSizeInCellsX() - r_mx < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
-		  end_x = costmap->getSizeInCellsX() - r_mx;
+		if (costmap.getSizeInCellsX() - r_mx < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
+		  end_x = costmap.getSizeInCellsX() - r_mx;
 		else
 		  end_x = r_mx + ceil(ROBOT_RADIUS / MAP_RESOLUTION);
 
 		unsigned int end_y;
-		if (costmap->getSizeInCellsY() - r_my < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
-		  end_y = costmap->getSizeInCellsY() - r_my;
+		if (costmap.getSizeInCellsY() - r_my < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
+		  end_y = costmap.getSizeInCellsY() - r_my;
 		else
 		  end_y = r_my + ceil(ROBOT_RADIUS / MAP_RESOLUTION);
 
+		RCLCPP_INFO(m_central_path_planner.get_logger(),
+					"[PRIORITIZED COSTMAP] trying to clear costmap around robot %s at pose x= %f, y= %f, map "
+					"coordninates mx= %d, my=%d",
+					it.id.c_str(), robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
+		
+		RCLCPP_INFO(m_central_path_planner.get_logger(),
+					"[PRIORITIZED COSTMAP] clearing cost map from (start_x, start_y): (%d,%d) to (end_x, end_y):"
+					 "(%d,%d)", start_x, start_y, end_x, end_y);
+		
+		double temp_x, temp_y;
+
+		costmap.mapToWorld(r_mx, r_my, temp_x, temp_y);
+		RCLCPP_WARN(m_central_path_planner.get_logger(), "costmap origin x,y: %f, %f robot pose, map to world %f, %f ", costmap.getOriginX(), costmap.getOriginY(), temp_x, temp_y);
+		
 		// clear cost map around the robot
 
 		for (unsigned int i = start_x; i < end_x; i++)
 		{
 		  for (unsigned int j = start_y; j < end_y; j++)
 		  {
-			costmap->setCost(i, j, nav2_costmap_2d::FREE_SPACE);
+			costmap.setCost(i, j, nav2_costmap_2d::FREE_SPACE);
 		  }
 		}
 	  }
@@ -172,26 +191,36 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 					"[PRIORITIZED COSTMAP] could not transform from w space to m space, robot: %s at pose x= %f, y= %f",
 					robotId.id.c_str(), robot_pose.pose.position.x, robot_pose.pose.position.y);
 	  }
+	
+	for(int i = 0; i < master_costmap->getSizeInCellsX(); i++){
+		for(int j = 0; j < master_costmap->getSizeInCellsY(); j++){
+			unsigned char cost = costmap.getCost(i,j);
+			if (cost != nav2_costmap_2d::LETHAL_OBSTACLE)
+                {
+                    continue;
+                }
+			master_costmap->setCost(i,j,cost);
+		}
+	}
 
-	  // publish prioritized costmap result
-	  nav_msgs::msg::OccupancyGrid occGrid;
+	nav_msgs::msg::OccupancyGrid occGrid;
 	  occGrid.header.frame_id = "map";
 	  occGrid.header.stamp = m_central_path_planner.now();
-	  occGrid.info.width = costmap->getSizeInCellsX();
-	  occGrid.info.height = costmap->getSizeInCellsY();
-	  occGrid.info.origin.position.x = costmap->getOriginX();
-	  occGrid.info.origin.position.y = costmap->getOriginY();
-	  occGrid.info.resolution = costmap->getResolution();
+	  occGrid.info.width = master_costmap->getSizeInCellsX();
+	  occGrid.info.height = master_costmap->getSizeInCellsY();
+	  occGrid.info.origin.position.x = master_costmap->getOriginX();
+	  occGrid.info.origin.position.y = master_costmap->getOriginY();
+	  occGrid.info.resolution = master_costmap->getResolution();
 	  occGrid.info.map_load_time = m_central_path_planner.now();
-	  occGrid.data.resize(costmap->getSizeInCellsX() * costmap->getSizeInCellsY());
-	  unsigned char* grid = costmap->getCharMap();
-	  for (unsigned int i = 0; i < costmap->getSizeInCellsX() * costmap->getSizeInCellsY(); i++)
+	  occGrid.data.resize(master_costmap->getSizeInCellsX() * master_costmap->getSizeInCellsY());
+	  unsigned char* grid = master_costmap->getCharMap();
+	  for (unsigned int i = 0; i < master_costmap->getSizeInCellsX() * master_costmap->getSizeInCellsY(); i++)
 	  {
 		occGrid.data[i] = *grid++;
 	  }
 	  m_costmapPub->publish(occGrid);
-
-	  return costmap;
+	  
+	  return master_costmap;
 	}
 
 	std::vector<std::vector<unsigned int>> costpositions;
@@ -203,11 +232,11 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 		break;
 	  }
 	  unsigned int mx, my;
-	  if (costmap->worldToMap(pose.pose.position.x, pose.pose.position.y, mx, my))
+	  if (costmap.worldToMap(pose.pose.position.x, pose.pose.position.y, mx, my))
 	  {
-		if (costmap->getCost(mx, my) < nav2_costmap_2d::LETHAL_OBSTACLE)
+		if (costmap.getCost(mx, my) < nav2_costmap_2d::LETHAL_OBSTACLE)
 		{
-		  costmap->setCost(mx, my, nav2_costmap_2d::LETHAL_OBSTACLE);
+		  costmap.setCost(mx, my, nav2_costmap_2d::LETHAL_OBSTACLE);
 		  costpositions.push_back({ mx, my });
 		}
 	  }
@@ -215,7 +244,8 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	}
 
 	int number_of_loops = ceil(INFLATION_RADIOUS / MAP_RESOLUTION);
-	inflateCostMap(number_of_loops, number_of_loops, *costmap, costpositions);
+	inflateCostMap(number_of_loops, number_of_loops, costmap, costpositions);
+
   }
   RCLCPP_WARN(m_central_path_planner.get_logger(), "went through all robots and got no machting id");
   return std::make_shared<nav2_costmap_2d::Costmap2D>();  // if loop through all robots without returning map
