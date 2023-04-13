@@ -43,9 +43,11 @@ void CentralPathPlanner::get_plan_cb(
         return;
     }
     auto start_time = now();
+
+    robot_plan cur_robot_plan;
     
-    m_planned_paths[request->id.id].start = request->start;
-    m_planned_paths[request->id.id].goal = request->goal;
+    cur_robot_plan.start = request->start;
+    cur_robot_plan.goal = request->goal;
 
     std::string planner_type = "Unknown";
     
@@ -66,9 +68,10 @@ void CentralPathPlanner::get_plan_cb(
     }
     
     auto duration = (now()-start_time).nanoseconds()*10e-9;
-    m_planned_paths[request->id.id].plan = response->plan;
-    m_planned_paths[request->id.id].timestamp = now();
+    cur_robot_plan.plan = response->plan;
+    cur_robot_plan.timestamp = now();
 
+    m_planned_paths[request->id.id] = cur_robot_plan;
     RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s", 
         response->plan.poses.size(), duration, planner_type.c_str());
 }
