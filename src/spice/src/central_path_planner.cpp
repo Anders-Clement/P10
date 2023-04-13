@@ -144,6 +144,8 @@ void CentralPathPlanner::debug_publish_timer_cb()
 {
     visualization_msgs::msg::MarkerArray msg;
     rclcpp::Time current_time = now();
+    int num_paths = m_planned_paths.size();
+    int i = 0; // for color
     for(auto& path : m_planned_paths)
     {
         auto age = current_time - path.second.timestamp;
@@ -152,6 +154,7 @@ void CentralPathPlanner::debug_publish_timer_cb()
             path.second.plan.poses.clear();
             continue;
         }
+        auto color = color_from_hue((float)i++*(360.0/num_paths));
         visualization_msgs::msg::Marker marker;
         marker.action = 0;
         marker.type = 4;
@@ -161,6 +164,7 @@ void CentralPathPlanner::debug_publish_timer_cb()
         marker.ns = path.first;
         marker.id = 0;
         marker.header.frame_id = path.second.plan.header.frame_id;
+        marker.color = color;
 
         for(auto& pose : path.second.plan.poses)
         {
@@ -171,13 +175,19 @@ void CentralPathPlanner::debug_publish_timer_cb()
             marker.points.push_back(point);
         }
         msg.markers.push_back(marker);
-    }
 
-    // add colors
-    for(unsigned int i = 0; i < msg.markers.size(); i++)
-    {
-        double hue = (float)i*(360.0/(float)msg.markers.size());
-        msg.markers[i].color = color_from_hue(hue);
+        visualization_msgs::msg::Marker goal_marker;
+        goal_marker.action = 0;
+        goal_marker.type = 2;
+        marker.scale.x = 0.1;
+        marker.scale.y = 0.1;
+        marker.scale.z = 0.1;
+        marker.lifetime = rclcpp::Duration::from_seconds(1.0);
+        marker.header.stamp = now();
+        marker.ns = path.first;
+        marker.id = 1;
+        marker.header.frame_id = path.second.plan.header.frame_id;
+        marker.color = color;
     }
 
     m_marker_array_publisher->publish(std::move(msg));
