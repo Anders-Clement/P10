@@ -333,7 +333,7 @@ class EnterWorkCellState(RobotStateTemplate):
 
     def init(self):
         change_planner_type_request = SetPlannerType.Request()
-        change_planner_type_request.planner_type = PlannerType.PLANNER_STRAIGHT_LINE
+        change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
         change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
         change_planner_type_future.add_done_callback(self.navigate_into_cell)
 
@@ -460,7 +460,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
     def init(self):
         self.sm.get_logger().info(self.sm.id.id+  ' is done processing at ' + self.sm.current_task.workcell_id.id + ' exiting work cell')
         change_planner_type_request = SetPlannerType.Request()
-        change_planner_type_request.planner_type = PlannerType.PLANNER_STRAIGHT_LINE
+        change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
         change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
         change_planner_type_future.add_done_callback(self.navigate_exit_cell)
 
