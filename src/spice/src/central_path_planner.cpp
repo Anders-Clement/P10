@@ -83,7 +83,8 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spic
 
 robot_plan& CentralPathPlanner::get_last_plan_by_id(spice_msgs::msg::Id id)
 {
-    return m_planned_paths[id.id];
+    if(m_planned_paths.find(id.id) != m_planned_paths.end())
+        return m_planned_paths.at(id.id);
 }
 
 
