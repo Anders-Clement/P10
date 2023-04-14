@@ -36,7 +36,10 @@ def generate_launch_description():
         Node(
             package='spice',
             executable='central_path_planner',
-            name='central_path_planner'
+            name='central_path_planner',
+            parameters=[{'priority_scheme': 0}, # 0 static priorites, 1 shortest dist hihgest priority, 2 planning failed gives highest priority 
+                        {'future_lookup': 0} # number of higer priority plan steps to consider when planning 
+                        ]
         ),
 
         IncludeLaunchDescription(

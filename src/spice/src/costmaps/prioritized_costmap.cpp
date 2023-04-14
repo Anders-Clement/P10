@@ -94,7 +94,7 @@ void PrioritizedCostmap::calcRobotPriorities()
 				[=](std::pair<spice_msgs::msg::Id, int>& a, std::pair<spice_msgs::msg::Id, int>& b) {
 				  return a.second < b.second;
 				});
-	  for (int i = 0; i < robots.size(); i++)
+	  for (long unsigned int i = 0; i < robots.size(); i++)
 	  {
 		robots[i] = robotPathPriorities[i].first;
 	  }
@@ -117,6 +117,14 @@ void PrioritizedCostmap::calcRobotPriorities()
 
 	default:
 	  break;
+  }
+  
+  int priority = 0;
+  for(auto robot : robots){
+	RCLCPP_INFO(m_central_path_planner.get_logger(),
+				  "[PRIORITIZED COSTMAP] robot %s has priority %d",
+				  robot.id.c_str(), priority);
+	priority++;
   }
 }
 
@@ -200,8 +208,8 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 					robotId.id.c_str(), robot_pose.pose.position.x, robot_pose.pose.position.y);
 	  }
 	
-	for(int i = 0; i < master_costmap->getSizeInCellsX(); i++){
-		for(int j = 0; j < master_costmap->getSizeInCellsY(); j++){
+	for(unsigned int i = 0; i < master_costmap->getSizeInCellsX(); i++){
+		for(unsigned int j = 0; j < master_costmap->getSizeInCellsY(); j++){
 			unsigned char cost = costmap.getCost(i,j);
 			if (cost == nav2_costmap_2d::FREE_SPACE)
                 {
@@ -266,7 +274,7 @@ void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costma
 {
   std::vector<std::vector<unsigned int>> nextcosts;
   unsigned int mx, my;
-  unsigned char cost = nav2_costmap_2d::LETHAL_OBSTACLE / (maxLoops + 1 - loopsLeft);
+  unsigned char cost = nav2_costmap_2d::LETHAL_OBSTACLE / ((maxLoops + 1 - loopsLeft)*0.25);
 
   if (loopsLeft > 0)
   {
