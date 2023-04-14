@@ -54,6 +54,9 @@ void PrioritizedCostmap::get_robots_on_timer_cb()
 	{
 	  robots.push_back(robot.id);
 	}
+	if(PRIORITY_SCHEME == 2){
+		return;
+	}
 	calcRobotPriorities();
   };
 
@@ -85,10 +88,11 @@ void PrioritizedCostmap::calcRobotPriorities()
 	  {
 		std::optional<robot_plan> cur_robot_plan_opt = m_central_path_planner.get_last_plan_by_id(robot);
 		if(!cur_robot_plan_opt){
+			robotPathPriorities.push_back(std::pair<spice_msgs::msg::Id, int>{ robot, 0});
 			continue;
 		}
 		robot_plan& robotPlan = cur_robot_plan_opt.value();
-		robotPathPriorities.push_back(std::pair<spice_msgs::msg::Id, int>{ robot, robotPlan.plan.poses.size() });
+		robotPathPriorities.push_back(std::pair<spice_msgs::msg::Id, int>{ robot, robotPlan.plan.poses.size()});
 	  }
 	  std::sort(robotPathPriorities.begin(), robotPathPriorities.end(),
 				[=](std::pair<spice_msgs::msg::Id, int>& a, std::pair<spice_msgs::msg::Id, int>& b) {
@@ -118,7 +122,7 @@ void PrioritizedCostmap::calcRobotPriorities()
 	default:
 	  break;
   }
-  
+
   int priority = 0;
   for(auto robot : robots){
 	RCLCPP_INFO(m_central_path_planner.get_logger(),
