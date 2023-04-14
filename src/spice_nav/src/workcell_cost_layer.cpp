@@ -25,9 +25,13 @@ namespace nav2_costmap_2d
         declareParameter("enabled", rclcpp::ParameterValue(true));
         declareParameter("shape", rclcpp::ParameterValue(0));
         declareParameter("cost", rclcpp::ParameterValue(254));
+        declareParameter("OFFSET_ENTRY", rclcpp::ParameterValue(0.25));
+        declareParameter("OFFSET_EXIT", rclcpp::ParameterValue(0.25));
         nh_->get_parameter(name_ + "." + "enabled", enabled_);
         nh_->get_parameter(name_ + "." + "shape", shape_);
         nh_->get_parameter(name_ + "." + "cost", cost_);
+        nh_->get_parameter(name_ + "." + "OFFSET_ENTRY", OFFSET_ENTRY);
+        nh_->get_parameter(name_ + "." + "OFFSET_EXIT", OFFSET_EXIT);
 
         transform_tolerance_ = tf2::durationFromSec(TF_TOLERANCE);
 
@@ -109,9 +113,9 @@ namespace nav2_costmap_2d
             auto inv_m = rot_m.inverse();
             auto zero_rot_entry = inv_m * entry_pos;
             auto zero_rot_exit = inv_m * exit_pos;
-            entry_wx = zero_rot_entry.getX() + OFFSET;
+            entry_wx = zero_rot_entry.getX() + OFFSET_ENTRY;
             entry_wy = zero_rot_entry.getY();
-            exit_wx = zero_rot_exit.getX() - OFFSET;
+            exit_wx = zero_rot_exit.getX() - OFFSET_EXIT;
             exit_wy = zero_rot_exit.getY();
         
             unsigned int mx, my;

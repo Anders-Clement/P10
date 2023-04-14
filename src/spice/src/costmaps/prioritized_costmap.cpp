@@ -15,6 +15,9 @@ PrioritizedCostmap::PrioritizedCostmap(CentralPathPlanner& central_path_planner)
   m_central_path_planner.declare_parameter("priority_scheme", 0);
   PRIORITY_SCHEME = m_central_path_planner.get_parameter("priority_scheme").get_parameter_value().get<int>();
 
+  m_central_path_planner.declare_parameter("cost", nav2_costmap_2d::LETHAL_OBSTACLE);		
+  m_cost = m_central_path_planner.get_parameter("cost").get_parameter_value().get<unsigned char>();
+
   if(PRIORITY_SCHEME > PRIORITY_OPTIONS){
 	RCLCPP_WARN(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] Priority_scheme: %d  does not exists, maximum is: %d defaulting to 0", PRIORITY_SCHEME, PRIORITY_OPTIONS);
 	PRIORITY_SCHEME = 0;
@@ -256,9 +259,9 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	  unsigned int mx, my;
 	  if (costmap.worldToMap(pose.pose.position.x, pose.pose.position.y, mx, my))
 	  {
-		if (costmap.getCost(mx, my) < nav2_costmap_2d::LETHAL_OBSTACLE)
+		if (costmap.getCost(mx, my) < m_cost)
 		{
-		  costmap.setCost(mx, my, nav2_costmap_2d::LETHAL_OBSTACLE);
+		  costmap.setCost(mx, my, m_cost);
 		  costpositions.push_back({ mx, my });
 		}
 	  }
@@ -278,7 +281,7 @@ void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costma
 {
   std::vector<std::vector<unsigned int>> nextcosts;
   unsigned int mx, my;
-  unsigned char cost = nav2_costmap_2d::LETHAL_OBSTACLE / ((maxLoops + 1 - loopsLeft)*0.25);
+  unsigned char cost = m_cost;// / ((maxLoops + 1 - loopsLeft)*0.25);
 
   if (loopsLeft > 0)
   {

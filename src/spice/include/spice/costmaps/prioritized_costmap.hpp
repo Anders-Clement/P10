@@ -33,4 +33,5 @@ private:
     int PRIORITY_SCHEME = 0;
     int FUTURE_LOOKUP = 0;
     int PRIORITY_OPTIONS = 2;
+    unsigned char m_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
 };
