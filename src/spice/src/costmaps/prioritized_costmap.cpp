@@ -126,12 +126,16 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
   
   for (auto it : robots)  // robots ordered according to priority
   {
-	robot_plan cur_robot_plan = m_central_path_planner.get_last_plan_by_id(it);
+	std::optional<robot_plan> cur_robot_plan_opt = m_central_path_planner.get_last_plan_by_id(it);	
 	if (it.id == robotId.id)
 	{
+		if(!cur_robot_plan_opt)
+		{
+			RCLCPP_ERROR(m_central_path_planner.get_logger(), "Did not get plan for robot which costmap is calculated for");
+		}
+		robot_plan cur_robot_plan = cur_robot_plan_opt.value();
 	  geometry_msgs::msg::PoseStamped robot_pose = cur_robot_plan.start;
 	  unsigned int r_mx, r_my;
-
 	  // get current robot w pose in order to clear costmap around it
 	  if (costmap.worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my))
 	  {
@@ -224,6 +228,8 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	}
 
 	std::vector<std::vector<unsigned int>> costpositions;
+	if(!cur_robot_plan_opt) continue;
+	robot_plan& cur_robot_plan = cur_robot_plan_opt.value();	
 	int index = 0;
 	for (auto pose : cur_robot_plan.plan.poses)
 	{

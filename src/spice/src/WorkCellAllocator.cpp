@@ -78,7 +78,7 @@ private:
       for(auto type : request.get()->robot_types ){ // check if robot is of requested type
         if(type.type == workcell.id.robot_type.type){
           
-          std::string fromFrameRel = workcell.id.id;
+          std::string fromFrameRel = workcell.id.id + "_entry";
           try
           {
             t = tf_buffer_->lookupTransform(

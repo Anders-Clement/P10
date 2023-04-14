@@ -28,6 +28,11 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
     );
     m_tf_static_broadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(m_nodehandle);
 
+    const double STEP_DISTANCE = .5;
+    
+    m_entry_transform.translation.x = -STEP_DISTANCE;
+    m_exit_transform.translation.x = STEP_DISTANCE;    
+
     m_current_state = WORK_CELL_STATE::STARTUP;
     m_states = {
         std::make_shared<StartupState>(*this),
@@ -60,30 +65,63 @@ void WorkCellStateMachine::change_state(WORK_CELL_STATE new_state)
     m_states[static_cast<int>(m_current_state)]->init();
 }
 
+tf2::Matrix3x3 q_to_mat(geometry_msgs::msg::Quaternion q)
+{
+    tf2::Quaternion q_tf2;
+    q_tf2.setX(q.x); 
+    q_tf2.setY(q.y); 
+    q_tf2.setZ(q.z); 
+    q_tf2.setW(q.w); 
+    return tf2::Matrix3x3(q_tf2);
+}
+
 void WorkCellStateMachine::on_register_robot(
     const std::shared_ptr<spice_msgs::srv::RegisterWork::Request> request, 
     std::shared_ptr<spice_msgs::srv::RegisterWork::Response> response)
 {
     RCLCPP_INFO(m_nodehandle.get_logger(), "On register robot");
-    // TODO: do we want to implement simulated checks for work compatibility, queue lenght etc?
+    // TODO: do we want to implement simulated checks for work compatibility, queue length etc?
     m_enqueued_robots.emplace(*request);
     response->work_is_enqueued = true;
-    // TODO: processing pose and exit pose is just an offset, consider if suitable
-    response->processing_pose.pose.position.x = m_transform.translation.x + 0.1;
+    
+    // TODO: transform entry and exit poses to map frame before sending
+    response->processing_pose.pose.position.x = m_transform.translation.x;
     response->processing_pose.pose.position.y = m_transform.translation.y;
     response->processing_pose.pose.position.z = m_transform.translation.z;
     response->processing_pose.pose.orientation.x = m_transform.rotation.x;
     response->processing_pose.pose.orientation.y = m_transform.rotation.y;
     response->processing_pose.pose.orientation.z = m_transform.rotation.z;
     response->processing_pose.pose.orientation.w = m_transform.rotation.w;
+    
+    // calculate exit transform to map frame, using m_transform
+    auto from_rot = q_to_mat(m_exit_transform.rotation);
+    auto to_rot = q_to_mat(m_transform.rotation);
 
-    response->exit_pose.pose.position.x = m_transform.translation.x + 0.2;
-    response->exit_pose.pose.position.y = m_transform.translation.y;
-    response->exit_pose.pose.position.z = m_transform.translation.z;
-    response->exit_pose.pose.orientation.x = m_transform.rotation.x;
-    response->exit_pose.pose.orientation.y = m_transform.rotation.y;
-    response->exit_pose.pose.orientation.z = m_transform.rotation.z;
-    response->exit_pose.pose.orientation.w = m_transform.rotation.w;
+    tf2::Matrix3x3 from_to_rot_mat = from_rot * to_rot;
+    tf2::Quaternion from_to_rot;
+    from_to_rot_mat.getRotation(from_to_rot);
+
+    tf2::Vector3 from_translation;
+    from_translation.setX(m_exit_transform.translation.x);
+    from_translation.setY(m_exit_transform.translation.y);
+    from_translation.setZ(m_exit_transform.translation.z);
+    tf2::Vector3 to_translation;
+    to_translation.setX(m_transform.translation.x);
+    to_translation.setY(m_transform.translation.y);
+    to_translation.setZ(m_transform.translation.z);
+
+    tf2::Vector3 from_to_trans = to_rot*from_translation + to_translation;
+
+    geometry_msgs::msg::Pose exit_pose;
+    exit_pose.position.x = from_to_trans.getX();
+    exit_pose.position.y = from_to_trans.getY();
+    exit_pose.position.z = from_to_trans.getZ();
+    exit_pose.orientation.x = from_to_rot.getX();
+    exit_pose.orientation.y = from_to_rot.getY();
+    exit_pose.orientation.z = from_to_rot.getZ();
+    exit_pose.orientation.w = from_to_rot.getW();
+
+    response->exit_pose.pose = exit_pose;
 
     response->processing_pose.header.frame_id = "map";
     response->processing_pose.header.stamp = m_nodehandle.get_clock()->now();
@@ -164,38 +202,17 @@ void WorkCellStateMachine::publish_transform()
     t.transform = m_transform;
     m_tf_static_broadcaster->sendTransform(t);
 
-    // get rotation of cell in order to find entry and exit points
-    // tf2::Quaternion q(
-    //     m_transform.rotation.x,
-    //     m_transform.rotation.y,
-    //     m_transform.rotation.z,
-    //     m_transform.rotation.w);
-    // tf2::Matrix3x3 m(q);
-    // double roll, pitch, yaw;
-    // m.getRPY(roll, pitch, yaw);
-
-    const double STEP_DISTANCE = .25;
-    // double x_offset = STEP_DISTANCE*cos(yaw);
-    // double y_offset = STEP_DISTANCE*sin(yaw);
-
-
-    t.header.frame_id = get_work_cell_id().id;
-    t.transform.rotation.x = 0;
-    t.transform.rotation.y = 0;
-    t.transform.rotation.z = 0;
-    t.transform.rotation.w = 1;
-    t.transform.translation.y = 0;
-    
     // publish transform for entry to cell
-    t.transform.translation.x = -STEP_DISTANCE;
+    t.transform = m_entry_transform;
+    t.header.frame_id = get_work_cell_id().id;
     t.child_frame_id = get_work_cell_id().id + "_entry";
     m_tf_static_broadcaster->sendTransform(t);
 
     // publish transform for exit of cell
-    t.transform.translation.x = STEP_DISTANCE;
+    t.transform = m_exit_transform;
+    t.header.frame_id = get_work_cell_id().id;
     t.child_frame_id = get_work_cell_id().id + "_exit";
     m_tf_static_broadcaster->sendTransform(t);
-
 }
 
 spice_msgs::msg::RobotState WorkCellStateMachine::internal_state_to_robot_state(WORK_CELL_STATE state)

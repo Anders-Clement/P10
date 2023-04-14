@@ -54,33 +54,37 @@ void CentralPlanner::configure(
   std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
   std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
 {
-  node_ = parent.lock();
-  name_ = name;
-  tf_ = tf;
-  costmap_ = costmap_ros->getCostmap();
-  global_frame_ = costmap_ros->getGlobalFrameID();
+    node_ = parent.lock();
+    name_ = name;
+    tf_ = tf;
+    costmap_ = costmap_ros->getCostmap();
+    global_frame_ = costmap_ros->getGlobalFrameID();
 
-  // Parameter initialization
-  nav2_util::declare_parameter_if_not_declared(
+    // Parameter initialization
+    nav2_util::declare_parameter_if_not_declared(
     node_, name_ + ".interpolation_resolution", rclcpp::ParameterValue(
-      0.1));
-  node_->get_parameter(name_ + ".interpolation_resolution", interpolation_resolution_);
-  nav2_util::declare_parameter_if_not_declared(
+        0.1));
+    node_->get_parameter(name_ + ".interpolation_resolution", interpolation_resolution_);
+    nav2_util::declare_parameter_if_not_declared(
     node_, name_ + ".tolerance", rclcpp::ParameterValue(
-      0.1));
-  node_->get_parameter(name_ + ".tolerance", goal_tolerance_);
+        0.1));
+    node_->get_parameter(name_ + ".tolerance", goal_tolerance_);
 
-  robot_namespace_ = std::string(node_->get_namespace()).substr(std::string(node_->get_namespace()).rfind('/')+1);
+    robot_namespace_ = std::string(node_->get_namespace()).substr(std::string(node_->get_namespace()).rfind('/')+1);
+    // default to a_star planner
+    planner_type.type = spice_msgs::msg::PlannerType::PLANNER_A_STAR;
 
-
-  // char* ns = getenv("ROBOT_NAMESPACE");
-  if(robot_namespace_ == "")
-  {
+    // char* ns = getenv("ROBOT_NAMESPACE");
+    if(robot_namespace_ == "")
+    {
     RCLCPP_ERROR(node_->get_logger(), 
-      "ROBOT_NAMESPACE is empty, planner will be unable to fetch correct plans");
-  }
+        "ROBOT_NAMESPACE is empty, planner will be unable to fetch correct plans");
+    }
 
-  central_planner_client = node_->create_client<spice_msgs::srv::GetPlan>("/get_plan");
+    central_planner_client = node_->create_client<spice_msgs::srv::GetPlan>("/get_plan");
+
+    set_planner_type_server = node_->create_service<spice_msgs::srv::SetPlannerType>("set_planner_type", 
+        std::bind(&CentralPlanner::set_planner_type_cb, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 void CentralPlanner::cleanup()
@@ -120,6 +124,7 @@ nav_msgs::msg::Path CentralPlanner::createPlan(
     request->goal = goal;
     request->tolerance = goal_tolerance_;
     request->id.id = robot_namespace_;
+    request->planner_type = planner_type;
 
     auto start_time = node_->now();
     
@@ -140,6 +145,13 @@ nav_msgs::msg::Path CentralPlanner::createPlan(
       duration);
 
     return response->plan;
+}
+
+void CentralPlanner::set_planner_type_cb(spice_msgs::srv::SetPlannerType::Request::SharedPtr req, 
+    spice_msgs::srv::SetPlannerType::Response::SharedPtr res)
+{
+    planner_type = req->planner_type;
+    res->success = true;
 }
 
 }  // namespace spice_nav

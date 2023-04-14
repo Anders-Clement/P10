@@ -109,9 +109,9 @@ namespace nav2_costmap_2d
             auto inv_m = rot_m.inverse();
             auto zero_rot_entry = inv_m * entry_pos;
             auto zero_rot_exit = inv_m * exit_pos;
-            entry_wx = zero_rot_entry.getX();
+            entry_wx = zero_rot_entry.getX() + OFFSET;
             entry_wy = zero_rot_entry.getY();
-            exit_wx = zero_rot_exit.getX(); // same as entry_wx when rotated(?)
+            exit_wx = zero_rot_exit.getX() - OFFSET;
             exit_wy = zero_rot_exit.getY();
         
             unsigned int mx, my;
@@ -122,7 +122,7 @@ namespace nav2_costmap_2d
 
                 while (it_wx < exit_wx)
                 {
-                    obstacle_points.push_back({it_wx, entry_wy+ ROBOT_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy + ROBOT_RADIUS});
                     obstacle_points.push_back({it_wx, entry_wy - ROBOT_RADIUS});
                     it_wx += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
                                         
@@ -132,6 +132,7 @@ namespace nav2_costmap_2d
             { // square:
                 double it_wx = entry_wx;
                 double it_wy = entry_wy - ROBOT_RADIUS;
+                
                 while (it_wx < exit_wx)
                 {
                     obstacle_points.push_back({it_wx, entry_wy + ROBOT_RADIUS});

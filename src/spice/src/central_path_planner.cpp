@@ -1,4 +1,5 @@
 #include "spice/central_path_planner.hpp"
+#include "spice/planners/straight_line_planner.hpp"
 #include "spice/planners/a_star_planner.hpp"
 #include "spice/costmaps/prioritized_costmap.hpp"
 
@@ -10,13 +11,14 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
     m_marker_array_publisher = create_publisher<visualization_msgs::msg::MarkerArray>("/planned_paths", 10);
     m_debug_publish_timer = rclcpp::create_timer(this, 
                                                 get_clock(), 
-                                                rclcpp::Duration::from_seconds(1.0),
+                                                rclcpp::Duration::from_seconds(DEBUG_PUBLISH_TIME),
                                                 std::bind(&CentralPathPlanner::debug_publish_timer_cb, this));
 
     m_global_frame = "map";
     m_tolerance = 0.5;
 
-    m_planner = std::make_unique<AStarPlanner>(*this);
+    m_a_star_planner = std::make_unique<AStarPlanner>(*this);
+    m_straight_line_planner = std::make_unique<StraightLinePlanner>(*this);
     m_costmap = std::make_unique<PrioritizedCostmap>(*this);
 
     RCLCPP_INFO(get_logger(), "Central path planner is initialized");
@@ -41,20 +43,35 @@ void CentralPathPlanner::get_plan_cb(
         return;
     }
     auto start_time = now();
-    
+
+    // set start and goal here, as it is used by some costmaps during planning    
     m_planned_paths[request->id.id].start = request->start;
     m_planned_paths[request->id.id].goal = request->goal;
+
+    std::string planner_type = "Unknown";
     
-    response->plan = m_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
+    if(request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_A_STAR)
+    {
+        response->plan = m_a_star_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
+        planner_type = "A*";
+    }
+    else if (request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_STRAIGHT_LINE)
+    {
+        response->plan = m_straight_line_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
+        planner_type = "Straight line planner";
+    }
+    else
+    {
+        RCLCPP_WARN(get_logger(), "Received request to plan with unknown planner: %d", request->planner_type.type);
+        response->plan = nav_msgs::msg::Path();
+    }
     
     auto duration = (now()-start_time).nanoseconds()*10e-9;
     m_planned_paths[request->id.id].plan = response->plan;
+    m_planned_paths[request->id.id].timestamp = now();
 
-    if(response->plan.poses.size() == 0){
-        RCLCPP_WARN(get_logger(), "[CENTRAL_PLANNER]failed to create a plan with more than 0 poses");
-        m_costmap->PlanFailed(request->id);
-    }
-    //RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms", response->plan.poses.size(), duration);
+    RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s", 
+        response->plan.poses.size(), duration, planner_type.c_str());
 }
 
 std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spice_msgs::msg::Id id)
@@ -62,9 +79,12 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spic
     return m_costmap->get_costmap(id);
 }
 
-robot_plan& CentralPathPlanner::get_last_plan_by_id(spice_msgs::msg::Id id)
+std::optional<robot_plan> CentralPathPlanner::get_last_plan_by_id(spice_msgs::msg::Id id)
 {
-    return m_planned_paths[id.id];
+    if(m_planned_paths.find(id.id) != m_planned_paths.end())
+        return std::optional<robot_plan>{m_planned_paths.at(id.id)};
+    else
+        return {};
 }
 
 
@@ -127,9 +147,18 @@ std_msgs::msg::ColorRGBA color_from_hue(double hue)
 void CentralPathPlanner::debug_publish_timer_cb()
 {
     visualization_msgs::msg::MarkerArray msg;
-
+    rclcpp::Time current_time = now();
+    int num_paths = m_planned_paths.size();
+    int i = 0; // for color
     for(auto& path : m_planned_paths)
     {
+        auto age = current_time - path.second.timestamp;
+        if(age.seconds() > DEBUG_PUBLISH_TIME*2.0)
+        {   
+            path.second.plan.poses.clear();
+            continue;
+        }
+        auto color = color_from_hue((float)i++*(360.0/num_paths));
         visualization_msgs::msg::Marker marker;
         marker.action = 0;
         marker.type = 4;
@@ -139,6 +168,7 @@ void CentralPathPlanner::debug_publish_timer_cb()
         marker.ns = path.first;
         marker.id = 0;
         marker.header.frame_id = path.second.plan.header.frame_id;
+        marker.color = color;
 
         for(auto& pose : path.second.plan.poses)
         {
@@ -149,13 +179,22 @@ void CentralPathPlanner::debug_publish_timer_cb()
             marker.points.push_back(point);
         }
         msg.markers.push_back(marker);
-    }
 
-    // add colors
-    for(unsigned int i = 0; i < msg.markers.size(); i++)
-    {
-        double hue = (float)i*(360.0/(float)msg.markers.size());
-        msg.markers[i].color = color_from_hue(hue);
+        visualization_msgs::msg::Marker goal_marker;
+        goal_marker.action = 0;
+        goal_marker.type = 2;
+        goal_marker.scale.x = 0.1;
+        goal_marker.scale.y = 0.1;
+        goal_marker.scale.z = 0.1;
+        goal_marker.lifetime = rclcpp::Duration::from_seconds(1.0);
+        goal_marker.header.stamp = now();
+        goal_marker.ns = path.first;
+        goal_marker.id = 1;
+        goal_marker.header.frame_id = path.second.plan.header.frame_id;
+        goal_marker.color = color;
+        goal_marker.pose = path.second.goal.pose;
+
+        msg.markers.push_back(goal_marker);
     }
 
     m_marker_array_publisher->publish(std::move(msg));
