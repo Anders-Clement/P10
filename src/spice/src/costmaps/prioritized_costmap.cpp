@@ -83,7 +83,11 @@ void PrioritizedCostmap::calcRobotPriorities()
 	case 1:	 // dynamic priorities based on shortest path
 	  for (auto robot : robots)
 	  {
-		robot_plan robotPlan = m_central_path_planner.get_last_plan_by_id(robot);
+		std::optional<robot_plan> cur_robot_plan_opt = m_central_path_planner.get_last_plan_by_id(robot);
+		if(!cur_robot_plan_opt){
+			continue;
+		}
+		robot_plan& robotPlan = cur_robot_plan_opt.value();
 		robotPathPriorities.push_back(std::pair<spice_msgs::msg::Id, int>{ robot, robotPlan.plan.poses.size() });
 	  }
 	  std::sort(robotPathPriorities.begin(), robotPathPriorities.end(),
@@ -199,7 +203,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	for(int i = 0; i < master_costmap->getSizeInCellsX(); i++){
 		for(int j = 0; j < master_costmap->getSizeInCellsY(); j++){
 			unsigned char cost = costmap.getCost(i,j);
-			if (cost != nav2_costmap_2d::LETHAL_OBSTACLE)
+			if (cost == nav2_costmap_2d::FREE_SPACE)
                 {
                     continue;
                 }
