@@ -184,7 +184,7 @@ class FindWorkCell(RobotStateTemplate):
             self.sm.current_task = response
 
             set_planner_type_request = SetPlannerType.Request()
-            set_planner_type_request.planner_type = PlannerType(type=PlannerType.PLANNER_A_STAR)
+            set_planner_type_request.planner_type = PlannerType(type=PlannerType.PLANNER_PRIORITIZED)
             change_planner_type_future = self.sm.change_planner_type_client.call_async(set_planner_type_request)
             change_planner_type_future.add_done_callback(self.navigate_to_goal)
             

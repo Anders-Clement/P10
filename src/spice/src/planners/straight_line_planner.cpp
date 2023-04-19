@@ -6,6 +6,7 @@ nav_msgs::msg::Path StraightLinePlanner::get_plan(
     geometry_msgs::msg::PoseStamped start, 
     geometry_msgs::msg::PoseStamped goal,
     double goal_tolerance,
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap,
     spice_msgs::msg::Id id)
 {
     nav_msgs::msg::Path plan;
