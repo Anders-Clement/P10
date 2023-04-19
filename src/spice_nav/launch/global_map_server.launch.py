@@ -9,7 +9,7 @@ from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
 
-MAP_NAME = 'A4.yaml' # Change name of map here
+MAP_NAME = 'low_res/A4.yaml' # Change name of map here
 
 def generate_launch_description():
 
