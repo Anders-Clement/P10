@@ -23,6 +23,7 @@ set(msg_files
   "msg/Work.msg"
   "msg/RobotType.msg"
   "msg/PlannerType.msg"
+  "msg/Performance.msg"
 )
 
 set(srv_files
