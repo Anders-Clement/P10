@@ -27,8 +27,8 @@ PrioritizedCostmap::PrioritizedCostmap(CentralPathPlanner& central_path_planner)
   m_central_path_planner.declare_parameter("future_lookup", 0);
   FUTURE_LOOKUP = m_central_path_planner.get_parameter("future_lookup").get_parameter_value().get<int>();
 
-  RCLCPP_WARN(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] init with priority_scheme: %d ", PRIORITY_SCHEME);
-  RCLCPP_WARN(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] init with future_lookup: %d", FUTURE_LOOKUP);
+  RCLCPP_INFO(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] init with priority_scheme: %d ", PRIORITY_SCHEME);
+  RCLCPP_INFO(m_central_path_planner.get_logger(), "[PRIORITIZED COSTMAP] init with future_lookup: %d", FUTURE_LOOKUP);
 };
 
 // get current full costmap, of map + any other layers added for a robot Id
@@ -126,13 +126,13 @@ void PrioritizedCostmap::calcRobotPriorities()
 	  break;
   }
 
-  int priority = 0;
-  for(auto robot : robots){
-	RCLCPP_INFO(m_central_path_planner.get_logger(),
-				  "[PRIORITIZED COSTMAP] robot %s has priority %d",
-				  robot.id.c_str(), priority);
-	priority++;
-  }
+//   int priority = 0;
+//   for(auto robot : robots){
+// 	RCLCPP_INFO(m_central_path_planner.get_logger(),
+// 				  "[PRIORITIZED COSTMAP] robot %s has priority %d",
+// 				  robot.id.c_str(), priority);
+// 	priority++;
+//   }
 }
 
 std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedCostMap(spice_msgs::msg::Id robotId)
@@ -183,19 +183,19 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 		else
 		  end_y = r_my + ceil(ROBOT_RADIUS / MAP_RESOLUTION);
 
-		RCLCPP_INFO(m_central_path_planner.get_logger(),
-					"[PRIORITIZED COSTMAP] trying to clear costmap around robot %s at pose x= %f, y= %f, map "
-					"coordninates mx= %d, my=%d",
-					it.id.c_str(), robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
+		// RCLCPP_INFO(m_central_path_planner.get_logger(),
+		// 			"[PRIORITIZED COSTMAP] trying to clear costmap around robot %s at pose x= %f, y= %f, map "
+		// 			"coordninates mx= %d, my=%d",
+		// 			it.id.c_str(), robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
 		
-		RCLCPP_INFO(m_central_path_planner.get_logger(),
-					"[PRIORITIZED COSTMAP] clearing cost map from (start_x, start_y): (%d,%d) to (end_x, end_y):"
-					 "(%d,%d)", start_x, start_y, end_x, end_y);
+		// RCLCPP_INFO(m_central_path_planner.get_logger(),
+		// 			"[PRIORITIZED COSTMAP] clearing cost map from (start_x, start_y): (%d,%d) to (end_x, end_y):"
+		// 			 "(%d,%d)", start_x, start_y, end_x, end_y);
 		
 		double temp_x, temp_y;
 
 		costmap.mapToWorld(r_mx, r_my, temp_x, temp_y);
-		RCLCPP_WARN(m_central_path_planner.get_logger(), "costmap origin x,y: %f, %f robot pose, map to world %f, %f ", costmap.getOriginX(), costmap.getOriginY(), temp_x, temp_y);
+		// RCLCPP_INFO(m_central_path_planner.get_logger(), "costmap origin x,y: %f, %f robot pose, map to world %f, %f ", costmap.getOriginX(), costmap.getOriginY(), temp_x, temp_y);
 		
 		// clear cost map around the robot
 
@@ -272,7 +272,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 	inflateCostMap(number_of_loops, number_of_loops, costmap, costpositions);
 
   }
-  RCLCPP_WARN(m_central_path_planner.get_logger(), "went through all robots and got no machting id");
+  RCLCPP_WARN(m_central_path_planner.get_logger(), "went through all robots and got no matching id");
   return std::make_shared<nav2_costmap_2d::Costmap2D>();  // if loop through all robots without returning map
 }
 

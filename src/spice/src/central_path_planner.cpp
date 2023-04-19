@@ -78,17 +78,24 @@ void CentralPathPlanner::get_plan_cb(
                 response->wait = true;
             }
         }
+        else
+        {
+            response->plan = prioritized_plan;
+            response->wait = false;
+        }
         planner_type="Prioritized planner";
     }
     else if (request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_STRAIGHT_LINE)
     {
         response->plan = m_straight_line_planner->get_plan(request->start, request->goal, m_tolerance, nullptr, request->id);
+        response->wait = false;
         planner_type = "Straight line planner";
     }
     else if(request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_A_STAR)
     {
         auto costmap = m_global_costmap->get_costmap(request->id);
         response->plan = m_a_star_planner->get_plan(request->start, request->goal, m_tolerance, costmap, request->id);
+        response->wait = false;
         planner_type = "A*";
     }
     else
@@ -101,8 +108,8 @@ void CentralPathPlanner::get_plan_cb(
     m_planned_paths[request->id.id].plan = response->plan;
     m_planned_paths[request->id.id].timestamp = now();
 
-    RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s", 
-        response->plan.poses.size(), duration, planner_type.c_str());
+    RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s. Wait: %d", 
+        response->plan.poses.size(), duration, planner_type.c_str(), response->wait);
 }
 
 

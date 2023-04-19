@@ -85,7 +85,7 @@ void CentralPlanner::configure(
     set_planner_type_server = node_->create_service<spice_msgs::srv::SetPlannerType>("set_planner_type", 
         std::bind(&CentralPlanner::set_planner_type_cb, this, std::placeholders::_1, std::placeholders::_2));
 
-    wait_publisher = node_->create_publisher<std_msgs::msg::Bool>("wait_topic", 10);
+    wait_publisher = node_->create_publisher<std_msgs::msg::Bool>("nav_wait_condition", 10);
 }
 
 void CentralPlanner::cleanup()
