@@ -111,6 +111,9 @@ ament_target_dependencies(
   nav_msgs
   spice_msgs
   nav2_costmap_2d
+  tf2
+  tf2_ros
+  tf2_msgs
 )
 
 install(TARGETS
