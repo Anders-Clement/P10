@@ -171,66 +171,18 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 
 			// add other robots to costmap
 			AddRobotsToGlobalCostmap(costmap);
+			
 			// get current robot w pose in order to clear costmap around it
-			if (costmap.worldToMap(robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my))
+			double angle_increment = 2.0 * M_PI / m_robot_points;
+			for (float i = robot_pose.pose.position.x - ROBOT_RADIUS; i < robot_pose.pose.position.x + ROBOT_RADIUS; i += 0.2)
 			{
-				// ensure cost map is not accessed outside of bounds (less than 0, more than x,y max)
-				unsigned int start_x;
-				if (r_mx < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
-					start_x = -r_mx;
-				else
-					start_x = r_mx - ceil(ROBOT_RADIUS / MAP_RESOLUTION);
-
-				unsigned int start_y;
-				if (r_my < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
-					start_y = -r_my;
-				else
-					start_y = r_my - ceil(ROBOT_RADIUS / MAP_RESOLUTION);
-
-				unsigned int end_x;
-				if (costmap.getSizeInCellsX() - r_mx < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
-					end_x = costmap.getSizeInCellsX() - r_mx;
-				else
-					end_x = r_mx + ceil(ROBOT_RADIUS / MAP_RESOLUTION);
-
-				unsigned int end_y;
-				if (costmap.getSizeInCellsY() - r_my < ceil(ROBOT_RADIUS / MAP_RESOLUTION))
-					end_y = costmap.getSizeInCellsY() - r_my;
-				else
-					end_y = r_my + ceil(ROBOT_RADIUS / MAP_RESOLUTION);
-
-				RCLCPP_INFO(m_central_path_planner.get_logger(),
-							"[PRIORITIZED COSTMAP] trying to clear costmap around robot %s at pose x= %f, y= %f, map "
-							"coordninates mx= %d, my=%d",
-							it.id.c_str(), robot_pose.pose.position.x, robot_pose.pose.position.y, r_mx, r_my);
-
-				RCLCPP_INFO(m_central_path_planner.get_logger(),
-							"[PRIORITIZED COSTMAP] clearing cost map from (start_x, start_y): (%d,%d) to (end_x, end_y):"
-							"(%d,%d)",
-							start_x, start_y, end_x, end_y);
-
-				double temp_x, temp_y;
-
-				costmap.mapToWorld(r_mx, r_my, temp_x, temp_y);
-				RCLCPP_WARN(m_central_path_planner.get_logger(), "costmap origin x,y: %f, %f robot pose, map to world %f, %f ",
-							costmap.getOriginX(), costmap.getOriginY(), temp_x, temp_y);
-
-				// clear cost map around the robot
-
-				for (unsigned int i = start_x; i < end_x; i++)
-				{
-					for (unsigned int j = start_y; j < end_y; j++)
+				for(float j = robot_pose.pose.position.y - ROBOT_RADIUS; j < robot_pose.pose.position.y + ROBOT_RADIUS; j += 0.2){
+					
+					if (costmap.worldToMap(i, j, r_mx, r_my))
 					{
-						costmap.setCost(i, j, nav2_costmap_2d::FREE_SPACE);
+						costmap.setCost(r_mx, r_my, nav2_costmap_2d::FREE_SPACE);
 					}
 				}
-			}
-
-			else
-			{
-				RCLCPP_WARN(m_central_path_planner.get_logger(),
-							"[PRIORITIZED COSTMAP] could not transform from w space to m space, robot: %s at pose x= %f, y= %f",
-							current_robot_id.id.c_str(), robot_pose.pose.position.x, robot_pose.pose.position.y);
 			}
 
 			for (unsigned int i = 0; i < master_costmap->getSizeInCellsX(); i++)
@@ -289,7 +241,7 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 			index++;
 		}
 
-		int number_of_loops = ceil(INFLATION_RADIOUS / MAP_RESOLUTION);
+		int number_of_loops = round(INFLATION_RADIOUS / MAP_RESOLUTION);
 		inflateCostMap(number_of_loops, number_of_loops, costmap, costpositions);
 	}
 	RCLCPP_WARN(m_central_path_planner.get_logger(), "went through all robots and got no machting id");
@@ -329,7 +281,7 @@ void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costma
 
 void PrioritizedCostmap::AddRobotsToGlobalCostmap(nav2_costmap_2d::Costmap2D costmap)
 {
-	double angle_increment = 2.0 * M_PI / m_obstacle_points;
+	double angle_increment = 2.0 * M_PI / m_robot_points;
 	for (auto robot : robots)
 	{
 		if (robot.id == current_robot_id.id)
@@ -347,7 +299,7 @@ void PrioritizedCostmap::AddRobotsToGlobalCostmap(nav2_costmap_2d::Costmap2D cos
 			}
 
 			
-			for (int i = 0; i < m_obstacle_points; i++)
+			for (int i = 0; i < m_robot_points; i++)
 			{
 
 				float wx = robot_obs_tf.transform.translation.x + (ROBOT_RADIUS * std::cos(angle_increment * i));
