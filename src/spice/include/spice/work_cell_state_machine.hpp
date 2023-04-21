@@ -18,6 +18,11 @@
 #include "spice_msgs/srv/heartbeat.hpp"
 #include "spice_msgs/srv/robot_ready.hpp"
 #include "spice/work_cell.hpp"
+#include "nav_msgs/msg/occupancy_grid.hpp"
+#include "nav2_costmap_2d/costmap_2d.hpp"
+#include "tf2_ros/transform_listener.h"
+#include "tf2_ros/buffer.h"
+#include "spice_msgs/srv/get_robots_by_type.hpp"
 
 enum class WORK_CELL_STATE : uint8_t{
     STARTUP = 0,
@@ -85,11 +90,28 @@ private:
     );
     spice_msgs::msg::RobotState internal_state_to_robot_state(WORK_CELL_STATE state);
 
+    void update_q_location();
+    void global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg);
+    int pnpoly(int nvert, std::vector<float> vertx, std::vector<float> verty, float testx, float testy);
+
     std::string m_work_cell_name;
     spice_msgs::msg::RobotType::_type_type m_robot_type;
     geometry_msgs::msg::Transform m_transform;
     geometry_msgs::msg::Transform m_entry_transform;
     geometry_msgs::msg::Transform m_exit_transform;
+    std::vector<geometry_msgs::msg::Transform> m_q_transforms;
+    double ROBOT_RADIUS = 0.25;
+    double WORKCELL_RADIUS = 0.25;
+    int q_num = 3;
+    std::vector<spice_msgs::msg::Robot> workcell_list; //list of all workcells
+    std::vector<spice_msgs::msg::Robot> carrier_list; //list of all carrier robots
+    rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_workcells_cli;
+    rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_carriers_cli;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+    std::vector<std::pair<float,float>> world_corners;
+    std::vector<float> world_corners_x;
+    std::vector<float> world_corners_y;
     std::vector<std::shared_ptr<WorkCellState>> m_states;
     WORK_CELL_STATE m_current_state;
     std::shared_ptr<tf2_ros::StaticTransformBroadcaster> m_tf_static_broadcaster;
@@ -100,6 +122,10 @@ private:
     std::shared_ptr<rclcpp::Service<std_srvs::srv::Trigger>> m_robot_ready_for_processing_service;
     std::shared_ptr<rclcpp::Publisher<spice_msgs::msg::RobotStateTransition>> m_state_transition_event_pub;
     std::list<carrier_robot> m_enqueued_robots;
+    rclcpp::TimerBase::SharedPtr m_timer{nullptr};
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> m_global_costmap;
+    rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmap_subscriber;
+    
 };
 
 #endif
