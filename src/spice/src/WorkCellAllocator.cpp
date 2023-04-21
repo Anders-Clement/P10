@@ -71,7 +71,7 @@ private:
     std::string toFrameRel = request.get()->robot_id.id + "_base_link";
     geometry_msgs::msg::TransformStamped t;
     float minDist = INFINITY;
-    geometry_msgs::msg::TransformStamped goal;
+    // geometry_msgs::msg::TransformStamped goal;
     spice_msgs::msg::Id workcellType;
 
     for(auto workcell : workcells){
@@ -89,9 +89,10 @@ private:
             if (dist < minDist)
             {
               
-            workcellType = workcell.id;
-            minDist = dist;
-            goal = tf_buffer_->lookupTransform("map", fromFrameRel, tf2::TimePointZero);
+                workcellType = workcell.id;
+                minDist = dist;
+                response->found_job = true;
+            //goal = tf_buffer_->lookupTransform("map", fromFrameRel, tf2::TimePointZero);
             }
           }
           catch (const tf2::TransformException &ex)
@@ -104,21 +105,21 @@ private:
       }
     }
 
-    if (goal.header.frame_id == "") // if message is correct
-    {
-      response->found_job = false;
-      return;
-    }
+    // if (goal.header.frame_id == "") // if message is correct
+    // {
+    //   response->found_job = false;
+    //   return;
+    // }
     // SEND RESPONSE
-    geometry_msgs::msg::PoseStamped goalPose;
-    geometry_msgs::msg::Pose pose;
+    // geometry_msgs::msg::PoseStamped goalPose;
+    // geometry_msgs::msg::Pose pose;
 
-    goalPose.header = goal.header;
-    goalPose.pose.position.x = goal.transform.translation.x;
-    goalPose.pose.position.y = goal.transform.translation.y;
-    goalPose.pose.position.z = goal.transform.translation.z;
-    goalPose.pose.orientation = goal.transform.rotation;
-    response->goal_pose = goalPose;
+    // goalPose.header = goal.header;
+    // goalPose.pose.position.x = goal.transform.translation.x;
+    // goalPose.pose.position.y = goal.transform.translation.y;
+    // goalPose.pose.position.z = goal.transform.translation.z;
+    // goalPose.pose.orientation = goal.transform.rotation;
+    //response->goal_pose = goalPose;
     response->found_job = true;
     response->workcell_id = workcellType;
   }

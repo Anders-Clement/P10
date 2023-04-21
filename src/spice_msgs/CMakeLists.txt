@@ -38,6 +38,7 @@ set(srv_files
   "srv/GetRobotsByType.srv"
   "srv/GetPlan.srv"
   "srv/SetPlannerType.srv"
+  "srv/RobotReady.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

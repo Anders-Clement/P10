@@ -14,10 +14,13 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
 {
     m_register_work_service = m_nodehandle.create_service<spice_msgs::srv::RegisterWork>(
         m_work_cell_name + "/register_work", 
-        std::bind(&WorkCellStateMachine::on_register_robot, this, std::placeholders::_1, std::placeholders::_2));
+        std::bind(&WorkCellStateMachine::on_register_work, this, std::placeholders::_1, std::placeholders::_2));
     m_robot_ready_for_processing_service = m_nodehandle.create_service<std_srvs::srv::Trigger>(
         m_work_cell_name + "/robot_ready_for_processing", 
         std::bind(&WorkCellStateMachine::on_robot_ready_for_processing, this, std::placeholders::_1, std::placeholders::_2));
+    m_robot_ready_in_queue_service = m_nodehandle.create_service<spice_msgs::srv::RobotReady>(
+        m_work_cell_name + "/robot_ready_in_queue", 
+        std::bind(&WorkCellStateMachine::on_robot_ready_in_queue, this, std::placeholders::_1, std::placeholders::_2));
 
     auto qos_profile_TL = rmw_qos_profile_default;
     qos_profile_TL.durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
@@ -75,14 +78,24 @@ tf2::Matrix3x3 q_to_mat(geometry_msgs::msg::Quaternion q)
     return tf2::Matrix3x3(q_tf2);
 }
 
-void WorkCellStateMachine::on_register_robot(
+bool WorkCellStateMachine::enqueue_robot(spice_msgs::srv::RegisterWork::Request::SharedPtr request)
+{
+    // TODO: add check that there is space in queue, if not, return false
+    // TODO: get queue pose here
+    carrier_robot robot(geometry_msgs::msg::Pose(), request->work, request->robot_id);
+    m_enqueued_robots.push_back(robot);
+    return true;
+}
+
+void WorkCellStateMachine::on_register_work(
     const std::shared_ptr<spice_msgs::srv::RegisterWork::Request> request, 
     std::shared_ptr<spice_msgs::srv::RegisterWork::Response> response)
 {
-    RCLCPP_INFO(m_nodehandle.get_logger(), "On register robot");
+    RCLCPP_INFO(m_nodehandle.get_logger(), "On register work from %s", request->robot_id.id.c_str());
     // TODO: do we want to implement simulated checks for work compatibility, queue length etc?
-    m_enqueued_robots.emplace(*request);
-    response->work_is_enqueued = true;
+    
+    response->work_is_enqueued = enqueue_robot(request);
+    // TODO: add queue pose transform
     
     // TODO: transform entry and exit poses to map frame before sending
     response->processing_pose.pose.position.x = m_transform.translation.x;
@@ -132,6 +145,21 @@ void WorkCellStateMachine::on_register_robot(
     RCLCPP_INFO(m_nodehandle.get_logger(), "Enqueued robot: %s", request->robot_id.id.c_str());
 }
 
+void WorkCellStateMachine::on_robot_ready_in_queue(
+    const std::shared_ptr<spice_msgs::srv::RobotReady::Request> request,
+    std::shared_ptr<spice_msgs::srv::RobotReady::Response> response)
+{
+    response->success = false; // return false if we do now know the robot
+    for(auto& robot : m_enqueued_robots)
+    {
+        if(robot.robot_id == request->robot_id)
+        {
+            robot.ready_in_queue = true;
+            response->success = true;
+        }
+    }
+}
+
 void WorkCellStateMachine::on_robot_ready_for_processing(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -139,13 +167,18 @@ void WorkCellStateMachine::on_robot_ready_for_processing(
     m_states[static_cast<int>(m_current_state)]->on_robot_ready_for_processing(request, response);
 }
 
-std::optional<spice_msgs::srv::RegisterWork::Request> WorkCellStateMachine::get_enqueued_robot()
+std::optional<carrier_robot> WorkCellStateMachine::get_enqueued_robot()
 {
-    if (m_enqueued_robots.empty()) return {};
-
-    std::optional<spice_msgs::srv::RegisterWork::Request> next_robot(m_enqueued_robots.front());
-    m_enqueued_robots.pop();
-    return next_robot;
+    for(auto enqueued_robot = m_enqueued_robots.begin(); enqueued_robot != m_enqueued_robots.end(); enqueued_robot++)
+    {
+        if(enqueued_robot->ready_in_queue)
+        {
+            std::optional<carrier_robot> next_robot(*enqueued_robot);
+            m_enqueued_robots.erase(enqueued_robot);
+            return next_robot;
+        }
+    }
+    return {};
 }
 
 void WorkCellStateMachine::activate_heartbeat()

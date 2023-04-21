@@ -14,7 +14,7 @@ from nav2_msgs.action import NavigateToPose
 
 from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType
 from spice_msgs.srv import Heartbeat, RobotTask, SetPlannerType
-from work_tree import WorkTree, Vertex
+from work_tree import WorkTree
 import robot_state
 
 
