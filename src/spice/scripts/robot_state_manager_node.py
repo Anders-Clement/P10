@@ -57,7 +57,7 @@ class RobotStateManager(Node):
         self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', qos)
 
         self.heartbeat_client = self.create_client(Heartbeat, '/heartbeat')
-        self.heartbeat_timer = self.create_timer(5, self.heartbeat_timer_cb)
+        self.heartbeat_timer = self.create_timer(2.5, self.heartbeat_timer_cb)
         self.heartbeat_timer.cancel()
         self.heartbeat_future = None
 
@@ -128,6 +128,7 @@ class RobotStateManager(Node):
             or self.current_state == ROBOT_STATE.READY_FOR_PROCESS\
             or self.current_state == ROBOT_STATE.PROCESS_DONE\
             or self.current_state == ROBOT_STATE.EXIT_WORKCELL\
+            or self.current_state == ROBOT_STATE.ENTER_WORKCELL\
             or self.current_state == ROBOT_STATE.ERROR:
 
             if self.heartbeat_future is None:

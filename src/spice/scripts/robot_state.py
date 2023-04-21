@@ -156,6 +156,7 @@ class FindWorkCell(RobotStateTemplate):
 
         if len(self.sm.current_work) == 0: # no more work
             self.sm.task_tree = None
+            self.sm.get_logger().info("Job done, getting ready for a new job")
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
             return
 
@@ -182,8 +183,7 @@ class FindWorkCell(RobotStateTemplate):
         if response.found_job:
             self.sm.task_tree.select_next_work_type(response.workcell_id.robot_type)
             self.sm.current_task = response
-
-
+            self.sm.change_state(ROBOT_STATE.REGISTER_WORK)
             
         else:
             self.sm.get_logger().info('Failed to allocate workcell to robot, are they available?')
@@ -246,7 +246,7 @@ class ProcessRegisterWorkState(RobotStateTemplate):
             return
 
         nav_goal = NavigateToPose.Goal()
-        nav_goal.pose = self.sm.current_task.goal_pose
+        nav_goal.pose = self.sm.current_work_cell_info.queue_pose
         self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
             nav_goal)
         self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
@@ -296,10 +296,19 @@ class ProcessWaitQueueState(RobotStateTemplate):
         self.sm = sm
     
     def init(self):
+
+        self.robot_is_called = False
+        self.srv_call_robot = self.sm.create_service(
+                    Trigger, 'call_robot', self.call_robot_cb)
+        
         robot_ready_request = RobotReady.Request()
         robot_ready_request.robot_id = self.sm.id
         current_task: AllocWorkCell.Response = self.sm.current_task
-        self.robot_ready_client = self.sm.create_client(RobotReady, current_task.workcell_id.id + "/robot_ready_in_queue")
+        robot_ready_service_name = '/' + current_task.workcell_id.id + "/robot_ready_in_queue"
+        self.robot_ready_client = self.sm.create_client(RobotReady, robot_ready_service_name)
+        if not self.robot_ready_client.wait_for_service(5.0):
+            self.sm.get_logger().error('Timeout on wait for service: ' + robot_ready_service_name)
+            self.sm.change_state(ROBOT_STATE.ERROR)
         robot_ready_future = self.robot_ready_client.call_async(robot_ready_request)
         robot_ready_future.add_done_callback(self.robot_ready_cb)
 
@@ -312,9 +321,6 @@ class ProcessWaitQueueState(RobotStateTemplate):
         self.wait_in_queue()
 
     def wait_in_queue(self):
-        self.robot_is_called = False
-        self.srv_call_robot = self.sm.create_service(
-                    Trigger, 'call_robot', self.call_robot_cb)
         self.timer = self.sm.create_timer(0.1, self.check_service_cb)
     
     def check_service_cb(self):
@@ -375,7 +381,7 @@ class EnterWorkCellState(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.ERROR)
         
         self.nav_goal_done_future: Future = goal_handle.get_result_async()
-        self.nav_goal_done_future.add_done_callback(self.sm.on_cell_entry_nav_done)
+        self.nav_goal_done_future.add_done_callback(self.on_cell_entry_nav_done)
 
     def on_cell_entry_nav_done(self, future: Future):
         nav_goal_result: GoalStatus = future.result().status
