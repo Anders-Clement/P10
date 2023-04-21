@@ -17,7 +17,8 @@
 #include "spice_msgs/srv/register_work.hpp"
 #include "spice_msgs/srv/heartbeat.hpp"
 #include "spice_msgs/srv/robot_ready.hpp"
-#include "spice/work_cell.hpp"
+#include "spice/work_cells/work_cell.hpp"
+#include "spice/work_cells/queue_manager.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav2_costmap_2d/costmap_2d.hpp"
 #include "tf2_ros/transform_listener.h"
@@ -56,7 +57,6 @@ struct carrier_robot
 };
 
 class WorkCellState;
-
 class WorkCellStateMachine
 {
 public:

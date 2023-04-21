@@ -1,4 +1,4 @@
-#include "spice/work_cell.hpp"
+#include "spice/work_cells/work_cell.hpp"
 #include "rclcpp/create_timer.hpp"
 
 using namespace std::chrono_literals;

@@ -4,7 +4,7 @@
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "spice_msgs/msg/robot_type.hpp"
 #include "spice_msgs/msg/task.hpp"
-#include "spice/work_cell_state_machine.hpp"
+#include "spice/work_cells/work_cell_state_machine.hpp"
 
 using namespace std::chrono_literals;
 
@@ -191,8 +191,17 @@ void WorkCellStateMachine::on_register_work(
     // TODO: do we want to implement simulated checks for work compatibility, queue length etc?
     
     response->work_is_enqueued = enqueue_robot(request);
-    // TODO: add queue pose transform
+    // TODO: add queue pose transform based on robot's queue pos, and keep track of available queue positions
+    response->queue_pose.pose = transform_to_map(m_q_transforms[0], m_transform);
+    response->queue_pose.header.frame_id = "map";
+    response->queue_pose.header.stamp = m_nodehandle.get_clock()->now();
+
+    response->entry_pose.pose = transform_to_map(m_entry_transform, m_transform);
+    response->entry_pose.header.frame_id = "map";
+    response->entry_pose.header.stamp = m_nodehandle.get_clock()->now();
     
+    response->processing_pose.header.frame_id = "map";
+    response->processing_pose.header.stamp = m_nodehandle.get_clock()->now();
     response->processing_pose.pose.position.x = m_transform.translation.x;
     response->processing_pose.pose.position.y = m_transform.translation.y;
     response->processing_pose.pose.position.z = m_transform.translation.z;
@@ -203,9 +212,6 @@ void WorkCellStateMachine::on_register_work(
     
     // calculate exit transform to map frame, using m_transform
     response->exit_pose.pose = transform_to_map(m_exit_transform, m_transform);
-
-    response->processing_pose.header.frame_id = "map";
-    response->processing_pose.header.stamp = m_nodehandle.get_clock()->now();
     response->exit_pose.header.frame_id = "map";
     response->exit_pose.header.stamp = m_nodehandle.get_clock()->now();
     
