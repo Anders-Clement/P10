@@ -23,22 +23,17 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
         m_work_cell_name + "/robot_ready_for_processing", 
         std::bind(&WorkCellStateMachine::on_robot_ready_for_processing, this, std::placeholders::_1, std::placeholders::_2));
 
-    // m_timer = m_nodehandle.create_wall_timer(2s, std::bind(&WorkCellStateMachine::update_q_location, this));
+    m_timer_q = m_nodehandle.create_wall_timer(1s, std::bind(&WorkCellStateMachine::update_q_location, this));
+    m_timer_robots_lists = m_nodehandle.create_wall_timer(2s, std::bind(&WorkCellStateMachine::update_robots_lists, this));
 
-    // tf_buffer_ =
-    //     std::make_unique<tf2_ros::Buffer>(m_nodehandle.get_clock());
-
-    // tf_listener_ =
-    //     std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(m_nodehandle.get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
     
-    // get_workcells_cli = m_nodehandle.create_client<spice_msgs::srv::GetRobotsByType>("/get_robots_by_type");
+    get_workcells_cli = m_nodehandle.create_client<spice_msgs::srv::GetRobotsByType>("/get_robots_by_type");
+    get_carriers_cli = m_nodehandle.create_client<spice_msgs::srv::GetRobotsByType>("/get_robots_by_type");
 
-    // m_costmap_subscriber = m_nodehandle.create_subscription<nav_msgs::msg::OccupancyGrid>(
-    //     "/costmap/costmap",
-    //     10,
-    //     std::bind(&WorkCellStateMachine::global_costmap_cb, this, std::placeholders::_1));
+    m_costmapPub = m_nodehandle.create_publisher<nav_msgs::msg::OccupancyGrid>("/queue_costmap", 10);
 
-    
 
     auto qos_profile_TL = rmw_qos_profile_default;
     qos_profile_TL.durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
@@ -47,6 +42,13 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
         m_work_cell_name + "/robot_state_transition_event",
         rclcpp::QoS(rclcpp::QoSInitialization(qos_profile_TL.history, 10), qos_profile_TL)
     );
+
+    m_costmap_subscriber = m_nodehandle.create_subscription<nav_msgs::msg::OccupancyGrid>(
+        "/map",
+        rclcpp::QoS(rclcpp::QoSInitialization(qos_profile_TL.history, 10), qos_profile_TL),
+        std::bind(&WorkCellStateMachine::global_costmap_cb, this, std::placeholders::_1)
+    );
+
     m_tf_static_broadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(m_nodehandle);
 
     const double STEP_DISTANCE = .5;
@@ -76,13 +78,13 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
 
     // polygon corners in world coordinates:
         // for A4:
+    world_corners.push_back({2.6586, -0.8671}); // mid mid
     world_corners.push_back({2.4185, -3.6402}); // top mid
     world_corners.push_back({-1.7283, -3.5899}); // top right
     world_corners.push_back({-1.5848, 2.0436}); // bottom right
     world_corners.push_back({6.9987, 1.7771}); // bottom left
     world_corners.push_back({7.0078, -0.6922}); // mid left
-    world_corners.push_back({2.6586, -0.8671}); // mid mid
-    world_corners.push_back({2.4185, -3.6402}); // top mid again. For the sake of the check poly function
+
 
     //std::vector<float> world_corners_x({2.4185,-1.7283,-1.5848,6.9987,7.0078,2.6586});
     //std::vector<float> world_corners_y({-3.6402,-3.5899,-2.0436,1.7771,-0.6922,-0.8671});
@@ -301,94 +303,230 @@ spice_msgs::msg::Id WorkCellStateMachine::get_work_cell_id()
     return id; 
 }
 
-// void WorkCellStateMachine::global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg)
-// {
-//     m_global_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*msg);
-// }
+void WorkCellStateMachine::global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg)
+{
+    m_global_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*msg);
+    gotCostmap = true;
+    preprocessing_q_costmap();
+}
 
-// void WorkCellStateMachine::update_q_location(){
-//     RCLCPP_INFO(m_nodehandle.get_logger(), "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
+void WorkCellStateMachine::preprocessing_q_costmap(){
+    double wx, wy;
+    for (auto x = 0; x < m_global_costmap->getSizeInCellsX(); x++)
+    {
+        for (auto y = 0; y < m_global_costmap->getSizeInCellsY(); y++)
+        {
+            m_global_costmap->mapToWorld(x,y, wx, wy);
 
-//     if (!get_workcells_cli->wait_for_service(1s))
-//     {
-//         RCLCPP_WARN(m_nodehandle.get_logger(), "Timeout on Swarm manager get_robots_by_type");
-//         return;
-//     }
-//     auto get_robots_request = std::make_shared<spice_msgs::srv::GetRobotsByType::Request>();
-//     get_robots_request->type.type = spice_msgs::msg::RobotType::WORK_CELL_ANY;
+            if(pnpoly(world_corners.size(),world_corners_x, world_corners_y, wx, wy))
+            {
+                viable_points.push_back({x,y});
+            }
+        }
+    }
+}
 
-//     using ServiceResponseFuture = rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedFuture;
+void WorkCellStateMachine::update_q_location(){
+    RCLCPP_INFO(m_nodehandle.get_logger(), "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
 
-//     auto get_robots_cb = [this](ServiceResponseFuture future)
-//     { workcell_list = future.get()->robots; };
+    if(!gotCostmap || !m_global_costmap)
+    {
+        RCLCPP_INFO(m_nodehandle.get_logger(), "did not get costmap for q");
+        return;
+    }
 
-//     auto futureResult = get_workcells_cli->async_send_request(get_robots_request, get_robots_cb);
-
-//     if (!get_carriers_cli->wait_for_service(1s))
-//     {
-//         RCLCPP_WARN(m_nodehandle.get_logger(), "Timeout on Swarm manager get_robots_by_type");
-//         return;
-//     }
-//     auto get_robots_request = std::make_shared<spice_msgs::srv::GetRobotsByType::Request>();
-//     get_robots_request->type.type = spice_msgs::msg::RobotType::WORK_CELL_ANY;
-
-//     using ServiceResponseFuture = rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedFuture;
-
-//     auto get_robots_cb = [this](ServiceResponseFuture future)
-//     { carrier_list = future.get()->robots; };
-
-//     auto futureResult = get_workcells_cli->async_send_request(get_robots_request, get_robots_cb);
     
-//     /*
-//     float test_x = 0.4771;
-//     float test_y = -0.1844;
-//     auto temp = pnpoly(world_corners_x.size(), world_corners_x, world_corners_y, test_x, test_y);
+    std::vector<std::pair<unsigned int, unsigned int>> carriers_map_coords;
+    std::vector<std::pair<unsigned int, unsigned int>> workcells_map_coords;
+    // only needs to be done once or when ws are moved
+    for (auto const &workcell : workcell_list)
+    {
+        try
+        {
+            unsigned int map_x_coord, map_y_coord;
+            auto workcell_tf = tf_buffer_->lookupTransform("map", workcell.id.id, tf2::TimePointZero);
+            m_global_costmap->worldToMap(workcell_tf.transform.translation.x, workcell_tf.transform.translation.y, map_x_coord, map_y_coord);
+            workcells_map_coords.push_back({map_x_coord, map_y_coord});
 
-//     for(auto x: world_corners_x){
-//         RCLCPP_WARN(m_nodehandle.get_logger(), "debug: x: [%f]",x);
-//     }
-//     for(auto y: world_corners_y){
-//         RCLCPP_ERROR(m_nodehandle.get_logger(), "debug: y: [%f]",y);
-//     }
-
-     
-//     RCLCPP_ERROR(m_nodehandle.get_logger(), "test world x: [x:%f, y:%f]",world_corners_x[1],world_corners_x[2]);
-
-//     for (auto i: world_corners)
-//     {
-//         for (size_t i = 0; i < world_corners.size(); i++)
-//         {
-            
-//         }
-//         for (auto i: world_corners)
-
+            unsigned int map_x_coord_entry, map_y_coord_entry;
+            unsigned int map_x_coord_exit, map_y_coord_exit;
+            auto workcell_tf_entry = tf_buffer_->lookupTransform("map", workcell.id.id+ "_entry", tf2::TimePointZero);
+            auto workcell_tf_exit = tf_buffer_->lookupTransform("map", workcell.id.id+ "_exit", tf2::TimePointZero);
+            m_global_costmap->worldToMap(workcell_tf_entry.transform.translation.x, workcell_tf_entry.transform.translation.y, map_x_coord_entry, map_y_coord_entry);
+            m_global_costmap->worldToMap(workcell_tf_exit.transform.translation.x, workcell_tf_exit.transform.translation.y, map_x_coord_exit, map_y_coord_exit);
+            workcells_map_coords.push_back({map_x_coord_entry, map_y_coord_entry});
+            workcells_map_coords.push_back({map_x_coord_exit, map_y_coord_exit});
+        }
+        catch (const tf2::TransformException &ex)
+        {
+            RCLCPP_WARN(m_nodehandle.get_logger(), "[update_q_location] failed transform");
+            continue;
+        }
         
-        
-//         pnpoly(world_corners[][2]);
-
-
-//         unsigned int corner_x, corner_y;
-//         if (!m_global_costmap->worldToMap(world_corners[i][1], world_corners[i][2], corner_x, corner_y))
-//         {
-//             RCLCPP_ERROR(m_nodehandle.get_logger(), "Could not convert world coordinates to map coordinates: [x:%f, y:%f]",world_corners[i][1],world_corners[i][2]);
-//         }
-//     }
-//     */
+    }
     
+    for (auto const &carrier : carrier_list)
+        {
+            // if(carrier.id.id == queueing_robot){
+            //     continue;
+            // }
+            try
+            {
+                unsigned int map_x_coord, map_y_coord;
+                auto carrier_tf = tf_buffer_->lookupTransform("map", carrier.id.id, tf2::TimePointZero);
+                m_global_costmap->worldToMap(carrier_tf.transform.translation.x, carrier_tf.transform.translation.y, map_x_coord, map_y_coord);
+                carriers_map_coords.push_back({map_x_coord, map_y_coord});
+            }
+            catch (const tf2::TransformException &ex)
+            {
+                RCLCPP_WARN(m_nodehandle.get_logger(), "[update_q_location] failed transform");
+                continue;
+            }
+        }
 
-// }
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
+    inflateCostMap(1, costmap, workcells_map_coords, 0.05);
+    inflateCostMap(1, costmap, carriers_map_coords, 0.2);
+    
+    for (int i = 0; i < q_num; i++)
+    {
+        unsigned int cheapest_cost = INFINITY;
+        std::pair<unsigned int, unsigned int> cheapest_point;
+
+        for(auto point : viable_points){
+            if(cheapest_cost > costmap->getCost(point.first, point.second)){
+                cheapest_point = {point.first, point.second};
+                cheapest_cost = costmap->getCost(point.first, point.second);
+            }
+        }
+        double wx, wy;
+        costmap->mapToWorld(cheapest_point.first, cheapest_point.second, wx, wy);
+
+        tf2::Quaternion q;
+        q.setW(m_transform.rotation.w);
+        q.setX(m_transform.rotation.x);
+        q.setY(m_transform.rotation.y);
+        q.setZ(m_transform.rotation.z);
+        tf2::Matrix3x3 rot(q);
+
+        tf2::Vector3 t(m_transform.translation.x, m_transform.translation.y, m_transform.translation.z);
+
+        tf2::Transform tf(rot, t);
+        tf2::Transform tf_inv =  tf.inverse();
+        
+        tf2::Vector3 queue_translation(wx, wy, 0.0);
+        tf2::Vector3 queueToMap = tf_inv * queue_translation;
+
+        m_q_transforms[i].translation.x = queueToMap.getX();
+        m_q_transforms[i].translation.y = queueToMap.getY();
+
+        inflateCostMap(1, costmap, {cheapest_point}, 0.2);
+        publish_transform();
+    }
+    publish_costmap(costmap);
+}
+
+void WorkCellStateMachine::update_robots_lists(){
+    // get all workcells
+    if (!get_workcells_cli->wait_for_service(1s))
+    {
+        RCLCPP_WARN(m_nodehandle.get_logger(), "Timeout on Swarm manager get_robots_by_type: workcells");
+        return;
+    }
+    auto get_workcells_request = std::make_shared<spice_msgs::srv::GetRobotsByType::Request>();
+    get_workcells_request->type.type = spice_msgs::msg::RobotType::WORK_CELL_ANY;
+    using ServiceResponseFuture = rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedFuture;
+    auto get_workcells_cb = [this](ServiceResponseFuture future)
+    {
+        workcell_list = future.get()->robots;
+    };
+    auto futureResult_ws = get_workcells_cli->async_send_request(get_workcells_request, get_workcells_cb);
+
+
+    //get carrier robots
+    if (!get_carriers_cli->wait_for_service(1s))
+    {
+        RCLCPP_WARN(m_nodehandle.get_logger(), "Timeout on Swarm manager get_robots_by_type: carrier");
+        return;
+    }
+    auto get_carriers_request = std::make_shared<spice_msgs::srv::GetRobotsByType::Request>();
+    get_carriers_request->type.type = spice_msgs::msg::RobotType::CARRIER_ROBOT;
+    using ServiceResponseFuture = rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedFuture;
+    auto get_carriers_cb = [this](ServiceResponseFuture future)
+    { 
+        carrier_list = future.get()->robots;
+    };
+    auto futureResult_carrier = get_carriers_cli->async_send_request(get_carriers_request, get_carriers_cb);    
+}
+
+void WorkCellStateMachine::inflateCostMap(int current_loop, std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap,
+										std::vector<std::pair<unsigned int, unsigned int>> costpositions, float slope)
+{
+    std::vector<std::pair<unsigned int, unsigned int>> nextcosts;
+    unsigned int mx, my;
+    unsigned int cost = nav2_costmap_2d::LETHAL_OBSTACLE/pow(1+(current_loop*slope),2);
+    if(cost > 255) cost = 0;
+    if (cost < 1 || costpositions.size() == 0)
+    {
+        return;
+    }
+
+        for (auto it : costpositions)
+        {
+            for (int i = -1; i <= 1; i ++)
+            {
+                for (int j = -1; j <= 1; j ++)
+                {
+                    mx = it.first + i;
+                    my = it.second + j;
+                    if (mx > costmap->getSizeInCellsX() || my > costmap->getSizeInCellsY())
+                    {
+                        continue;
+                    }
+                    if (costmap->getCost(mx, my) < cost)
+                    {
+                        costmap->setCost(mx, my, cost);
+                        nextcosts.push_back({ mx, my });
+                    }
+                }
+            }
+        }
+	current_loop ++;
+	inflateCostMap(current_loop, costmap, nextcosts, slope);
+
+  return;
+}
 
 int WorkCellStateMachine::pnpoly(int nvert, std::vector<float> vertx, std::vector<float> verty, float testx, float testy)
 {
   int i, j, c = 0;
   for (i = 0, j = nvert-1; i < nvert; j = i++) {
     if ( ((verty[i]>testy) != (verty[j]>testy)) &&
-     (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
+	 (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
        c = !c;
   }
   return c;
 }
 
+void WorkCellStateMachine::publish_costmap(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap){
+    nav_msgs::msg::OccupancyGrid occGrid;
+	  occGrid.header.frame_id = "map";
+	  occGrid.header.stamp = m_nodehandle.now();
+	  occGrid.info.width = costmap->getSizeInCellsX();
+	  occGrid.info.height = costmap->getSizeInCellsY();
+	  occGrid.info.origin.position.x = costmap->getOriginX();
+	  occGrid.info.origin.position.y = costmap->getOriginY();
+	  occGrid.info.resolution = costmap->getResolution();
+	  occGrid.info.map_load_time = m_nodehandle.now();
+	  occGrid.data.resize(costmap->getSizeInCellsX() * costmap->getSizeInCellsY());
+	  unsigned char* grid = costmap->getCharMap();
+	  for (unsigned int i = 0; i < costmap->getSizeInCellsX() * costmap->getSizeInCellsY(); i++)
+	  {
+		occGrid.data[i] = *grid++;
+	  }
+	  m_costmapPub->publish(occGrid);
+      return;
+}
 
 // enum class WORK_CELL_STATE : uint8_t{
     // STARTUP = 0,

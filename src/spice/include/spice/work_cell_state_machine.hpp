@@ -18,6 +18,7 @@
 #include "spice/work_cell.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav2_costmap_2d/costmap_2d.hpp"
+#include "nav2_costmap_2d/costmap_2d_ros.hpp"
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
@@ -70,8 +71,13 @@ private:
     spice_msgs::msg::RobotState internal_state_to_robot_state(WORK_CELL_STATE state);
 
     void update_q_location();
+    void update_robots_lists();
     void global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg);
     int pnpoly(int nvert, std::vector<float> vertx, std::vector<float> verty, float testx, float testy);
+    void inflateCostMap(int current_loop, std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap,
+        std::vector<std::pair<unsigned int, unsigned int>> costpositions, float slope);
+    void publish_costmap(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap);
+    void preprocessing_q_costmap();
 
     std::string m_work_cell_name;
     spice_msgs::msg::RobotType::_type_type m_robot_type;
@@ -82,6 +88,11 @@ private:
     double ROBOT_RADIUS = 0.25;
     double WORKCELL_RADIUS = 0.25;
     int q_num = 3;
+    bool gotCostmap = false;
+    std::vector<std::pair<unsigned int, unsigned int>> viable_points;
+    rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmapPub;
+    rclcpp::TimerBase::SharedPtr m_timer_robots_lists{nullptr};
+    rclcpp::TimerBase::SharedPtr m_timer_q{nullptr};
     std::vector<spice_msgs::msg::Robot> workcell_list; //list of all workcells
     std::vector<spice_msgs::msg::Robot> carrier_list; //list of all carrier robots
     rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_workcells_cli;
@@ -100,7 +111,6 @@ private:
     std::shared_ptr<rclcpp::Service<std_srvs::srv::Trigger>> m_robot_ready_for_processing_service;
     std::shared_ptr<rclcpp::Publisher<spice_msgs::msg::RobotStateTransition>> m_state_transition_event_pub;
     std::queue<spice_msgs::srv::RegisterWork::Request> m_enqueued_robots;
-    rclcpp::TimerBase::SharedPtr m_timer{nullptr};
     std::shared_ptr<nav2_costmap_2d::Costmap2D> m_global_costmap;
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmap_subscriber;
     
