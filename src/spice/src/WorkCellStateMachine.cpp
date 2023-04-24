@@ -23,8 +23,8 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
         m_work_cell_name + "/robot_ready_for_processing", 
         std::bind(&WorkCellStateMachine::on_robot_ready_for_processing, this, std::placeholders::_1, std::placeholders::_2));
 
-    m_timer_q = m_nodehandle.create_wall_timer(1s, std::bind(&WorkCellStateMachine::update_q_location, this));
-    m_timer_robots_lists = m_nodehandle.create_wall_timer(2s, std::bind(&WorkCellStateMachine::update_robots_lists, this));
+    m_timer_q = m_nodehandle.create_wall_timer(0.1s, std::bind(&WorkCellStateMachine::timer_update_q_locations, this));
+    m_timer_robots_lists = m_nodehandle.create_wall_timer(2s, std::bind(&WorkCellStateMachine::timer_update_robots_lists, this));
 
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(m_nodehandle.get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
@@ -78,13 +78,23 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
 
     // polygon corners in world coordinates:
         // for A4:
-    world_corners.push_back({2.6586, -0.8671}); // mid mid
-    world_corners.push_back({2.4185, -3.6402}); // top mid
-    world_corners.push_back({-1.7283, -3.5899}); // top right
-    world_corners.push_back({-1.5848, 2.0436}); // bottom right
-    world_corners.push_back({6.9987, 1.7771}); // bottom left
-    world_corners.push_back({7.0078, -0.6922}); // mid left
+    // world_corners.push_back({2.6586, -0.8671}); // mid mid
+    // world_corners.push_back({2.4185, -3.6402}); // top mid
+    // world_corners.push_back({-1.7283, -3.5899}); // top right
+    // world_corners.push_back({-1.5848, 2.0436}); // bottom right
+    // world_corners.push_back({6.9987, 1.7771}); // bottom left
+    // world_corners.push_back({7.0078, -0.6922}); // mid left
 
+    // polygon corners in world coordinates:
+        // for C4:
+    world_corners.push_back({20.78, 8.91}); //gr window left
+    world_corners.push_back({20.72, 6.08}); //gr window right
+    world_corners.push_back({16.91, 6.18}); //gr door tv-side
+    world_corners.push_back({16.82, 3.29}); //hall door gr-side
+    world_corners.push_back({14.92, 3.36}); //hall door south
+    world_corners.push_back({15.20, 18.33}); // hall tri-way south wall
+    world_corners.push_back({17.25, 18.30}); // hall tri-way north wall
+    world_corners.push_back({16.98, 9.07}); // gr door west
 
     //std::vector<float> world_corners_x({2.4185,-1.7283,-1.5848,6.9987,7.0078,2.6586});
     //std::vector<float> world_corners_y({-3.6402,-3.5899,-2.0436,1.7771,-0.6922,-0.8671});
@@ -306,10 +316,7 @@ spice_msgs::msg::Id WorkCellStateMachine::get_work_cell_id()
 void WorkCellStateMachine::global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg)
 {
     m_global_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*msg);
-    preprocessing_q_costmap();
-}
 
-void WorkCellStateMachine::preprocessing_q_costmap(){
     double wx, wy;
     costpoints.clear();
 
@@ -331,17 +338,20 @@ void WorkCellStateMachine::preprocessing_q_costmap(){
     inflateCostMap(1, m_global_costmap, 0.3);
 }
 
-void WorkCellStateMachine::update_q_location(){
-    //RCLCPP_INFO(m_nodehandle.get_logger(), "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
+void WorkCellStateMachine::update_workcell_costmap()
+{
     if(!m_global_costmap || workcell_list.size()== 0)
     {
         //RCLCPP_WARN(m_nodehandle.get_logger(), "did not get costmap or workcells for queue");
         return;
     }
-    m_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
-    std::vector<std::pair<unsigned int, unsigned int>> carriers_map_coords;
+
+    m_mutex.lock();
+
+    workcell_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
     std::vector<std::pair<unsigned int, unsigned int>> workcells_map_coords;
-    // only needs to be done once or when wc' are moved
+    
+    // find coordinates of all workcell bots
     for (auto const &workcell : workcell_list)
     {
         try
@@ -371,6 +381,27 @@ void WorkCellStateMachine::update_q_location(){
         }
 
     }
+
+    costpoints = workcells_map_coords;
+    inflateCostMap(1,workcell_costmap, 0.05);
+    attraction(workcell_costmap, 0.05, map_coord_entry);
+    m_mutex.unlock();
+
+    return;
+}
+
+void WorkCellStateMachine::timer_update_q_locations(){
+    //RCLCPP_INFO(m_nodehandle.get_logger(), "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
+    if(!workcell_costmap || workcell_list.size()== 0)
+    {
+        //RCLCPP_WARN(m_nodehandle.get_logger(), "did not get costmap or workcells for queue");
+        return;
+    }
+    m_mutex.lock();
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> carrier_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*workcell_costmap);
+
+    // find coordinates of all carrier bots
+    std::vector<std::pair<unsigned int, unsigned int>> carriers_map_coords;
     for (auto const &carrier : carrier_list)
         {
             // if(carrier.id.id == queueing_robot){
@@ -379,7 +410,7 @@ void WorkCellStateMachine::update_q_location(){
             try
             {
                 unsigned int map_x_coord, map_y_coord;
-                auto carrier_tf = tf_buffer_->lookupTransform("map", carrier.id.id, tf2::TimePointZero);
+                auto carrier_tf = tf_buffer_->lookupTransform("map", carrier.id.id+"_base_link", tf2::TimePointZero);
                 m_global_costmap->worldToMap(carrier_tf.transform.translation.x, carrier_tf.transform.translation.y, map_x_coord, map_y_coord);
                 carriers_map_coords.push_back({map_x_coord, map_y_coord});
             }
@@ -389,25 +420,23 @@ void WorkCellStateMachine::update_q_location(){
                 continue;
             }
         }
-    costpoints = workcells_map_coords;
-    inflateCostMap(1,m_costmap, 0.05);
+    
     costpoints = carriers_map_coords;
-    inflateCostMap(1,m_costmap, 0.2);
-    attraction(m_costmap, 0.05, map_coord_entry);
+    inflateCostMap(1,carrier_costmap, 0.1);
     for (int i = 0; i < q_num; i++)
     {
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         std::pair<unsigned int, unsigned int> cheapest_point;
 
         for(auto point : viable_points){
-            unsigned char current_cost = m_costmap->getCost(point.first,point.second);
+            unsigned char current_cost = carrier_costmap->getCost(point.first,point.second);
             if(cheapest_cost > current_cost){
                 cheapest_point = point;
                 cheapest_cost = current_cost;
             }
         }
         double wx, wy;
-        m_costmap->mapToWorld(cheapest_point.first, cheapest_point.second, wx, wy);
+        carrier_costmap->mapToWorld(cheapest_point.first, cheapest_point.second, wx, wy);
 
         tf2::Quaternion q;
         q.setW(m_transform.rotation.w);
@@ -428,25 +457,30 @@ void WorkCellStateMachine::update_q_location(){
         m_q_transforms[i].translation.y = queueToMap.getY();
         std::vector<std::pair<unsigned int, unsigned int>> temp;
         costpoints = {cheapest_point};
-        inflateCostMap(1, m_costmap, 0.2);
+        inflateCostMap(1, carrier_costmap, 0.2);
         publish_transform();
     }
-    publish_costmap(m_costmap);
+    publish_costmap(carrier_costmap);
+
+    m_mutex.unlock();
+    return;
 }
 
-void WorkCellStateMachine::update_robots_lists(){
+void WorkCellStateMachine::timer_update_robots_lists(){
     // get all workcells
     if (!get_workcells_cli->wait_for_service(1s))
     {
         RCLCPP_WARN(m_nodehandle.get_logger(), "Timeout on Swarm manager get_robots_by_type: workcells");
         return;
     }
+
     auto get_workcells_request = std::make_shared<spice_msgs::srv::GetRobotsByType::Request>();
     get_workcells_request->type.type = spice_msgs::msg::RobotType::WORK_CELL_ANY;
     using ServiceResponseFuture = rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedFuture;
     auto get_workcells_cb = [this](ServiceResponseFuture future)
     {
         workcell_list = future.get()->robots;
+        update_workcell_costmap();
     };
     auto futureResult_ws = get_workcells_cli->async_send_request(get_workcells_request, get_workcells_cb);
 
@@ -464,7 +498,9 @@ void WorkCellStateMachine::update_robots_lists(){
     { 
         carrier_list = future.get()->robots;
     };
-    auto futureResult_carrier = get_carriers_cli->async_send_request(get_carriers_request, get_carriers_cb);    
+    auto futureResult_carrier = get_carriers_cli->async_send_request(get_carriers_request, get_carriers_cb);
+
+    return;
 }
 
 void WorkCellStateMachine::inflateCostMap(int current_loop,  std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope)
@@ -488,24 +524,24 @@ void WorkCellStateMachine::inflateCostMap(int current_loop,  std::shared_ptr<nav
         if(!pnpoly(world_corners.size(), world_corners_x,world_corners_y,wx,wy)){
             continue;
         }
-        for (int i = -1; i <= 1; i ++)
-        {
-            for (int j = -1; j <= 1; j ++)
+            for (int i = -1; i <= 1; i ++)
             {
-                mx = it->first + i;
-                my = it->second + j;
-                if (mx > costmap->getSizeInCellsX() || my > costmap->getSizeInCellsY())
+                for (int j = -1; j <= 1; j ++)
                 {
-                    continue;
+                    mx = it->first + i;
+                    my = it->second + j;
+                    if (mx > costmap->getSizeInCellsX() || my > costmap->getSizeInCellsY())
+                    {
+                        continue;
+                    }
+                    if (costmap->getCost(mx, my) < cost)
+                    {
+                        costmap->setCost(mx, my, cost);
+                        nextcosts.push_back({mx,my});
+                    }
                 }
-                if (costmap->getCost(mx, my) < cost)
-                {
-                    costmap->setCost(mx, my, cost);
-                    nextcosts.push_back({mx,my});
-                }                
-            }
-        }  
-    }
+            }  
+        }
 
     costpoints = nextcosts;
     nextcosts.clear();
@@ -515,6 +551,7 @@ void WorkCellStateMachine::inflateCostMap(int current_loop,  std::shared_ptr<nav
 
   return;
 }
+
 void WorkCellStateMachine::attraction(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope, std::pair<unsigned int, unsigned int> attraction_center)
 {
     slope = 1;

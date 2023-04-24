@@ -70,14 +70,14 @@ private:
         std::shared_ptr<std_srvs::srv::Trigger::Response> response);
     spice_msgs::msg::RobotState internal_state_to_robot_state(WORK_CELL_STATE state);
 
-    void update_q_location();
-    void update_robots_lists();
+    void timer_update_q_locations();
+    void timer_update_robots_lists();
     void global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg);
     int pnpoly(int nvert, std::vector<float> vertx, std::vector<float> verty, float testx, float testy);
     void inflateCostMap(int current_loop, std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope);
     void publish_costmap(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap);
-    void preprocessing_q_costmap();
     void attraction(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope, std::pair<unsigned int, unsigned int> wc_center_point);
+    void update_workcell_costmap();
 
     std::string m_work_cell_name;
     spice_msgs::msg::RobotType::_type_type m_robot_type;
@@ -112,10 +112,11 @@ private:
     std::shared_ptr<rclcpp::Publisher<spice_msgs::msg::RobotStateTransition>> m_state_transition_event_pub;
     std::queue<spice_msgs::srv::RegisterWork::Request> m_enqueued_robots;
     std::shared_ptr<nav2_costmap_2d::Costmap2D> m_global_costmap;
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> workcell_costmap;
 
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmap_subscriber;
     std::vector<std::pair<unsigned int, unsigned int>> costpoints;
-    std::shared_ptr<nav2_costmap_2d::Costmap2D> m_costmap;
+    std::mutex m_mutex;
     
 };
 
