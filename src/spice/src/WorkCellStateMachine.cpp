@@ -311,10 +311,15 @@ void WorkCellStateMachine::global_costmap_cb(nav_msgs::msg::OccupancyGrid::Share
 
 void WorkCellStateMachine::preprocessing_q_costmap(){
     double wx, wy;
+    costpoints.clear();
+
     for (unsigned int x = 0; x < m_global_costmap->getSizeInCellsX(); x++)
     {
         for (unsigned int y = 0; y < m_global_costmap->getSizeInCellsY(); y++)
         {
+            if(m_global_costmap->getCost(x,y) == nav2_costmap_2d::LETHAL_OBSTACLE){
+                costpoints.push_back({x,y});
+            }
             m_global_costmap->mapToWorld(x,y, wx, wy);
 
             if(pnpoly(world_corners.size(),world_corners_x, world_corners_y, wx, wy))
@@ -323,6 +328,7 @@ void WorkCellStateMachine::preprocessing_q_costmap(){
             }
         }
     }
+    inflateCostMap(1, m_global_costmap, 0.3);
 }
 
 void WorkCellStateMachine::update_q_location(){
@@ -332,7 +338,7 @@ void WorkCellStateMachine::update_q_location(){
         RCLCPP_INFO(m_nodehandle.get_logger(), "did not get costmap for q");
         return;
     }
-
+    m_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
     std::vector<std::pair<unsigned int, unsigned int>> carriers_map_coords;
     std::vector<std::pair<unsigned int, unsigned int>> workcells_map_coords;
     // only needs to be done once or when wc' are moved
@@ -379,23 +385,24 @@ void WorkCellStateMachine::update_q_location(){
                 continue;
             }
         }
-    std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
-    inflateCostMap(1, costmap, workcells_map_coords, 0.05);
-    inflateCostMap(1, costmap, carriers_map_coords, 0.2);
+    costpoints = workcells_map_coords;
+    inflateCostMap(1,m_costmap, 0.05);
+    costpoints = carriers_map_coords;
+    inflateCostMap(1,m_costmap, 0.2);
     for (int i = 0; i < q_num; i++)
     {
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         std::pair<unsigned int, unsigned int> cheapest_point;
 
         for(auto point : viable_points){
-            unsigned char current_cost = costmap->getCost(point.first,point.second);
+            unsigned char current_cost = m_costmap->getCost(point.first,point.second);
             if(cheapest_cost > current_cost){
                 cheapest_point = point;
                 cheapest_cost = current_cost;
             }
         }
         double wx, wy;
-        costmap->mapToWorld(cheapest_point.first, cheapest_point.second, wx, wy);
+        m_costmap->mapToWorld(cheapest_point.first, cheapest_point.second, wx, wy);
 
         tf2::Quaternion q;
         q.setW(m_transform.rotation.w);
@@ -414,10 +421,12 @@ void WorkCellStateMachine::update_q_location(){
 
         m_q_transforms[i].translation.x = queueToMap.getX();
         m_q_transforms[i].translation.y = queueToMap.getY();
-        inflateCostMap(1, costmap, std::vector<std::pair<unsigned int, unsigned int>>{cheapest_point}, 0.2);
+        std::vector<std::pair<unsigned int, unsigned int>> temp;
+        costpoints = {cheapest_point};
+        inflateCostMap(1, m_costmap, 0.2);
         publish_transform();
     }
-    publish_costmap(costmap);
+    publish_costmap(m_costmap);
 }
 
 void WorkCellStateMachine::update_robots_lists(){
@@ -453,27 +462,26 @@ void WorkCellStateMachine::update_robots_lists(){
     auto futureResult_carrier = get_carriers_cli->async_send_request(get_carriers_request, get_carriers_cb);    
 }
 
-void WorkCellStateMachine::inflateCostMap(int current_loop, std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap,
-										std::vector<std::pair<unsigned int, unsigned int>> costpositions, float slope)
+void WorkCellStateMachine::inflateCostMap(int current_loop,  std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope)
 {
-    std::vector<std::pair<unsigned int, unsigned int>> nextcosts;
     unsigned int mx, my;
     unsigned int cost = std::floor(nav2_costmap_2d::LETHAL_OBSTACLE/pow(1+(current_loop*slope),2));
-    //RCLCPP_WARN(m_nodehandle.get_logger(), "Loop: %d ,inflation cost: %d, costpositions.size(): %d", current_loop, cost, costpositions.size());
-
-    if (cost < 5 || costpositions.size() == 0 || cost > 255 || current_loop > 200)
+    std::vector<std::pair<unsigned int, unsigned int>> nextcosts;
+    if(!costmap){
+        RCLCPP_WARN(m_nodehandle.get_logger(), "costmap is fucked");
+    }
+    if (cost < 5 || costpoints.size() == 0 || cost > 255 || current_loop > 50)
     {
         return;
     }
-    
-    for (auto it : costpositions)
+    for (auto it = costpoints.begin(); it < costpoints.end(); it++)
     {
             for (int i = -1; i <= 1; i ++)
             {
                 for (int j = -1; j <= 1; j ++)
                 {
-                    mx = it.first + i;
-                    my = it.second + j;
+                    mx = it->first + i;
+                    my = it->second + j;
                     if (mx > costmap->getSizeInCellsX() || my > costmap->getSizeInCellsY())
                     {
                         continue;
@@ -484,10 +492,13 @@ void WorkCellStateMachine::inflateCostMap(int current_loop, std::shared_ptr<nav2
                         nextcosts.push_back({mx,my});
                     }
                 }
-            }
+            }  
         }
+
+    costpoints = nextcosts;
+    nextcosts.clear();
 	current_loop ++;
-	inflateCostMap(current_loop, costmap, nextcosts, slope);
+	inflateCostMap(current_loop, costmap, slope);
 
   return;
 }

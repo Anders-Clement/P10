@@ -74,8 +74,7 @@ private:
     void update_robots_lists();
     void global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg);
     int pnpoly(int nvert, std::vector<float> vertx, std::vector<float> verty, float testx, float testy);
-    void inflateCostMap(int current_loop, std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap,
-        std::vector<std::pair<unsigned int, unsigned int>> costpositions, float slope);
+    void inflateCostMap(int current_loop, std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope);
     void publish_costmap(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap);
     void preprocessing_q_costmap();
 
@@ -111,7 +110,10 @@ private:
     std::shared_ptr<rclcpp::Publisher<spice_msgs::msg::RobotStateTransition>> m_state_transition_event_pub;
     std::queue<spice_msgs::srv::RegisterWork::Request> m_enqueued_robots;
     std::shared_ptr<nav2_costmap_2d::Costmap2D> m_global_costmap;
+
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmap_subscriber;
+    std::vector<std::pair<unsigned int, unsigned int>> costpoints;
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> m_costmap;
     
 };
 
