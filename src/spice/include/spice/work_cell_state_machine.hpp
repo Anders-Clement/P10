@@ -117,6 +117,8 @@ private:
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmap_subscriber;
     std::vector<std::pair<unsigned int, unsigned int>> costpoints;
     std::mutex m_mutex;
+    float MAX_Q_VEL = 0.30;
+    std::chrono::_V2::system_clock::time_point lastTime;
     
 };
 

@@ -1,6 +1,7 @@
 #include <string>
 #include <rclcpp/node.hpp>
 #include <optional>
+#include <chrono>
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "spice_msgs/msg/robot_type.hpp"
 #include "spice_msgs/msg/task.hpp"
@@ -16,6 +17,7 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
     // m_nodehandle.declare_parameter("workcell_radius",rclcpp::ParameterValue(0.25));
     // ROBOT_RADIUS = m_nodehandle.get_parameter("robot_radius").as_double();
     // WORKCELL_RADIUS = m_nodehandle.get_parameter("workcell_radius").as_double();
+    lastTime = std::chrono::system_clock::now();
     m_register_work_service = m_nodehandle.create_service<spice_msgs::srv::RegisterWork>(
         m_work_cell_name + "/register_work", 
         std::bind(&WorkCellStateMachine::on_register_robot, this, std::placeholders::_1, std::placeholders::_2));
@@ -340,6 +342,7 @@ void WorkCellStateMachine::global_costmap_cb(nav_msgs::msg::OccupancyGrid::Share
 
 void WorkCellStateMachine::update_workcell_costmap()
 {
+    
     if(!m_global_costmap || workcell_list.size()== 0)
     {
         //RCLCPP_WARN(m_nodehandle.get_logger(), "did not get costmap or workcells for queue");
@@ -423,19 +426,43 @@ void WorkCellStateMachine::timer_update_q_locations(){
     
     costpoints = carriers_map_coords;
     inflateCostMap(1,carrier_costmap, 0.1);
+
     for (int i = 0; i < q_num; i++)
     {
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
+        unsigned int current_cost;
         std::pair<unsigned int, unsigned int> cheapest_point;
+        std::chrono::duration<float, std::milli> diff = std::chrono::system_clock::now() - lastTime;
+        int moveRange = floor((MAX_Q_VEL*diff.count())/carrier_costmap->getResolution());
+        unsigned int mx, my;
+        double wx, wy;
 
-        for(auto point : viable_points){
-            unsigned char current_cost = carrier_costmap->getCost(point.first,point.second);
-            if(cheapest_cost > current_cost){
-                cheapest_point = point;
-                cheapest_cost = current_cost;
+        // for(auto point : viable_points){
+        //     unsigned char current_cost = carrier_costmap->getCost(point.first,point.second);
+        //     if(cheapest_cost > current_cost){
+        //         cheapest_point = point;
+        //         cheapest_cost = current_cost;
+        //     }
+        // }
+
+        for(int x = -moveRange; x < moveRange; x++){
+            for(int y = -moveRange; y < moveRange; y++){
+                if(carrier_costmap->worldToMap(m_q_transforms[i].translation.x, m_q_transforms[i].translation.y, mx,my)){
+                    if(mx + x < carrier_costmap->getSizeInCellsX() || my +y < carrier_costmap->getSizeInCellsY()){
+                        current_cost = carrier_costmap->getCost(mx+x,my+y);
+                        if(cheapest_cost > current_cost){
+                            carrier_costmap->mapToWorld(mx+x,my+y,wx,wy);
+                            if(pnpoly(world_corners.size(), world_corners_x, world_corners_y, wx, wy)){
+                                cheapest_cost = current_cost;
+                                cheapest_point = {mx+x,my+y};
+                            }
+
+                        }
+                    }
+                }
             }
         }
-        double wx, wy;
+        
         carrier_costmap->mapToWorld(cheapest_point.first, cheapest_point.second, wx, wy);
 
         tf2::Quaternion q;
@@ -463,6 +490,7 @@ void WorkCellStateMachine::timer_update_q_locations(){
     publish_costmap(carrier_costmap);
 
     m_mutex.unlock();
+    lastTime = std::chrono::system_clock::now();
     return;
 }
 
