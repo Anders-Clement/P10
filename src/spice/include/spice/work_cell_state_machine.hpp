@@ -88,7 +88,6 @@ private:
     double ROBOT_RADIUS = 0.25;
     double WORKCELL_RADIUS = 0.25;
     int q_num = 3;
-    bool gotCostmap = false;
     std::vector<std::pair<unsigned int, unsigned int>> viable_points;
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmapPub;
     rclcpp::TimerBase::SharedPtr m_timer_robots_lists{nullptr};
