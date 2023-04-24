@@ -470,11 +470,13 @@ void WorkCellStateMachine::update_robots_lists(){
 void WorkCellStateMachine::inflateCostMap(int current_loop,  std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope)
 {
     unsigned int mx, my;
+    double wx, wy;
     unsigned int cost = std::floor(nav2_costmap_2d::LETHAL_OBSTACLE/pow(1+(current_loop*slope),2));
     std::vector<std::pair<unsigned int, unsigned int>> nextcosts;
     if(!costmap){
         RCLCPP_WARN(m_nodehandle.get_logger(), "costmap is fucked");
     }
+
     if (cost < 5 || costpoints.size() == 0 || cost > 255 || current_loop > 50)
     {
         //RCLCPP_WARN(m_nodehandle.get_logger(), "Exiting at loop: %d",current_loop);
@@ -482,24 +484,28 @@ void WorkCellStateMachine::inflateCostMap(int current_loop,  std::shared_ptr<nav
     }
     for (auto it = costpoints.begin(); it < costpoints.end(); it++)
     {
-            for (int i = -1; i <= 1; i ++)
-            {
-                for (int j = -1; j <= 1; j ++)
-                {
-                    mx = it->first + i;
-                    my = it->second + j;
-                    if (mx > costmap->getSizeInCellsX() || my > costmap->getSizeInCellsY())
-                    {
-                        continue;
-                    }
-                    if (costmap->getCost(mx, my) < cost)
-                    {
-                        costmap->setCost(mx, my, cost);
-                        nextcosts.push_back({mx,my});
-                    }
-                }
-            }  
+        costmap->mapToWorld(it->first, it->second, wx,wy);
+        if(!pnpoly(world_corners.size(), world_corners_x,world_corners_y,wx,wy)){
+            continue;
         }
+        for (int i = -1; i <= 1; i ++)
+        {
+            for (int j = -1; j <= 1; j ++)
+            {
+                mx = it->first + i;
+                my = it->second + j;
+                if (mx > costmap->getSizeInCellsX() || my > costmap->getSizeInCellsY())
+                {
+                    continue;
+                }
+                if (costmap->getCost(mx, my) < cost)
+                {
+                    costmap->setCost(mx, my, cost);
+                    nextcosts.push_back({mx,my});
+                }                
+            }
+        }  
+    }
 
     costpoints = nextcosts;
     nextcosts.clear();
