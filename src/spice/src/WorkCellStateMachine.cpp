@@ -32,7 +32,7 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
     get_workcells_cli = m_nodehandle.create_client<spice_msgs::srv::GetRobotsByType>("/get_robots_by_type");
     get_carriers_cli = m_nodehandle.create_client<spice_msgs::srv::GetRobotsByType>("/get_robots_by_type");
 
-    m_costmapPub = m_nodehandle.create_publisher<nav_msgs::msg::OccupancyGrid>("/queue_costmap", 10);
+    m_costmapPub = m_nodehandle.create_publisher<nav_msgs::msg::OccupancyGrid>("/queue_costmap/"+ m_work_cell_name, 10);
 
 
     auto qos_profile_TL = rmw_qos_profile_default;
@@ -333,9 +333,9 @@ void WorkCellStateMachine::preprocessing_q_costmap(){
 
 void WorkCellStateMachine::update_q_location(){
     //RCLCPP_INFO(m_nodehandle.get_logger(), "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
-    if(!m_global_costmap)
+    if(!m_global_costmap || workcell_list.size()== 0)
     {
-        RCLCPP_INFO(m_nodehandle.get_logger(), "did not get costmap for q");
+        //RCLCPP_WARN(m_nodehandle.get_logger(), "did not get costmap or workcells for queue");
         return;
     }
     m_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
@@ -359,13 +359,17 @@ void WorkCellStateMachine::update_q_location(){
             m_global_costmap->worldToMap(workcell_tf_exit.transform.translation.x, workcell_tf_exit.transform.translation.y, map_x_coord_exit, map_y_coord_exit);
             workcells_map_coords.push_back({map_x_coord_entry, map_y_coord_entry});
             workcells_map_coords.push_back({map_x_coord_exit, map_y_coord_exit});
+            if (workcell.id.id == m_work_cell_name)
+            {
+                map_coord_entry = {map_x_coord_entry, map_y_coord_entry};
+            }
         }
         catch (const tf2::TransformException &ex)
         {
             RCLCPP_WARN(m_nodehandle.get_logger(), "[update_q_location] failed transform");
             continue;
         }
-        
+
     }
     for (auto const &carrier : carrier_list)
         {
@@ -389,6 +393,7 @@ void WorkCellStateMachine::update_q_location(){
     inflateCostMap(1,m_costmap, 0.05);
     costpoints = carriers_map_coords;
     inflateCostMap(1,m_costmap, 0.2);
+    attraction(costmap, 0.05, map_coord_entry);
     for (int i = 0; i < q_num; i++)
     {
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
@@ -472,6 +477,7 @@ void WorkCellStateMachine::inflateCostMap(int current_loop,  std::shared_ptr<nav
     }
     if (cost < 5 || costpoints.size() == 0 || cost > 255 || current_loop > 50)
     {
+        //RCLCPP_WARN(m_nodehandle.get_logger(), "Exiting at loop: %d",current_loop);
         return;
     }
     for (auto it = costpoints.begin(); it < costpoints.end(); it++)
@@ -499,6 +505,28 @@ void WorkCellStateMachine::inflateCostMap(int current_loop,  std::shared_ptr<nav
     nextcosts.clear();
 	current_loop ++;
 	inflateCostMap(current_loop, costmap, slope);
+    //RCLCPP_WARN(m_nodehandle.get_logger(), "Returning: Loop: %d ,inflation cost: %d, costpositions.size(): %ld", current_loop, cost, costpositions.size());
+
+  return;
+}
+void WorkCellStateMachine::attraction(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope, std::pair<unsigned int, unsigned int> attraction_center)
+{
+    slope = 1;
+    unsigned char current_cost;
+    float distance_to_center;
+    unsigned char new_cost;
+
+    for(auto point : viable_points)
+    {
+        current_cost = costmap->getCost(point.first, point.second);
+        distance_to_center = sqrt(pow(std::max(point.first, attraction_center.first) - std::min(point.first, attraction_center.first), 2) + pow(std::max(point.second, attraction_center.second) - std::min(point.second, attraction_center.second), 2));
+        new_cost = std::floor((nav2_costmap_2d::LETHAL_OBSTACLE/200)*distance_to_center*slope);
+        if(new_cost > nav2_costmap_2d::LETHAL_OBSTACLE) new_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
+        if(new_cost > current_cost)
+        {
+            costmap->setCost(point.first, point.second, new_cost);
+        }
+    }
 
   return;
 }

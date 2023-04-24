@@ -77,6 +77,7 @@ private:
     void inflateCostMap(int current_loop, std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope);
     void publish_costmap(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap);
     void preprocessing_q_costmap();
+    void attraction(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope, std::pair<unsigned int, unsigned int> wc_center_point);
 
     std::string m_work_cell_name;
     spice_msgs::msg::RobotType::_type_type m_robot_type;
@@ -87,6 +88,7 @@ private:
     double ROBOT_RADIUS = 0.25;
     double WORKCELL_RADIUS = 0.25;
     int q_num = 3;
+    std::pair<unsigned int, unsigned int> map_coord_entry;
     std::vector<std::pair<unsigned int, unsigned int>> viable_points;
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmapPub;
     rclcpp::TimerBase::SharedPtr m_timer_robots_lists{nullptr};
