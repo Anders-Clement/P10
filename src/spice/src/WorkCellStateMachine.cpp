@@ -393,7 +393,7 @@ void WorkCellStateMachine::update_q_location(){
     inflateCostMap(1,m_costmap, 0.05);
     costpoints = carriers_map_coords;
     inflateCostMap(1,m_costmap, 0.2);
-    attraction(costmap, 0.05, map_coord_entry);
+    attraction(m_costmap, 0.05, map_coord_entry);
     for (int i = 0; i < q_num; i++)
     {
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
