@@ -71,13 +71,12 @@ void CentralPlanner::configure(
     node_->get_parameter(name_ + ".tolerance", goal_tolerance_);
 
     robot_namespace_ = std::string(node_->get_namespace()).substr(std::string(node_->get_namespace()).rfind('/')+1);
-    // default to a_star planner
-    planner_type.type = spice_msgs::msg::PlannerType::PLANNER_A_STAR;
+    // default to prioritized planner
+    planner_type.type = spice_msgs::msg::PlannerType::PLANNER_PRIORITIZED;
 
-    // char* ns = getenv("ROBOT_NAMESPACE");
     if(robot_namespace_ == "")
     {
-    RCLCPP_ERROR(node_->get_logger(), 
+      RCLCPP_ERROR(node_->get_logger(), 
         "ROBOT_NAMESPACE is empty, planner will be unable to fetch correct plans");
     }
 
@@ -85,6 +84,8 @@ void CentralPlanner::configure(
 
     set_planner_type_server = node_->create_service<spice_msgs::srv::SetPlannerType>("set_planner_type", 
         std::bind(&CentralPlanner::set_planner_type_cb, this, std::placeholders::_1, std::placeholders::_2));
+
+    wait_publisher = node_->create_publisher<std_msgs::msg::Bool>("nav_wait_condition", 10);
 }
 
 void CentralPlanner::cleanup()
@@ -143,6 +144,11 @@ nav_msgs::msg::Path CentralPlanner::createPlan(
       "Got path from central planner with %ld poses in %f seconds", 
       response->plan.poses.size(), 
       duration);
+
+    // always publish wait condition, in order to keep in sync
+    std_msgs::msg::Bool msg;
+    msg.data = response->wait;
+    wait_publisher->publish(msg);
 
     return response->plan;
 }

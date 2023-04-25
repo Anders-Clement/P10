@@ -27,7 +27,6 @@ class CentralPathPlanner : public rclcpp::Node
 {
 public:
     CentralPathPlanner();
-    std::shared_ptr<nav2_costmap_2d::Costmap2D> get_costmap(spice_msgs::msg::Id id);
     std::optional<robot_plan> get_last_plan_by_id(spice_msgs::msg::Id id);
 
 private:
@@ -35,7 +34,8 @@ private:
     void debug_publish_timer_cb();
     std::unique_ptr<GlobalPlanner> m_straight_line_planner;
     std::unique_ptr<GlobalPlanner> m_a_star_planner;
-    std::unique_ptr<Costmap> m_costmap;
+    std::unique_ptr<Costmap> m_global_costmap;
+    std::unique_ptr<Costmap> m_prioritized_costmap;
     rclcpp::Service<spice_msgs::srv::GetPlan>::SharedPtr m_planner_service;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr m_marker_array_publisher;
     rclcpp::TimerBase::SharedPtr m_debug_publish_timer;

@@ -79,9 +79,11 @@ ament_target_dependencies(
   tf2_msgs
 )
 set(WORK_CELL_SIMULATOR_SOURCES 
-  src/WorkCell.cpp
-  src/WorkCellSimulator.cpp
-  src/WorkCellStateMachine.cpp
+  src/work_cells/WorkCell.cpp
+  src/work_cells/WorkCellSimulator.cpp
+  src/work_cells/WorkCellStateMachine.cpp
+  src/work_cells/QueueManager.cpp
+  src/work_cells/WorkCellQueuePositionManager.cpp
 )
 add_executable(work_cell_simulator ${WORK_CELL_SIMULATOR_SOURCES})
 ament_target_dependencies(
@@ -91,6 +93,7 @@ ament_target_dependencies(
   std_srvs
   geometry_msgs
   tf2_ros
+  nav2_costmap_2d
 )
 
 set(CENTRAL_PLANNER_SOURCES

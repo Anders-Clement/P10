@@ -27,11 +27,15 @@ namespace nav2_costmap_2d
         declareParameter("cost", rclcpp::ParameterValue(254));
         declareParameter("OFFSET_ENTRY", rclcpp::ParameterValue(0.25));
         declareParameter("OFFSET_EXIT", rclcpp::ParameterValue(0.25));
+        declareParameter("robot_radius", rclcpp::ParameterValue(0.25));
+        declareParameter("workcell_radius", rclcpp::ParameterValue(ROBOT_RADIUS));
         nh_->get_parameter(name_ + "." + "enabled", enabled_);
         nh_->get_parameter(name_ + "." + "shape", shape_);
         nh_->get_parameter(name_ + "." + "cost", cost_);
         nh_->get_parameter(name_ + "." + "OFFSET_ENTRY", OFFSET_ENTRY);
         nh_->get_parameter(name_ + "." + "OFFSET_EXIT", OFFSET_EXIT);
+        nh_->get_parameter(name_ + "." + "robot_radius", ROBOT_RADIUS);
+        nh_->get_parameter(name_ + "." + "workcell_radius", WORKCELL_RADIUS);
 
         transform_tolerance_ = tf2::durationFromSec(TF_TOLERANCE);
 
@@ -126,8 +130,8 @@ namespace nav2_costmap_2d
 
                 while (it_wx < exit_wx)
                 {
-                    obstacle_points.push_back({it_wx, entry_wy + ROBOT_RADIUS});
-                    obstacle_points.push_back({it_wx, entry_wy - ROBOT_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy + WORKCELL_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy - WORKCELL_RADIUS});
                     it_wx += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
                                         
                 }
@@ -135,15 +139,15 @@ namespace nav2_costmap_2d
             else if (shape_ == 1)
             { // square:
                 double it_wx = entry_wx;
-                double it_wy = entry_wy - ROBOT_RADIUS;
+                double it_wy = entry_wy - WORKCELL_RADIUS;
                 
                 while (it_wx < exit_wx)
                 {
-                    obstacle_points.push_back({it_wx, entry_wy + ROBOT_RADIUS});
-                    obstacle_points.push_back({it_wx, entry_wy - ROBOT_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy + WORKCELL_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy - WORKCELL_RADIUS});
                     it_wx += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
                 }
-                while (it_wy < entry_wy + ROBOT_RADIUS)
+                while (it_wy < entry_wy + WORKCELL_RADIUS)
                 {
 
                     obstacle_points.push_back({entry_wx, it_wy});
@@ -161,6 +165,22 @@ namespace nav2_costmap_2d
                 for (double it = 0; it < 2 * M_PI; it += M_PI / 100)
                 {
                     obstacle_points.push_back({c_wx + r_w * cos(it), c_wy + r_w * sin(it)});
+                }
+            }
+            else if (shape_ == 3)
+            { // filled square
+                double it_wx = entry_wx;
+                double it_wy = entry_wy - WORKCELL_RADIUS;
+            
+                while (it_wy < entry_wy + WORKCELL_RADIUS)
+                {
+                    while (it_wx < exit_wx)
+                    {
+                        obstacle_points.push_back({it_wx, it_wy});
+                        it_wx += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
+                    }
+                    it_wy += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
+                    it_wx = entry_wx;
                 }
             }
             else
