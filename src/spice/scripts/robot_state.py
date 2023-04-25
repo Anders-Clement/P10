@@ -335,6 +335,7 @@ class ProcessWaitQueueState(RobotStateTemplate):
     
     def check_service_cb(self):
         if self.robot_is_called:
+            self.timer.cancel()
             self.sm.change_state(ROBOT_STATE.ENTER_WORKCELL)
     
     def call_robot_cb(self, request:Trigger.Request, response:Trigger.Response) -> Trigger.Response:
@@ -355,7 +356,7 @@ class ProcessWaitQueueState(RobotStateTemplate):
     
     def deinit(self):
         
-        self.timer.cancel()
+        self.timer.destroy()
         self.srv_call_robot.destroy()
 
 
