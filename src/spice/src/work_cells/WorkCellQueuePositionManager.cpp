@@ -117,9 +117,9 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
 
     for (auto it = m_workCellStateMachine.m_queue_manager.m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager.m_queue_points.end(); it++)
     {
-        if(it->occupied){
-            continue;
-        }
+       
+            
+        
         
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         unsigned int current_cost;
@@ -130,6 +130,8 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         unsigned int mx, my;
         double wx, wy;
 
+        if(!it->occupied){
+        
         for(auto point : viable_points){
             unsigned char current_cost = carrier_costmap->getCost(point.first,point.second);
             if(cheapest_cost > current_cost){
@@ -177,6 +179,11 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         it->transform.translation.x = queueToMap.getX();
         it->transform.translation.y = queueToMap.getY();
         costpoints = {cheapest_point};
+        }
+        else{
+            if(carrier_costmap->worldToMap(it->transform.translation.x + m_workCellStateMachine.m_transform.translation.x, it->transform.translation.y + m_workCellStateMachine.m_transform.translation.y,mx,my));
+            costpoints = {{mx,my}};
+        }
         inflateCostMap(1, carrier_costmap, 0.2);
         m_workCellStateMachine.publish_transform();
     }
