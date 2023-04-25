@@ -22,7 +22,7 @@ public:
 
     virtual void PlanFailed(spice_msgs::msg::Id robot);
 
-    virtual void AddRobotsToGlobalCostmap(nav2_costmap_2d::Costmap2D costmap);
+    virtual void AddRobotsToGlobalCostmap(nav2_costmap_2d::Costmap2D& costmap);
 
     // get current full costmap, of map + any other layers added for a robot Id
     std::shared_ptr<nav2_costmap_2d::Costmap2D> get_costmap(spice_msgs::msg::Id id) override;
