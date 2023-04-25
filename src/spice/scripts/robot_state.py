@@ -531,6 +531,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
         change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
         change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
         change_planner_type_future.add_done_callback(self.navigate_exit_cell)
+        self.sm.work_cell_heartbeat.deactivate()
 
     def navigate_exit_cell(self, future: Future):
         result: SetPlannerType.Response = future.result()
@@ -564,7 +565,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.ERROR)
 
     def deinit(self):
-        self.sm.work_cell_heartbeat.deactivate()
+        pass
 
 class ErrorState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
