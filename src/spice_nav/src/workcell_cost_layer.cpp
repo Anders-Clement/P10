@@ -167,6 +167,22 @@ namespace nav2_costmap_2d
                     obstacle_points.push_back({c_wx + r_w * cos(it), c_wy + r_w * sin(it)});
                 }
             }
+            else if (shape_ == 3)
+            { // filled square
+                double it_wx = entry_wx;
+                double it_wy = entry_wy - WORKCELL_RADIUS;
+            
+                while (it_wy < entry_wy + WORKCELL_RADIUS)
+                {
+                    while (it_wx < exit_wx)
+                    {
+                        obstacle_points.push_back({it_wx, it_wy});
+                        it_wx += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
+                    }
+                    it_wy += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
+                    it_wx = entry_wx;
+                }
+            }
             else
             {
                 RCLCPP_WARN(
