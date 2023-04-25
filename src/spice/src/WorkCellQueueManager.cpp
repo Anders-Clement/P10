@@ -1,7 +1,3 @@
-
-#include <string>
-#include <rclcpp/node.hpp>
-#include <optional>
 #include <chrono>
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "spice/work_cell_queue_manager.hpp"
@@ -130,31 +126,31 @@ void WorkCellQueueManager::timer_update_q_locations(){
         unsigned int mx, my;
         double wx, wy;
 
-        // for(auto point : viable_points){
-        //     unsigned char current_cost = carrier_costmap->getCost(point.first,point.second);
-        //     if(cheapest_cost > current_cost){
-        //         cheapest_point = point;
-        //         cheapest_cost = current_cost;
-        //     }
-        // }
-
-        for(int x = -moveRange; x < moveRange; x++){
-            for(int y = -moveRange; y < moveRange; y++){
-                if(carrier_costmap->worldToMap(m_workCellStateMachine.m_q_transforms[i].translation.x, m_workCellStateMachine.m_q_transforms[i].translation.y, mx,my)){
-                    if(mx + x < carrier_costmap->getSizeInCellsX() || my +y < carrier_costmap->getSizeInCellsY()){
-                        current_cost = carrier_costmap->getCost(mx+x,my+y);
-                        if(cheapest_cost > current_cost){
-                            carrier_costmap->mapToWorld(mx+x,my+y,wx,wy);
-                            if(pnpoly(world_corners.size(), world_corners_x, world_corners_y, wx, wy)){
-                                cheapest_cost = current_cost;
-                                cheapest_point = {mx+x,my+y};
-                            }
-
-                        }
-                    }
-                }
+        for(auto point : viable_points){
+            unsigned char current_cost = carrier_costmap->getCost(point.first,point.second);
+            if(cheapest_cost > current_cost){
+                cheapest_point = point;
+                cheapest_cost = current_cost;
             }
         }
+
+        // for(int x = -moveRange; x < moveRange; x++){
+        //     for(int y = -moveRange; y < moveRange; y++){
+        //         if(carrier_costmap->worldToMap(m_workCellStateMachine.m_q_transforms[i].translation.x, m_workCellStateMachine.m_q_transforms[i].translation.y, mx,my)){
+        //             if(mx + x < carrier_costmap->getSizeInCellsX() || my +y < carrier_costmap->getSizeInCellsY()){
+        //                 current_cost = carrier_costmap->getCost(mx+x,my+y);
+        //                 if(cheapest_cost > current_cost){
+        //                     carrier_costmap->mapToWorld(mx+x,my+y,wx,wy);
+        //                     if(pnpoly(world_corners.size(), world_corners_x, world_corners_y, wx, wy)){
+        //                         cheapest_cost = current_cost;
+        //                         cheapest_point = {mx+x,my+y};
+        //                     }
+
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
         
         carrier_costmap->mapToWorld(cheapest_point.first, cheapest_point.second, wx, wy);
 

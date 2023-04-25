@@ -82,6 +82,7 @@ set(WORK_CELL_SIMULATOR_SOURCES
   src/WorkCell.cpp
   src/WorkCellSimulator.cpp
   src/WorkCellStateMachine.cpp
+  src/WorkCellQueueManager.cpp
 )
 add_executable(work_cell_simulator ${WORK_CELL_SIMULATOR_SOURCES})
 ament_target_dependencies(

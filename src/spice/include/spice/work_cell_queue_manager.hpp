@@ -2,20 +2,7 @@
 #define WORK_CELL_QUEUE_MANAGER_HPP
 
 #include <string>
-#include <rclcpp/node.hpp>
-#include <optional>
-#include <queue>
-#include "std_srvs/srv/trigger.hpp"
-#include "geometry_msgs/msg/transform_stamped.hpp"
-#include "tf2_ros/static_transform_broadcaster.h"
 #include "spice_msgs/msg/robot_type.hpp"
-#include "spice_msgs/msg/task.hpp"
-#include "spice_msgs/msg/id.hpp"
-#include "spice_msgs/msg/robot_type.hpp"
-#include "spice_msgs/msg/robot_state_transition.hpp"
-#include "spice_msgs/srv/register_work.hpp"
-#include "spice_msgs/srv/heartbeat.hpp"
-#include "spice/work_cell.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav2_costmap_2d/costmap_2d.hpp"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
@@ -24,7 +11,7 @@
 #include "spice_msgs/srv/get_robots_by_type.hpp"
 #include "spice/work_cell_state_machine.hpp"
 
-
+class WorkCellStateMachine;
 class WorkCellQueueManager{
     public:
     WorkCellQueueManager() = delete;
@@ -45,8 +32,8 @@ class WorkCellQueueManager{
     rclcpp::Logger get_logger();    
 
     private:
+    
     WorkCellStateMachine& m_workCellStateMachine;
-
 
     rclcpp::TimerBase::SharedPtr m_timer_robots_lists{nullptr};
     rclcpp::TimerBase::SharedPtr m_timer_q{nullptr};
