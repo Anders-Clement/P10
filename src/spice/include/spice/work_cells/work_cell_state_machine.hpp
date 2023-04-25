@@ -17,7 +17,7 @@
 #include "spice_msgs/srv/heartbeat.hpp"
 #include "spice_msgs/srv/robot_ready.hpp"
 #include "spice/work_cells/queue_manager.hpp"
-#include "spice/work_cells/work_cells/work_cell.hpp"
+#include "spice/work_cells/work_cell.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav2_costmap_2d/costmap_2d.hpp"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
@@ -85,11 +85,7 @@ public:
     std::shared_ptr<rclcpp::Client<std_srvs::srv::Trigger>> m_done_processing_client;
     std::unique_ptr<carrier_robot> m_current_robot_work;
     std::string m_work_cell_name;
-    geometry_msgs::msg::Transform m_transform;
-    geometry_msgs::msg::Transform m_entry_transform;
-    geometry_msgs::msg::Transform m_exit_transform;
-    std::vector<geometry_msgs::msg::Transform> m_q_transforms;
-    int m_q_num = 3;
+    QueueManager m_queue_manager;
 
 private:
 
@@ -111,7 +107,7 @@ private:
     geometry_msgs::msg::Transform m_transform;
     geometry_msgs::msg::Transform m_entry_transform;
     geometry_msgs::msg::Transform m_exit_transform;
-    QueueManager m_queue_manager;
+
     std::vector<spice_msgs::msg::Robot> workcell_list; //list of all workcells
     std::vector<spice_msgs::msg::Robot> carrier_list; //list of all carrier robots
     rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_workcells_cli;

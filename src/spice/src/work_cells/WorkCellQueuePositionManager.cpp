@@ -115,8 +115,12 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
     costpoints = carriers_map_coords;
     inflateCostMap(1,carrier_costmap, 0.1);
 
-    for (int i = 0; i < m_workCellStateMachine.m_q_num; i++)
+    for (auto it = m_workCellStateMachine.m_queue_manager.m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager.m_queue_points.end(); it++)
     {
+        if(it->occupied){
+            continue;
+        }
+        
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         unsigned int current_cost;
         std::pair<unsigned int, unsigned int> cheapest_point;
@@ -155,13 +159,14 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         carrier_costmap->mapToWorld(cheapest_point.first, cheapest_point.second, wx, wy);
 
         tf2::Quaternion q;
-        q.setW(m_workCellStateMachine.m_transform.rotation.w);
-        q.setX(m_workCellStateMachine.m_transform.rotation.x);
-        q.setY(m_workCellStateMachine.m_transform.rotation.y);
-        q.setZ(m_workCellStateMachine.m_transform.rotation.z);
+        
+        q.setW(it->transform.rotation.w);
+        q.setX(it->transform.rotation.x);
+        q.setY(it->transform.rotation.y);
+        q.setZ(it->transform.rotation.z);
         tf2::Matrix3x3 rot(q);
 
-        tf2::Vector3 t(m_workCellStateMachine.m_transform.translation.x, m_workCellStateMachine.m_transform.translation.y, m_workCellStateMachine.m_transform.translation.z);
+        tf2::Vector3 t(it->transform.translation.x, it->transform.translation.y, it->transform.translation.z);
 
         tf2::Transform tf(rot, t);
         tf2::Transform tf_inv =  tf.inverse();
@@ -169,8 +174,8 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         tf2::Vector3 queue_translation(wx, wy, 0.0);
         tf2::Vector3 queueToMap = tf_inv * queue_translation;
 
-        m_workCellStateMachine.m_q_transforms[i].translation.x = queueToMap.getX();
-        m_workCellStateMachine.m_q_transforms[i].translation.y = queueToMap.getY();
+        it->transform.translation.x = queueToMap.getX();
+        it->transform.translation.y = queueToMap.getY();
         std::vector<std::pair<unsigned int, unsigned int>> temp;
         costpoints = {cheapest_point};
         inflateCostMap(1, carrier_costmap, 0.2);
