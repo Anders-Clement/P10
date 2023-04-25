@@ -5,7 +5,7 @@
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "spice_msgs/msg/robot_type.hpp"
 #include "spice_msgs/msg/task.hpp"
-#include "spice/work_cell_state_machine.hpp"
+#include "spice/work_cells/work_cell_state_machine.hpp"
 
 using namespace std::chrono_literals;
 
@@ -17,7 +17,7 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
     // m_nodehandle.declare_parameter("workcell_radius",rclcpp::ParameterValue(0.25));
     // ROBOT_RADIUS = m_nodehandle.get_parameter("robot_radius").as_double();
     // WORKCELL_RADIUS = m_nodehandle.get_parameter("workcell_radius").as_double();
-    m_work_cell_queue_manager = std::make_unique<WorkCellQueueManager>(*this);
+    m_work_cell_queue_manager = std::make_unique<WorkCellQueuePositionManager>(*this);
     m_register_work_service = m_nodehandle.create_service<spice_msgs::srv::RegisterWork>(
         m_work_cell_name + "/register_work", 
         std::bind(&WorkCellStateMachine::on_register_robot, this, std::placeholders::_1, std::placeholders::_2));

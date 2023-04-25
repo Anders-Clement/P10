@@ -1,5 +1,5 @@
-#ifndef WORK_CELL_QUEUE_MANAGER_HPP
-#define WORK_CELL_QUEUE_MANAGER_HPP
+#ifndef WORK_CELL_QUEUE_POSITION_MANAGER_HPP
+#define WORK_CELL_QUEUE_POSITION_MANAGER_HPP
 
 #include <string>
 #include "spice_msgs/msg/robot_type.hpp"
@@ -9,13 +9,13 @@
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
-#include "spice/work_cell_state_machine.hpp"
+#include "spice/work_cells/work_cell_state_machine.hpp"
 
 class WorkCellStateMachine;
-class WorkCellQueueManager{
+class WorkCellQueuePositionManager{
     public:
-    WorkCellQueueManager() = delete;
-    WorkCellQueueManager(WorkCellStateMachine& workCellStateMachine);
+    WorkCellQueuePositionManager() = delete;
+    WorkCellQueuePositionManager(WorkCellStateMachine& workCellStateMachine);
     
     void global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg); // check
     void timer_update_robots_lists();//check

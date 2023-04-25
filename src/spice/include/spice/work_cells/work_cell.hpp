@@ -6,7 +6,7 @@
 #include <array>
 #include "spice_msgs/msg/task.hpp"
 #include "spice_msgs/srv/register_robot.hpp"
-#include "spice/work_cell_state_machine.hpp"
+#include "spice/work_cells/work_cell_state_machine.hpp"
 
 class WorkCellStateMachine;
 

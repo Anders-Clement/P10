@@ -1,15 +1,15 @@
 #include <chrono>
 #include "tf2/LinearMath/Matrix3x3.h"
-#include "spice/work_cell_queue_manager.hpp"
+#include "spice/work_cells/work_cell_queue_position_manager.hpp"
 
 using namespace std::chrono_literals;
 
-WorkCellQueueManager::WorkCellQueueManager(WorkCellStateMachine& workCellStateMachine) : m_workCellStateMachine(workCellStateMachine){
+WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine& workCellStateMachine) : m_workCellStateMachine(workCellStateMachine){
     
     lastTime = std::chrono::system_clock::now();
 
-    m_timer_q =  m_workCellStateMachine.m_nodehandle.create_wall_timer(0.1s, std::bind(&WorkCellQueueManager::timer_update_q_locations, this));
-    m_timer_robots_lists = m_workCellStateMachine.m_nodehandle.create_wall_timer(2s, std::bind(&WorkCellQueueManager::timer_update_robots_lists, this));
+    m_timer_q =  m_workCellStateMachine.m_nodehandle.create_wall_timer(0.1s, std::bind(&WorkCellQueuePositionManager::timer_update_q_locations, this));
+    m_timer_robots_lists = m_workCellStateMachine.m_nodehandle.create_wall_timer(2s, std::bind(&WorkCellQueuePositionManager::timer_update_robots_lists, this));
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(m_workCellStateMachine.m_nodehandle.get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
@@ -23,7 +23,7 @@ WorkCellQueueManager::WorkCellQueueManager(WorkCellStateMachine& workCellStateMa
     m_costmap_subscriber = m_workCellStateMachine.m_nodehandle.create_subscription<nav_msgs::msg::OccupancyGrid>(
         "/map",
         rclcpp::QoS(rclcpp::QoSInitialization(qos_profile_TL.history, 10), qos_profile_TL),
-        std::bind(&WorkCellQueueManager::global_costmap_cb, this, std::placeholders::_1)
+        std::bind(&WorkCellQueuePositionManager::global_costmap_cb, this, std::placeholders::_1)
     );
 
     m_costmapPub =  m_workCellStateMachine.m_nodehandle.create_publisher<nav_msgs::msg::OccupancyGrid>("/queue_costmap/"+ m_workCellStateMachine.m_work_cell_name, 10);
@@ -56,7 +56,7 @@ WorkCellQueueManager::WorkCellQueueManager(WorkCellStateMachine& workCellStateMa
     }
 }
 
-void WorkCellQueueManager::global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg)
+void WorkCellQueuePositionManager::global_costmap_cb(nav_msgs::msg::OccupancyGrid::SharedPtr msg)
 {
     m_global_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*msg);
 
@@ -81,7 +81,7 @@ void WorkCellQueueManager::global_costmap_cb(nav_msgs::msg::OccupancyGrid::Share
     inflateCostMap(1, m_global_costmap, 0.3);
 }
 
-void WorkCellQueueManager::timer_update_q_locations(){
+void WorkCellQueuePositionManager::timer_update_q_locations(){
      //RCLCPP_INFO(get_logger, "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
     if(!workcell_costmap || workcell_list.size()== 0)
     {
@@ -183,7 +183,7 @@ void WorkCellQueueManager::timer_update_q_locations(){
     return;
 }
 
-void WorkCellQueueManager::timer_update_robots_lists(){
+void WorkCellQueuePositionManager::timer_update_robots_lists(){
     // get all workcells
     if (!get_workcells_cli->wait_for_service(1s))
     {
@@ -221,7 +221,7 @@ void WorkCellQueueManager::timer_update_robots_lists(){
 }
 
 
-void WorkCellQueueManager::update_workcell_costmap()
+void WorkCellQueuePositionManager::update_workcell_costmap()
 {   
     if(!m_global_costmap || workcell_list.size()== 0)
     {
@@ -273,7 +273,7 @@ void WorkCellQueueManager::update_workcell_costmap()
     return;
 }
 
-void WorkCellQueueManager::attraction(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope, std::pair<unsigned int, unsigned int> attraction_center)
+void WorkCellQueuePositionManager::attraction(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope, std::pair<unsigned int, unsigned int> attraction_center)
 {
     slope = 1;
     unsigned char current_cost;
@@ -296,7 +296,7 @@ void WorkCellQueueManager::attraction(std::shared_ptr<nav2_costmap_2d::Costmap2D
 }
 
 
-void WorkCellQueueManager::inflateCostMap(int current_loop,  std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope)
+void WorkCellQueuePositionManager::inflateCostMap(int current_loop,  std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope)
 {
     unsigned int mx, my;
     double wx, wy;
@@ -346,7 +346,7 @@ void WorkCellQueueManager::inflateCostMap(int current_loop,  std::shared_ptr<nav
 }
 
 
-int WorkCellQueueManager::pnpoly(int nvert, std::vector<float> vertx, std::vector<float> verty, float testx, float testy)
+int WorkCellQueuePositionManager::pnpoly(int nvert, std::vector<float> vertx, std::vector<float> verty, float testx, float testy)
 {
   int i, j, c = 0;
   for (i = 0, j = nvert-1; i < nvert; j = i++) {
@@ -357,7 +357,7 @@ int WorkCellQueueManager::pnpoly(int nvert, std::vector<float> vertx, std::vecto
   return c;
 }
 
-void WorkCellQueueManager::publish_costmap(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap){
+void WorkCellQueuePositionManager::publish_costmap(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap){
     nav_msgs::msg::OccupancyGrid occGrid;
 	  occGrid.header.frame_id = "map";
 	  occGrid.header.stamp = m_workCellStateMachine.m_nodehandle.now();
@@ -377,6 +377,6 @@ void WorkCellQueueManager::publish_costmap(std::shared_ptr<nav2_costmap_2d::Cost
       return;
 }
 
-rclcpp::Logger WorkCellQueueManager::get_logger(){
+rclcpp::Logger WorkCellQueuePositionManager::get_logger(){
     return m_workCellStateMachine.m_nodehandle.get_logger();
 } 

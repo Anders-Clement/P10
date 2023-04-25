@@ -1,7 +1,7 @@
 #include <vector>
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/transform.hpp"
-#include "spice/work_cell_state_machine.hpp"
+#include "spice/work_cells/work_cell_state_machine.hpp"
 
 class PositionGenerator
 {

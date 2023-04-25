@@ -14,14 +14,14 @@
 #include "spice_msgs/msg/robot_state_transition.hpp"
 #include "spice_msgs/srv/register_work.hpp"
 #include "spice_msgs/srv/heartbeat.hpp"
-#include "spice/work_cell.hpp"
+#include "spice/work_cells/work_cell.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav2_costmap_2d/costmap_2d.hpp"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
-#include "spice/work_cell_queue_manager.hpp"
+#include "spice/work_cells/work_cell_queue_position_manager.hpp"
 
 enum class WORK_CELL_STATE : uint8_t{
     STARTUP = 0,
@@ -41,7 +41,7 @@ static const std::string WORK_CELL_STATE_NAMES[static_cast<uint8_t>(WORK_CELL_ST
 };
 
 class WorkCellState;
-class WorkCellQueueManager;
+class WorkCellQueuePositionManager;
 
 class WorkCellStateMachine
 {
@@ -76,7 +76,7 @@ private:
         const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
         std::shared_ptr<std_srvs::srv::Trigger::Response> response);
     spice_msgs::msg::RobotState internal_state_to_robot_state(WORK_CELL_STATE state);
-    std::unique_ptr<WorkCellQueueManager> m_work_cell_queue_manager;
+    std::unique_ptr<WorkCellQueuePositionManager> m_work_cell_queue_manager;
 
 
     spice_msgs::msg::RobotType::_type_type m_robot_type;
