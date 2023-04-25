@@ -278,9 +278,8 @@ void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costma
 	return;
 }
 
-void PrioritizedCostmap::AddRobotsToGlobalCostmap(nav2_costmap_2d::Costmap2D costmap)
+void PrioritizedCostmap::AddRobotsToGlobalCostmap(nav2_costmap_2d::Costmap2D& costmap)
 {
-	double angle_increment = 2.0 * M_PI / m_robot_points;
 	for (auto robot : robots)
 	{
 		if (robot.id == current_robot_id.id)
@@ -297,7 +296,7 @@ void PrioritizedCostmap::AddRobotsToGlobalCostmap(nav2_costmap_2d::Costmap2D cos
 				costmap.setCost(mx, my, nav2_costmap_2d::LETHAL_OBSTACLE);
 			}
 
-			
+			double angle_increment = 2.0 * M_PI / m_robot_points;
 			for (int i = 0; i < m_robot_points; i++)
 			{
 
