@@ -39,8 +39,8 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
 
     // polygon corners in world coordinates:
         // for C4:
-    world_corners.push_back({20.78, 8.91}); //gr window left
-    world_corners.push_back({20.72, 6.08}); //gr window right
+    // world_corners.push_back({20.78, 8.91}); //gr window left
+    // world_corners.push_back({20.72, 6.08}); //gr window right
     world_corners.push_back({16.91, 6.18}); //gr door tv-side
     world_corners.push_back({16.82, 3.29}); //hall door gr-side
     world_corners.push_back({14.92, 3.36}); //hall door south
