@@ -17,13 +17,17 @@
 #include "spice_msgs/srv/register_work.hpp"
 #include "spice_msgs/srv/heartbeat.hpp"
 #include "spice_msgs/srv/robot_ready.hpp"
-#include "spice/work_cells/work_cell.hpp"
 #include "spice/work_cells/queue_manager.hpp"
+#include "spice/work_cells/work_cell.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav2_costmap_2d/costmap_2d.hpp"
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
 #include "spice_msgs/srv/get_robots_by_type.hpp"
+
+#define ROBOT_RADIUS 0.25
+#define WORKCELL_RADIUS 0.25
+#define STEP_DISTANCE 0.5
 
 enum class WORK_CELL_STATE : uint8_t{
     STARTUP = 0,
@@ -45,18 +49,19 @@ static const std::string WORK_CELL_STATE_NAMES[static_cast<uint8_t>(WORK_CELL_ST
 // all data for a specific client carrier robot
 struct carrier_robot
 {
-    geometry_msgs::msg::Pose queue_pose;
+    QueuePoint* queue_point;
     spice_msgs::msg::Work work;
     spice_msgs::msg::Id robot_id;
     bool ready_in_queue;
 
-    carrier_robot(geometry_msgs::msg::Pose _queue_pose, 
+    carrier_robot(QueuePoint* _queue_point, 
             spice_msgs::msg::Work _work, spice_msgs::msg::Id _id)
-            : queue_pose(_queue_pose),
+            : queue_point(_queue_point),
             work(_work), robot_id(_id), ready_in_queue(false) {};
 };
 
 class WorkCellState;
+class QueueManager;
 class WorkCellStateMachine
 {
 public:
@@ -66,8 +71,8 @@ public:
     void activate_heartbeat();
     void deactivate_heartbeat();
     void publish_transform();
-    bool enqueue_robot(spice_msgs::srv::RegisterWork::Request::SharedPtr request);
     std::optional<carrier_robot> get_enqueued_robot();
+    void release_robot();
     float get_processing_time() {return 5.0;} // TODO: add and use processing time in Work msg
     spice_msgs::msg::Id get_work_cell_id();
     rclcpp::Logger get_logger() { return m_nodehandle.get_logger(); }
@@ -99,10 +104,7 @@ private:
     geometry_msgs::msg::Transform m_transform;
     geometry_msgs::msg::Transform m_entry_transform;
     geometry_msgs::msg::Transform m_exit_transform;
-    std::vector<geometry_msgs::msg::Transform> m_q_transforms;
-    double ROBOT_RADIUS = 0.25;
-    double WORKCELL_RADIUS = 0.25;
-    int q_num = 3;
+    QueueManager m_queue_manager;
     std::vector<spice_msgs::msg::Robot> workcell_list; //list of all workcells
     std::vector<spice_msgs::msg::Robot> carrier_list; //list of all carrier robots
     rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_workcells_cli;

@@ -87,7 +87,7 @@ void ReadyForRobotState::try_call_robot()
                 }
                 else
                 {
-                    this->m_sm.m_current_robot_work.reset();
+                    this->m_sm.release_robot();
                     m_timer->reset();
                     RCLCPP_WARN(m_sm.get_logger(), "Called robot, but got response false");
                 }
@@ -175,6 +175,9 @@ void RobotExitingState::init()
             this->m_sm.change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
         }
     );
+
+    m_sm.release_robot();
+    
 }
 void RobotExitingState::deinit()
 {

@@ -235,7 +235,7 @@ class ProcessRegisterWorkState(RobotStateTemplate):
             change_planner_type_future = self.sm.change_planner_type_client.call_async(set_planner_type_request)
             change_planner_type_future.add_done_callback(self.navigate_to_goal)
         else:
-            self.sm.get_logger().info("Could not register work at work cell, going to ERROR!")
+            self.sm.get_logger().info(f"Could not register work at work cell: {self.sm.current_task.workcell_id.id}, going to ERROR!")
             self.sm.change_state(ROBOT_STATE.ERROR)
         
     def navigate_to_goal(self, future: Future):
