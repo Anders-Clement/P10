@@ -27,11 +27,18 @@ def generate_launch_description():
         #     name='task_allocator'
         # ),
 
-        # Node(
-        #     package='spice',
-        #     executable='work_cell_simulator',
-        #     name='work_cell_simulator'
-        # ),
+            # Node(
+            #   package='spice',
+            #   executable='work_cell_simulator',
+            #   name='work_cell_simulator',
+            #   parameters=[{'workcell_rep_slope': 0.05}, # workcell repulsion for queue pos
+            #               {'carrier_bot_rep_slope': 0.1}, # carrier bot repulsion
+            #               {'wall_rep_slope': 0.15}, #static map obstacle repulsion
+            #               {'queue_rep_slope': 0.2}, # other queue point repulsion
+            #               {'workcell_att_slope':  0.05}, # own workcell attraction
+            #               {'queue_att_slope': 0} #own lower queue point attraction
+            #               ]
+            # ),
 
         # Node(
         #     package='spice',

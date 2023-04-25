@@ -8,6 +8,21 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
     
     lastTime = std::chrono::system_clock::now();
 
+    m_workCellStateMachine.m_nodehandle.declare_parameter("workcell_rep_slope", 0.05);
+    m_workCellStateMachine.m_nodehandle.declare_parameter("carrier_bot_rep_slope", 0.1);
+    m_workCellStateMachine.m_nodehandle.declare_parameter("wall_rep_slope", 0.15);
+    m_workCellStateMachine.m_nodehandle.declare_parameter("queue_rep_slope", 0.2);
+    m_workCellStateMachine.m_nodehandle.declare_parameter("workcell_att_slope", 0.05);
+    m_workCellStateMachine.m_nodehandle.declare_parameter("queue_att_slope", 0);
+
+    WORK_CELL_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("work_cell_rep_slope").get_parameter_value().get<float>();
+    CARRIER_BOT_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("carrier_bot_rep_slope").get_parameter_value().get<float>();
+    WALL_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("wall_rep_slope").get_parameter_value().get<float>();
+    QUEUE_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("queue_rep_slope").get_parameter_value().get<float>();
+    WORK_CELL_ATT_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("workcell_att_slope").get_parameter_value().get<float>();
+    QUEUE_ATT_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("queue_att_slope").get_parameter_value().get<float>();
+
+
     m_timer_q =  m_workCellStateMachine.m_nodehandle.create_wall_timer(0.1s, std::bind(&WorkCellQueuePositionManager::timer_update_q_locations, this));
     m_timer_robots_lists = m_workCellStateMachine.m_nodehandle.create_wall_timer(2s, std::bind(&WorkCellQueuePositionManager::timer_update_robots_lists, this));
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(m_workCellStateMachine.m_nodehandle.get_clock());
@@ -78,7 +93,7 @@ void WorkCellQueuePositionManager::global_costmap_cb(nav_msgs::msg::OccupancyGri
             }
         }
     }
-    inflateCostMap(1, m_global_costmap, 0.3);
+    inflateCostMap(1, m_global_costmap, WALL_REP_SLOPE); //inflate cost of static map obstacles
 }
 
 void WorkCellQueuePositionManager::timer_update_q_locations(){
@@ -113,7 +128,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         }
     
     costpoints = carriers_map_coords;
-    inflateCostMap(1,carrier_costmap, 0.1);
+    inflateCostMap(1,carrier_costmap, CARRIER_BOT_REP_SLOPE); // infalte Carrier_bot cost
 
     for (auto it = m_workCellStateMachine.m_queue_manager.m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager.m_queue_points.end(); it++)
     {
@@ -129,6 +144,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         //RCLCPP_WARN(get_logger(), "move range: %d",moveRange);
         unsigned int mx, my;
         double wx, wy;
+        std::pair<unsigned int, unsigned int> queueMapPoint;
 
         if(!it->occupied){
         
@@ -178,13 +194,17 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
 
         it->transform.translation.x = queueToMap.getX();
         it->transform.translation.y = queueToMap.getY();
-        costpoints = {cheapest_point};
+        queueMapPoint = cheapest_point;
+        
+
         }
         else{
             if(carrier_costmap->worldToMap(it->transform.translation.x + m_workCellStateMachine.m_transform.translation.x, it->transform.translation.y + m_workCellStateMachine.m_transform.translation.y,mx,my));
-            costpoints = {{mx,my}};
+            queueMapPoint = {mx,my};
         }
-        inflateCostMap(1, carrier_costmap, 0.2);
+        costpoints = {queueMapPoint};
+        inflateCostMap(1, carrier_costmap, QUEUE_REP_SLOPE); // Inflate queueu in costmap
+        attraction(carrier_costmap, QUEUE_ATT_SLOPE, queueMapPoint); //add attraction to local queue points
         m_workCellStateMachine.publish_transform();
     }
     publish_costmap(carrier_costmap);
@@ -277,8 +297,8 @@ void WorkCellQueuePositionManager::update_workcell_costmap()
     }
 
     costpoints = workcells_map_coords;
-    inflateCostMap(1,workcell_costmap, 0.05);
-    attraction(workcell_costmap, 0.05, map_coord_entry);
+    inflateCostMap(1,workcell_costmap, WORK_CELL_REP_SLOPE); //Infalte workcell in costmap
+    attraction(workcell_costmap, WORK_CELL_ATT_SLOPE, map_coord_entry); // set workcell att0raction
     m_mutex.unlock();
 
     return;
