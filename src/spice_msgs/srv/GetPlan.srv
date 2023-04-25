@@ -5,3 +5,4 @@ Id id
 PlannerType planner_type
 ---
 nav_msgs/Path plan
+bool wait # whether robot should wait at current position

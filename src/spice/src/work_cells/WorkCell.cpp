@@ -65,11 +65,11 @@ void ReadyForRobotState::try_call_robot()
     if (robot)
     {
         m_timer->cancel();
-        m_sm.m_current_robot_work = robot.value();
-        std::string call_robot_client_topic_name = m_sm.m_current_robot_work.robot_id.id + "/call_robot";
+        m_sm.m_current_robot_work = std::make_unique<carrier_robot>(robot.value());
+        std::string call_robot_client_topic_name = m_sm.m_current_robot_work->robot_id.id + "/call_robot";
         m_sm.m_call_robot_client = m_sm.m_nodehandle.create_client<std_srvs::srv::Trigger>(call_robot_client_topic_name);
         
-        RCLCPP_INFO(m_sm.get_logger(), "Got robot: %s", robot.value().robot_id.id.c_str());
+        RCLCPP_INFO(m_sm.get_logger(), "Calling robot into cell: %s", robot.value().robot_id.id.c_str());
         call_robot_request = std::make_shared<std_srvs::srv::Trigger::Request>();
         if (!m_sm.m_call_robot_client->wait_for_service(1s))
         {
@@ -87,7 +87,7 @@ void ReadyForRobotState::try_call_robot()
                 }
                 else
                 {
-                    this->m_sm.m_current_robot_work = spice_msgs::srv::RegisterWork::Request();
+                    this->m_sm.release_robot();
                     m_timer->reset();
                     RCLCPP_WARN(m_sm.get_logger(), "Called robot, but got response false");
                 }
@@ -127,7 +127,7 @@ ProcessingState::ProcessingState(WorkCellStateMachine& sm) : m_sm(sm)
 }
 void ProcessingState::init()
 {
-    std::string robot_done_processing_topic = m_sm.m_current_robot_work.robot_id.id + "/robot_done_processing";
+    std::string robot_done_processing_topic = m_sm.m_current_robot_work->robot_id.id + "/robot_done_processing";
     m_sm.m_done_processing_client = m_sm.m_nodehandle.create_client
         <std_srvs::srv::Trigger>(robot_done_processing_topic);
 
@@ -140,7 +140,7 @@ void ProcessingState::init()
                 if (!this->m_sm.m_done_processing_client->wait_for_service(1s))
                 {
                     RCLCPP_WARN(this->m_sm.get_logger(), "Timeout waiting for service %s, ignoring the robot",
-                        (m_sm.m_current_robot_work.robot_id.id + "/robot_done_processing").c_str());
+                        (m_sm.m_current_robot_work->robot_id.id + "/robot_done_processing").c_str());
                     this->m_sm.change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
                     return;
                 }                
@@ -175,6 +175,9 @@ void RobotExitingState::init()
             this->m_sm.change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
         }
     );
+
+    m_sm.release_robot();
+    
 }
 void RobotExitingState::deinit()
 {

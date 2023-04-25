@@ -2,6 +2,7 @@
 #include "spice/planners/straight_line_planner.hpp"
 #include "spice/planners/a_star_planner.hpp"
 #include "spice/costmaps/prioritized_costmap.hpp"
+#include "spice/costmaps/global_costmap.hpp"
 
 CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
 {
@@ -19,7 +20,8 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
 
     m_a_star_planner = std::make_unique<AStarPlanner>(*this);
     m_straight_line_planner = std::make_unique<StraightLinePlanner>(*this);
-    m_costmap = std::make_unique<PrioritizedCostmap>(*this);
+    m_global_costmap = std::make_unique<GlobalCostmap>(*this);
+    m_prioritized_costmap = std::make_unique<PrioritizedCostmap>(*this);
 
     RCLCPP_INFO(get_logger(), "Central path planner is initialized");
 };
@@ -50,15 +52,51 @@ void CentralPathPlanner::get_plan_cb(
 
     std::string planner_type = "Unknown";
     
-    if(request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_A_STAR)
+    if(request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_PRIORITIZED)
     {
-        response->plan = m_a_star_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
-        planner_type = "A*";
+        auto prioritized_costmap = m_prioritized_costmap->get_costmap(request->id);
+        auto prioritized_plan = m_a_star_planner->get_plan(request->start, request->goal, m_tolerance, prioritized_costmap, request->id);
+
+        // failed to make prioritized plan, check if path is available in general
+        if(prioritized_plan.poses.size() == 0)
+        {
+            auto global_costmap = m_global_costmap->get_costmap(request->id);
+            auto a_star_plan = m_a_star_planner->get_plan(request->start, request->goal, m_tolerance, global_costmap, request->id);
+
+            // plan is not possble in general
+            if(a_star_plan.poses.size() == 0)
+            {
+                // empty path, with no wait, will make the navigation goal fail
+                response->plan = nav_msgs::msg::Path();
+                response->wait = false;
+            }
+            // robot is currently blocked by other robots
+            // return valid path, but wait
+            else
+            {
+                response->plan = a_star_plan;
+                response->wait = true;
+            }
+        }
+        else
+        {
+            response->plan = prioritized_plan;
+            response->wait = false;
+        }
+        planner_type="Prioritized planner";
     }
     else if (request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_STRAIGHT_LINE)
     {
-        response->plan = m_straight_line_planner->get_plan(request->start, request->goal, m_tolerance, request->id);
+        response->plan = m_straight_line_planner->get_plan(request->start, request->goal, m_tolerance, nullptr, request->id);
+        response->wait = false;
         planner_type = "Straight line planner";
+    }
+    else if(request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_A_STAR)
+    {
+        auto costmap = m_global_costmap->get_costmap(request->id);
+        response->plan = m_a_star_planner->get_plan(request->start, request->goal, m_tolerance, costmap, request->id);
+        response->wait = false;
+        planner_type = "A*";
     }
     else
     {
@@ -70,14 +108,10 @@ void CentralPathPlanner::get_plan_cb(
     m_planned_paths[request->id.id].plan = response->plan;
     m_planned_paths[request->id.id].timestamp = now();
 
-    RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s", 
-        response->plan.poses.size(), duration, planner_type.c_str());
+    RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s. Wait: %d", 
+        response->plan.poses.size(), duration, planner_type.c_str(), response->wait);
 }
 
-std::shared_ptr<nav2_costmap_2d::Costmap2D> CentralPathPlanner::get_costmap(spice_msgs::msg::Id id)
-{
-    return m_costmap->get_costmap(id);
-}
 
 std::optional<robot_plan> CentralPathPlanner::get_last_plan_by_id(spice_msgs::msg::Id id)
 {

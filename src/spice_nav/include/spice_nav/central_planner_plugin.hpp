@@ -47,7 +47,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-
+#include "std_msgs/msg/bool.hpp"
 #include "nav2_core/global_planner.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "nav2_util/robot_utils.hpp"
@@ -96,6 +96,7 @@ private:
   std::string global_frame_, name_, robot_namespace_;
   rclcpp::Client<spice_msgs::srv::GetPlan>::SharedPtr central_planner_client;
   rclcpp::Service<spice_msgs::srv::SetPlannerType>::SharedPtr set_planner_type_server;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr wait_publisher;
 
   double interpolation_resolution_;
   double goal_tolerance_;

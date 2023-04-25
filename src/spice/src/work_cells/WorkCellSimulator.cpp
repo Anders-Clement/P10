@@ -22,47 +22,47 @@ public:
     geometry_msgs::msg::Transform C4Locations(){
 
         geometry_msgs::msg::Transform poses[4];
-        //A4
-        /*poses[0].rotation.w = 0.709132;
-        poses[0].rotation.x = 0.0;
-        poses[0].rotation.y = 0.0;
-        poses[0].rotation.z = 0.7050776;
-        poses[0].translation.x = 6.27535;
-        poses[0].translation.y = 0.518605;
-        poses[0].translation.z = 0.0;
+        // //A4
+        // poses[0].rotation.w = 0.709132;
+        // poses[0].rotation.x = 0.0;
+        // poses[0].rotation.y = 0.0;
+        // poses[0].rotation.z = 0.7050776;
+        // poses[0].translation.x = 6.27535;
+        // poses[0].translation.y = 0.518605;
+        // poses[0].translation.z = 0.0;
         
-        poses[1].rotation.w = 0.723702;
-        poses[1].rotation.x = 0;
-        poses[1].rotation.y = 0;
-        poses[1].rotation.z = 0.690113;
-        poses[1].translation.x = 4.10358;
-        poses[1].translation.y = 0.446661;
-        poses[1].translation.z = 0;
+        // poses[1].rotation.w = 0.723702;
+        // poses[1].rotation.x = 0;
+        // poses[1].rotation.y = 0;
+        // poses[1].rotation.z = 0.690113;
+        // poses[1].translation.x = 4.10358;
+        // poses[1].translation.y = 0.446661;
+        // poses[1].translation.z = 0;
 
-        poses[2].rotation.w = 1;
-        poses[2].rotation.x = 0;
-        poses[2].rotation.y = 0;
-        poses[2].rotation.z = 0.000737653;
-        poses[2].translation.x = 0.358586;
-        poses[2].translation.y = -1.50395;
-        poses[2].translation.z = 0;
+        // poses[2].rotation.w = 1;
+        // poses[2].rotation.x = 0;
+        // poses[2].rotation.y = 0;
+        // poses[2].rotation.z = 0.000737653;
+        // poses[2].translation.x = 0.358586;
+        // poses[2].translation.y = -1.50395;
+        // poses[2].translation.z = 0;
 
-        poses[3].rotation.w = 0.999716;
-        poses[3].rotation.x = 0;
-        poses[3].rotation.y = 0;
-        poses[3].rotation.z = 0.0238133;
-        poses[3].translation.x = 0.383676;
-        poses[3].translation.y = 0.486885;
-        poses[3].translation.z = 0;
-        */
+        // poses[3].rotation.w = 0.999716;
+        // poses[3].rotation.x = 0;
+        // poses[3].rotation.y = 0;
+        // poses[3].rotation.z = 0.0238133;
+        // poses[3].translation.x = 0.383676;
+        // poses[3].translation.y = 0.486885;
+        // poses[3].translation.z = 0;
+        
         
         // C4 POSES
         poses[0].rotation.w = 0.999997;
         poses[0].rotation.x = 0.0 ;
         poses[0].rotation.y = 0.0;
         poses[0].rotation.z = 0.00250493;
-        poses[0].translation.x = 18.7613;
-        poses[0].translation.y = 7.78589;
+        poses[0].translation.x = 15.9; //18.7613;
+        poses[0].translation.y = 7.0; //7.78589;
         poses[0].translation.z = 0.0;
         
         poses[1].rotation.w = 0.999997;
@@ -88,7 +88,7 @@ public:
         poses[3].translation.x = 16.0792;
         poses[3].translation.y = 12.8173;
         poses[3].translation.z = 0;
-
+        /*
         poses[4].rotation.w = 0.999997;
         poses[4].rotation.x = 0;
         poses[4].rotation.y = 0;
@@ -103,7 +103,7 @@ public:
         poses[5].rotation.z = 0;
         poses[5].translation.x = 16.6054;
         poses[5].translation.y = 19.8698;
-        poses[5].translation.z = 0;
+        poses[5].translation.z = 0;*/
 
         // CANTEEN POSES
         /*poses[0].rotation.w = 1.0;

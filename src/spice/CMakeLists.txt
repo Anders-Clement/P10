@@ -79,9 +79,10 @@ ament_target_dependencies(
   tf2_msgs
 )
 set(WORK_CELL_SIMULATOR_SOURCES 
-  src/work_cells/WorkCell.cpp
-  src/WorkCellSimulator.cpp
-  src/work_cells/WorkCellStateMachine.cpp
+  src/work_cells/work_cells/WorkCell.cpp
+  src/work_cells/WorkCellSimulator.cpp
+  src/work_cells/work_cells/WorkCellStateMachine.cpp
+  src/work_cells/QueueManager.cpp
   src/work_cells/WorkCellQueuePositionManager.cpp
 )
 add_executable(work_cell_simulator ${WORK_CELL_SIMULATOR_SOURCES})
