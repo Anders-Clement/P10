@@ -31,11 +31,11 @@ std::optional<QueuePoint*> QueueManager::get_queue_point()
 
 void QueueManager::free_queue_point(QueuePoint* queuepoint)
 {
-    for(auto point = m_queue_points.begin(); point != m_queue_points.end(); point++)
+    for(auto it = m_queue_points.begin(); it != m_queue_points.end(); it++)
     {
-        if(point->id == queuepoint->id)
-        {
-            point->occupied = false;
+        if(it->id == queuepoint->id)
+        {   
+            it->occupied = false;
             return;
         }
     }   

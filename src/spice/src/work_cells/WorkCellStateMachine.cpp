@@ -27,6 +27,12 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
     m_robot_ready_in_queue_service = m_nodehandle.create_service<spice_msgs::srv::RobotReady>(
         m_work_cell_name + "/robot_ready_in_queue", 
         std::bind(&WorkCellStateMachine::on_robot_ready_in_queue, this, std::placeholders::_1, std::placeholders::_2));
+    m_heartbeat_service = m_nodehandle.create_service<spice_msgs::srv::Heartbeat>(
+        m_work_cell_name + "/heartbeat",
+        std::bind(&WorkCellStateMachine::on_robot_heartbeat, this, std::placeholders::_1, std::placeholders::_2));
+    m_robot_heartbeat_timer = rclcpp::create_timer(&m_nodehandle, m_nodehandle.get_clock(), 
+        rclcpp::Duration::from_seconds(ROBOT_HEARTBEAT_TIMEOUT_PERIOD),
+        std::bind(&WorkCellStateMachine::check_robot_heartbeat_cb, this));
 
    
 
@@ -145,7 +151,7 @@ void WorkCellStateMachine::on_register_work(
     }
 
     QueuePoint* queue_point = queue_point_opt.value();
-    carrier_robot robot(queue_point, request->work, request->robot_id);
+    carrier_robot robot(queue_point, request->work, request->robot_id, m_nodehandle.now());
     m_enqueued_robots.push_back(robot);
     response->work_is_enqueued = true;
     
@@ -196,6 +202,73 @@ void WorkCellStateMachine::on_robot_ready_for_processing(
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
     m_states[static_cast<int>(m_current_state)]->on_robot_ready_for_processing(request, response);
+}
+
+void WorkCellStateMachine::on_robot_heartbeat(
+    const std::shared_ptr<spice_msgs::srv::Heartbeat::Request> request,
+    std::shared_ptr<spice_msgs::srv::Heartbeat::Response> response)
+{
+    // check for current robot in cell
+    if(m_current_robot_work)
+    {
+        if(m_current_robot_work->robot_id.id == request->id.id)
+        {
+            response->restart_robot = false;
+            m_current_robot_work->last_heartbeat_time = m_nodehandle.now();
+            return;
+        }
+    }
+
+    // check for enqueued robots
+    for(auto& robot : m_enqueued_robots)
+    {
+        if(robot.robot_id.id == request->id.id)
+        {
+            response->restart_robot = false;
+            robot.last_heartbeat_time = m_nodehandle.now();
+            return;
+        }
+    }
+
+    response->restart_robot = true; // if robot is unknown
+}
+
+void WorkCellStateMachine::check_robot_heartbeat_cb()
+{
+    rclcpp::Time current_time = m_nodehandle.now();
+
+    auto it = m_enqueued_robots.begin();
+    while(it != m_enqueued_robots.end())
+    {
+        auto timeout_period = (current_time-it->last_heartbeat_time).seconds();
+        if(timeout_period > ROBOT_HEARTBEAT_TIMEOUT_PERIOD)
+        {
+            RCLCPP_WARN(get_logger(), "Heartbeat timeout on enqueued robot: %s", it->robot_id.id.c_str());
+            auto to_delete = it;
+            it++;
+            m_queue_manager.free_queue_point(to_delete->queue_point);
+            m_enqueued_robots.erase(to_delete);
+        }
+        else {
+            it++; // to avoid pointer invalidation due to deletion above
+        }
+    }
+
+    // check robot in cell (or in its way into the cell)
+    if(m_current_robot_work)
+    {
+        auto timeout_period = (current_time-m_current_robot_work->last_heartbeat_time).seconds();
+        if(timeout_period > ROBOT_HEARTBEAT_TIMEOUT_PERIOD)
+        {
+            // timeout on robot in cell
+            RCLCPP_WARN(get_logger(), "Heartbeat timeout on current robot in cell: %s", m_current_robot_work->robot_id.id.c_str());
+            release_robot();
+            if(m_current_state != WORK_CELL_STATE::READY_FOR_ROBOT && m_current_state != WORK_CELL_STATE::STARTUP)
+            {
+                change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
+            }
+        }
+    }
 }
 
 std::optional<carrier_robot> WorkCellStateMachine::get_enqueued_robot()
@@ -328,7 +401,7 @@ void WorkCellStateMachine::release_robot()
     if(m_current_robot_work)
     {
         m_queue_manager.free_queue_point(m_current_robot_work->queue_point);
-        m_current_robot_work.release();
+        m_current_robot_work.reset();
     }
     else
     {

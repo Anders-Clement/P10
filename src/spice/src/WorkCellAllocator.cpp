@@ -120,7 +120,7 @@ private:
     // goalPose.pose.position.z = goal.transform.translation.z;
     // goalPose.pose.orientation = goal.transform.rotation;
     //response->goal_pose = goalPose;
-    response->found_job = true;
+    //response->found_job = true;
     response->workcell_id = workcellType;
   }
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};

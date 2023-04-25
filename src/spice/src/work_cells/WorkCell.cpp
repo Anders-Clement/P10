@@ -170,7 +170,7 @@ void RobotExitingState::init()
     m_timer = rclcpp::create_timer(
         &m_sm.m_nodehandle, 
         m_sm.m_nodehandle.get_clock(),
-        rclcpp::Duration::from_seconds(.1),
+        rclcpp::Duration::from_seconds(5),
         [this]() -> void {
             this->m_sm.change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
         }
