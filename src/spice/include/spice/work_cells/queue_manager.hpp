@@ -5,11 +5,13 @@
 #include <vector>
 #include <optional>
 #include "geometry_msgs/msg/transform.hpp"
+#include "spice_msgs/msg/id.hpp"
 
 struct QueuePoint
 {
     geometry_msgs::msg::Transform transform;
     int id;
+    spice_msgs::msg::Id queued_robot;
     bool occupied = false;
 
     QueuePoint(geometry_msgs::msg::Transform _transform, int _id) : transform(_transform), id(_id) {};

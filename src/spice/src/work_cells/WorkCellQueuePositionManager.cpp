@@ -126,7 +126,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         std::pair<unsigned int, unsigned int> cheapest_point;
         std::chrono::duration<float, std::milli> diff = std::chrono::system_clock::now() - lastTime;
         int moveRange = ceil((MAX_Q_VEL*diff.count()/1000.0)/carrier_costmap->getResolution());
-        RCLCPP_WARN(get_logger(), "move range: %d",moveRange);
+        //RCLCPP_WARN(get_logger(), "move range: %d",moveRange);
         unsigned int mx, my;
         double wx, wy;
 
@@ -160,13 +160,13 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
 
         tf2::Quaternion q;
         
-        q.setW(it->transform.rotation.w);
-        q.setX(it->transform.rotation.x);
-        q.setY(it->transform.rotation.y);
-        q.setZ(it->transform.rotation.z);
+        q.setW(m_workCellStateMachine.m_transform.rotation.w);
+        q.setX(m_workCellStateMachine.m_transform.rotation.x);
+        q.setY(m_workCellStateMachine.m_transform.rotation.y);
+        q.setZ(m_workCellStateMachine.m_transform.rotation.z);
         tf2::Matrix3x3 rot(q);
 
-        tf2::Vector3 t(it->transform.translation.x, it->transform.translation.y, it->transform.translation.z);
+        tf2::Vector3 t(m_workCellStateMachine.m_transform.translation.x, m_workCellStateMachine.m_transform.translation.y, m_workCellStateMachine.m_transform.translation.z);
 
         tf2::Transform tf(rot, t);
         tf2::Transform tf_inv =  tf.inverse();
@@ -176,7 +176,6 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
 
         it->transform.translation.x = queueToMap.getX();
         it->transform.translation.y = queueToMap.getY();
-        std::vector<std::pair<unsigned int, unsigned int>> temp;
         costpoints = {cheapest_point};
         inflateCostMap(1, carrier_costmap, 0.2);
         m_workCellStateMachine.publish_transform();

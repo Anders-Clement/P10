@@ -173,9 +173,9 @@ std::shared_ptr<nav2_costmap_2d::Costmap2D> PrioritizedCostmap::calcPrioritizedC
 			
 			// get current robot w pose in order to clear costmap around it
 			double angle_increment = 2.0 * M_PI / m_robot_points;
-			for (float i = robot_pose.pose.position.x - ROBOT_RADIUS; i < robot_pose.pose.position.x + ROBOT_RADIUS; i += 0.2)
+			for (float i = robot_pose.pose.position.x - ROBOT_RADIUS; i < robot_pose.pose.position.x + ROBOT_RADIUS; i += costmap.getResolution()/2)
 			{
-				for(float j = robot_pose.pose.position.y - ROBOT_RADIUS; j < robot_pose.pose.position.y + ROBOT_RADIUS; j += 0.2){
+				for(float j = robot_pose.pose.position.y - ROBOT_RADIUS; j < robot_pose.pose.position.y + ROBOT_RADIUS; j += costmap.getResolution()/2){
 					
 					if (costmap.worldToMap(i, j, r_mx, r_my))
 					{

@@ -151,6 +151,7 @@ void WorkCellStateMachine::on_register_work(
     }
 
     QueuePoint* queue_point = queue_point_opt.value();
+    queue_point->queued_robot = request->robot_id;
     carrier_robot robot(queue_point, request->work, request->robot_id, m_nodehandle.now());
     m_enqueued_robots.push_back(robot);
     response->work_is_enqueued = true;

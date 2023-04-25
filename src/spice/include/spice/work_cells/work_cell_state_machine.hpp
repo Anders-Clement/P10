@@ -88,6 +88,7 @@ public:
     std::unique_ptr<carrier_robot> m_current_robot_work;
     std::string m_work_cell_name;
     QueueManager m_queue_manager;
+    geometry_msgs::msg::Transform m_transform;
 
 private:
 
@@ -109,7 +110,6 @@ private:
 
 
     spice_msgs::msg::RobotType::_type_type m_robot_type;
-    geometry_msgs::msg::Transform m_transform;
     geometry_msgs::msg::Transform m_entry_transform;
     geometry_msgs::msg::Transform m_exit_transform;
 
