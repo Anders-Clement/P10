@@ -28,6 +28,7 @@
 #define ROBOT_RADIUS 0.25
 #define WORKCELL_RADIUS 0.25
 #define STEP_DISTANCE 0.5
+#define ROBOT_HEARTBEAT_TIMEOUT_PERIOD 5.0
 
 enum class WORK_CELL_STATE : uint8_t{
     STARTUP = 0,
@@ -53,11 +54,12 @@ struct carrier_robot
     spice_msgs::msg::Work work;
     spice_msgs::msg::Id robot_id;
     bool ready_in_queue;
+    rclcpp::Time last_heartbeat_time;
 
     carrier_robot(QueuePoint* _queue_point, 
-            spice_msgs::msg::Work _work, spice_msgs::msg::Id _id)
+            spice_msgs::msg::Work _work, spice_msgs::msg::Id _id, rclcpp::Time now)
             : queue_point(_queue_point),
-            work(_work), robot_id(_id), ready_in_queue(false) {};
+            work(_work), robot_id(_id), ready_in_queue(false), last_heartbeat_time(now) {};
 };
 
 class WorkCellState;
@@ -91,8 +93,11 @@ private:
         std::shared_ptr<std_srvs::srv::Trigger::Response> response);
     void on_robot_ready_in_queue(
         const std::shared_ptr<spice_msgs::srv::RobotReady::Request> request,
-        std::shared_ptr<spice_msgs::srv::RobotReady::Response> response
-    );
+        std::shared_ptr<spice_msgs::srv::RobotReady::Response> response);
+    void on_robot_heartbeat(
+        const std::shared_ptr<spice_msgs::srv::Heartbeat::Request> request,
+        std::shared_ptr<spice_msgs::srv::Heartbeat::Response> response);
+    void check_robot_heartbeat_cb();
     spice_msgs::msg::RobotState internal_state_to_robot_state(WORK_CELL_STATE state);
 
     void update_q_location();
@@ -122,9 +127,11 @@ private:
     std::shared_ptr<rclcpp::Service<spice_msgs::srv::RegisterWork>> m_register_work_service;
     std::shared_ptr<rclcpp::Service<spice_msgs::srv::RobotReady>> m_robot_ready_in_queue_service;
     std::shared_ptr<rclcpp::Service<std_srvs::srv::Trigger>> m_robot_ready_for_processing_service;
+    std::shared_ptr<rclcpp::Service<spice_msgs::srv::Heartbeat>> m_heartbeat_service;
     std::shared_ptr<rclcpp::Publisher<spice_msgs::msg::RobotStateTransition>> m_state_transition_event_pub;
     std::list<carrier_robot> m_enqueued_robots;
     rclcpp::TimerBase::SharedPtr m_timer{nullptr};
+    rclcpp::TimerBase::SharedPtr m_robot_heartbeat_timer;
     std::shared_ptr<nav2_costmap_2d::Costmap2D> m_global_costmap;
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmap_subscriber;
     

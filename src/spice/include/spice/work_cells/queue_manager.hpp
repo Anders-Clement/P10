@@ -23,7 +23,7 @@ public:
     void free_queue_point(QueuePoint* queuepoint);
     std::vector<geometry_msgs::msg::Transform> get_queue_point_transforms();
 
-    unsigned int m_queue_id_counter;
+    unsigned int m_queue_id_counter = 0;
     std::list<QueuePoint> m_queue_points;
 };
 

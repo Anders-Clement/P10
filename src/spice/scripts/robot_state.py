@@ -12,7 +12,7 @@ from spice_msgs.msg import PlannerType
 from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell, RegisterWork, SetPlannerType, RobotReady
 
 from work_tree import WorkTree
-from robot_state_manager_node import RobotStateManager, ROBOT_STATE
+from robot_state_manager_node import RobotStateManager, ROBOT_STATE, HeartBeatHandler
 
 class RobotStateTemplate():
     def __init__(self) -> None:
@@ -48,7 +48,7 @@ class StartUpState(RobotStateTemplate):
         self.nav_stack_is_active_future = None
 
         # ensure no heartbeat in this state
-        self.sm.heartbeat_timer.cancel()
+        self.sm.heartbeat.deactivate()
 
     def try_initialize(self):
         if not self.nav_stack_is_active:
@@ -114,8 +114,7 @@ class ReadyForJobState(RobotStateTemplate):
         self.sm = sm
         
     def init(self):
-        self.sm.heartbeat_timer.reset()
-        self.sm.heartbeat_future = None
+        self.sm.heartbeat.activate()
         if self.sm.task_tree is not None:
             self.sm.get_logger().warn('Entering ready_for_job state, but task tree was not None')
         self.sm.task_tree = None
@@ -229,6 +228,15 @@ class ProcessRegisterWorkState(RobotStateTemplate):
         response : RegisterWork.Response = future.result()
         if response.work_is_enqueued:
             self.sm.current_work_cell_info = response
+            if self.sm.work_cell_heartbeat is not None:
+                del self.sm.work_cell_heartbeat
+            self.sm.work_cell_heartbeat = HeartBeatHandler(
+                "/" + self.sm.current_task.workcell_id.id + "/heartbeat",
+                2.5,
+                self.sm.id,
+                lambda arg : arg.change_state(ROBOT_STATE.ERROR),
+                self.sm)
+            self.sm.work_cell_heartbeat.activate()
 
             set_planner_type_request = SetPlannerType.Request()
             set_planner_type_request.planner_type = PlannerType(type=PlannerType.PLANNER_PRIORITIZED)
@@ -272,7 +280,6 @@ class ProcessRegisterWorkState(RobotStateTemplate):
         self.register_work_client.destroy()
 
 
-
 class MovingState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
         self.sm = sm
@@ -312,6 +319,9 @@ class ProcessWaitQueueState(RobotStateTemplate):
         robot_ready_future = self.robot_ready_client.call_async(robot_ready_request)
         robot_ready_future.add_done_callback(self.robot_ready_cb)
 
+        self.timer = self.sm.create_timer(0.1, self.check_service_cb)
+        self.timer.cancel()
+
     def robot_ready_cb(self, future: Future):
         result: RobotReady.Response = future.result()
         if not result.success:
@@ -321,7 +331,7 @@ class ProcessWaitQueueState(RobotStateTemplate):
         self.wait_in_queue()
 
     def wait_in_queue(self):
-        self.timer = self.sm.create_timer(0.1, self.check_service_cb)
+        self.timer.reset()
     
     def check_service_cb(self):
         if self.robot_is_called:
@@ -554,7 +564,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.ERROR)
 
     def deinit(self):
-        pass
+        self.sm.work_cell_heartbeat.deactivate()
 
 class ErrorState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
@@ -567,6 +577,7 @@ class ErrorState(RobotStateTemplate):
         # clear job and task tree
         self.sm.current_task = None
         self.sm.task_tree = None
+        self.sm.work_cell_heartbeat = None
         
     def deinit(self):
         self.recovery_timer.cancel()
