@@ -13,14 +13,15 @@ struct QueuePoint
     int id;
     spice_msgs::msg::Id queued_robot;
     bool occupied = false;
+    double lastTime;
 
-    QueuePoint(geometry_msgs::msg::Transform _transform, int _id) : transform(_transform), id(_id) {};
+    QueuePoint(geometry_msgs::msg::Transform _transform, int _id, double _time) : transform(_transform), id(_id), lastTime(_time) {};
 };
 
 class QueueManager
 {
 public:
-    void initialize_points(int num_points, geometry_msgs::msg::Transform work_cell_transform);
+    void initialize_points(int num_points, geometry_msgs::msg::Transform work_cell_transform, double time);
     std::optional<QueuePoint*> get_queue_point();
     void free_queue_point(QueuePoint* queuepoint);
     std::vector<geometry_msgs::msg::Transform> get_queue_point_transforms();
