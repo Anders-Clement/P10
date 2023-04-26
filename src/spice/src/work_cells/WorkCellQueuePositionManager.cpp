@@ -8,20 +8,31 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
     
     lastTime = std::chrono::system_clock::now();
 
-    m_workCellStateMachine.m_nodehandle.declare_parameter("workcell_rep_slope", 0.05);
-    m_workCellStateMachine.m_nodehandle.declare_parameter("carrier_bot_rep_slope", 0.1);
-    m_workCellStateMachine.m_nodehandle.declare_parameter("wall_rep_slope", 0.15);
-    m_workCellStateMachine.m_nodehandle.declare_parameter("queue_rep_slope", 0.2);
-    m_workCellStateMachine.m_nodehandle.declare_parameter("workcell_att_slope", 0.05);
-    m_workCellStateMachine.m_nodehandle.declare_parameter("queue_att_slope", 0);
+    try
+    {
+        if(!m_workCellStateMachine.m_nodehandle.get_parameter_or("work_cell_rep_slope", 0.0)) // this if should make the try redundant
+        {
+            m_workCellStateMachine.m_nodehandle.declare_parameter("work_cell_rep_slope", 0.05);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("carrier_bot_rep_slope", 0.1);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("wall_rep_slope", 0.15);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("queue_rep_slope", 0.2);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("work_cell_att_slope", 0.05);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("queue_att_slope", 0.0);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("map", "");
+        }
+    }
+    catch(rclcpp::exceptions::ParameterAlreadyDeclaredException &e)
+    {
+        RCLCPP_WARN(get_logger(), "[debug] params already declared?");
+    }
 
     WORK_CELL_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("work_cell_rep_slope").get_parameter_value().get<float>();
     CARRIER_BOT_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("carrier_bot_rep_slope").get_parameter_value().get<float>();
     WALL_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("wall_rep_slope").get_parameter_value().get<float>();
     QUEUE_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("queue_rep_slope").get_parameter_value().get<float>();
-    WORK_CELL_ATT_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("workcell_att_slope").get_parameter_value().get<float>();
+    WORK_CELL_ATT_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("work_cell_att_slope").get_parameter_value().get<float>();
     QUEUE_ATT_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("queue_att_slope").get_parameter_value().get<float>();
-
+    MAP_NAME = m_workCellStateMachine.m_nodehandle.get_parameter("map").get_parameter_value().get<std::string>();
 
     m_timer_q =  m_workCellStateMachine.m_nodehandle.create_wall_timer(0.1s, std::bind(&WorkCellQueuePositionManager::timer_update_q_locations, this));
     m_timer_robots_lists = m_workCellStateMachine.m_nodehandle.create_wall_timer(2s, std::bind(&WorkCellQueuePositionManager::timer_update_robots_lists, this));
@@ -44,25 +55,28 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
     m_costmapPub =  m_workCellStateMachine.m_nodehandle.create_publisher<nav_msgs::msg::OccupancyGrid>("/queue_costmap/"+ m_workCellStateMachine.m_work_cell_name, 10);
 
     // polygon corners in world coordinates:
-        // for A4:
-    // world_corners.push_back({2.6586, -0.8671}); // mid mid
-    // world_corners.push_back({2.4185, -3.6402}); // top mid
-    // world_corners.push_back({-1.7283, -3.5899}); // top right
-    // world_corners.push_back({-1.5848, 2.0436}); // bottom right
-    // world_corners.push_back({6.9987, 1.7771}); // bottom left
-    // world_corners.push_back({7.0078, -0.6922}); // mid left
-
-    // polygon corners in world coordinates:
-        // for C4:
-    // world_corners.push_back({20.78, 8.91}); //gr window left
-    // world_corners.push_back({20.72, 6.08}); //gr window right
-    world_corners.push_back({16.91, 6.18}); //gr door tv-side
-    world_corners.push_back({16.82, 3.29}); //hall door gr-side
-    world_corners.push_back({14.92, 3.36}); //hall door south
-    world_corners.push_back({15.20, 18.33}); // hall tri-way south wall
-    world_corners.push_back({17.25, 18.30}); // hall tri-way north wall
-    world_corners.push_back({16.98, 9.07}); // gr door west
-
+        
+    if(MAP_NAME == "A4.yaml"){ // for A4:
+        world_corners.push_back({2.6586, -0.8671}); // mid mid
+        world_corners.push_back({2.4185, -3.6402}); // top mid
+        world_corners.push_back({-1.7283, -3.5899}); // top right
+        world_corners.push_back({-1.5848, 2.0436}); // bottom right
+        world_corners.push_back({6.9987, 1.7771}); // bottom left
+        world_corners.push_back({7.0078, -0.6922}); // mid left
+    }
+    else if(MAP_NAME == "C4.yaml"){ // for C4:
+        world_corners.push_back({20.78, 8.91}); //gr window left
+        world_corners.push_back({20.72, 6.08}); //gr window right
+        world_corners.push_back({16.91, 6.18}); //gr door tv-side
+        world_corners.push_back({16.82, 3.29}); //hall door gr-side
+        world_corners.push_back({14.92, 3.36}); //hall door south
+        world_corners.push_back({15.20, 18.33}); // hall tri-way south wall
+        world_corners.push_back({17.25, 18.30}); // hall tri-way north wall
+        world_corners.push_back({16.98, 9.07}); // gr door west
+    }
+    else{
+        RCLCPP_ERROR(get_logger(), "[WorkCellQueuePositionManager] %s got no map", m_workCellStateMachine.m_work_cell_name.c_str());
+    }
     //std::vector<float> world_corners_x({2.4185,-1.7283,-1.5848,6.9987,7.0078,2.6586});
     //std::vector<float> world_corners_y({-3.6402,-3.5899,-2.0436,1.7771,-0.6922,-0.8671});
     for(auto pair: world_corners){

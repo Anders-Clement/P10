@@ -44,6 +44,7 @@ class WorkCellQueuePositionManager{
     rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_carriers_cli;
     float WORK_CELL_REP_SLOPE, CARRIER_BOT_REP_SLOPE, WALL_REP_SLOPE, QUEUE_REP_SLOPE;
     float WORK_CELL_ATT_SLOPE, QUEUE_ATT_SLOPE;
+    std::string MAP_NAME;
 
     std::shared_ptr<nav2_costmap_2d::Costmap2D> m_global_costmap;
     std::shared_ptr<nav2_costmap_2d::Costmap2D> workcell_costmap;
