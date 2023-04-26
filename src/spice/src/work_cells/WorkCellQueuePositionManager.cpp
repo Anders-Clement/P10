@@ -130,6 +130,21 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
     costpoints = carriers_map_coords;
     inflateCostMap(1,carrier_costmap, CARRIER_BOT_REP_SLOPE); // infalte Carrier_bot cost
 
+    //setup transforms between world and workcell
+     tf2::Quaternion wc_q;
+        
+    wc_q.setW(m_workCellStateMachine.m_transform.rotation.w);
+    wc_q.setX(m_workCellStateMachine.m_transform.rotation.x);
+    wc_q.setY(m_workCellStateMachine.m_transform.rotation.y);
+    wc_q.setZ(m_workCellStateMachine.m_transform.rotation.z);
+    tf2::Matrix3x3 wc_rot(wc_q);
+
+    tf2::Vector3 wc_t(m_workCellStateMachine.m_transform.translation.x, m_workCellStateMachine.m_transform.translation.y, m_workCellStateMachine.m_transform.translation.z);
+    
+    tf2::Transform wc_tf_world(wc_rot, wc_t);
+    tf2::Transform world_tf_wc = wc_tf_world.inverse();
+    
+
     for (auto it = m_workCellStateMachine.m_queue_manager.m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager.m_queue_points.end(); it++)
     {
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
@@ -152,9 +167,24 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         //     }
         // }
 
+        //transform queue point to world space
+        
+        tf2::Quaternion queue_q;
+        
+        queue_q.setW(it->transform.rotation.w);
+        queue_q.setX(it->transform.rotation.x);
+        queue_q.setY(it->transform.rotation.y);
+        queue_q.setZ(it->transform.rotation.z);
+
+        tf2::Matrix3x3 queue_rot(queue_q);
+        tf2::Vector3 queue_t(it->transform.translation.x, it->transform.translation.y, it->transform.translation.z);
+        tf2::Transform queue_tf_wc(queue_rot, queue_t);
+        tf2::Vector3 queueToMap = wc_tf_world * queue_t;
+
+
         for(int x = -moveRange; x < moveRange; x++){
             for(int y = -moveRange; y < moveRange; y++){
-                if(carrier_costmap->worldToMap(it->transform.translation.x, it->transform.translation.y, mx,my)){
+                if(carrier_costmap->worldToMap(queueToMap.getX(), queueToMap.getY(), mx,my)){
                     if(mx + x < carrier_costmap->getSizeInCellsX() || my +y < carrier_costmap->getSizeInCellsY()){
                         current_cost = carrier_costmap->getCost(mx+x,my+y);
                         if(cheapest_cost > current_cost){
@@ -172,24 +202,12 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         
         carrier_costmap->mapToWorld(cheapest_point.first, cheapest_point.second, wx, wy);
 
-        tf2::Quaternion q;
-        
-        q.setW(m_workCellStateMachine.m_transform.rotation.w);
-        q.setX(m_workCellStateMachine.m_transform.rotation.x);
-        q.setY(m_workCellStateMachine.m_transform.rotation.y);
-        q.setZ(m_workCellStateMachine.m_transform.rotation.z);
-        tf2::Matrix3x3 rot(q);
-
-        tf2::Vector3 t(m_workCellStateMachine.m_transform.translation.x, m_workCellStateMachine.m_transform.translation.y, m_workCellStateMachine.m_transform.translation.z);
-
-        tf2::Transform tf(rot, t);
-        tf2::Transform tf_inv =  tf.inverse();
-        
+        //calc queue pose in work_cell space
         tf2::Vector3 queue_translation(wx, wy, 0.0);
-        tf2::Vector3 queueToMap = tf_inv * queue_translation;
+        tf2::Vector3 queue_to_wc = world_tf_wc * queue_translation;
 
-        it->transform.translation.x = queueToMap.getX();
-        it->transform.translation.y = queueToMap.getY();
+        it->transform.translation.x = queue_to_wc.getX();
+        it->transform.translation.y = queue_to_wc.getY();
         queueMapPoint = cheapest_point;
         it->lastTime = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds();
         }
