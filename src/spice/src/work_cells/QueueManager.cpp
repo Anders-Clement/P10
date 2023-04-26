@@ -1,7 +1,7 @@
 #include "spice/work_cells/queue_manager.hpp"
 #include "spice/work_cells/work_cell_state_machine.hpp"
 
-void QueueManager::initialize_points(int num_points, geometry_msgs::msg::Transform work_cell_transform)
+void QueueManager::initialize_points(int num_points, geometry_msgs::msg::Transform work_cell_transform, double time)
 {
     m_queue_points.clear();
     // static queue positions, can be replaced with dynamic positions
@@ -12,7 +12,7 @@ void QueueManager::initialize_points(int num_points, geometry_msgs::msg::Transfo
         q_transform.translation.y =  WORKCELL_RADIUS + ROBOT_RADIUS;
         q_transform.rotation.z = 0.7071; // rotate 90 deg cc
         q_transform.rotation.w = 0.7071;
-        m_queue_points.emplace_back(q_transform, m_queue_id_counter++);
+        m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
     }
 }
 

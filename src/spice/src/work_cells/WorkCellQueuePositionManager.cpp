@@ -132,47 +132,43 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
 
     for (auto it = m_workCellStateMachine.m_queue_manager.m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager.m_queue_points.end(); it++)
     {
-       
-            
-        
-        
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         unsigned int current_cost;
         std::pair<unsigned int, unsigned int> cheapest_point;
-        std::chrono::duration<float, std::milli> diff = std::chrono::system_clock::now() - lastTime;
-        int moveRange = ceil((MAX_Q_VEL*diff.count()/1000.0)/carrier_costmap->getResolution());
+        double dt = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds() - it->lastTime; // delta time since last pos update
+        int moveRange = round((MAX_Q_VEL*dt)/carrier_costmap->getResolution());
         //RCLCPP_WARN(get_logger(), "move range: %d",moveRange);
         unsigned int mx, my;
         double wx, wy;
         std::pair<unsigned int, unsigned int> queueMapPoint;
 
-        if(!it->occupied){
+        if(!it->occupied && moveRange > 0){
         
-        for(auto point : viable_points){
-            unsigned char current_cost = carrier_costmap->getCost(point.first,point.second);
-            if(cheapest_cost > current_cost){
-                cheapest_point = point;
-                cheapest_cost = current_cost;
-            }
-        }
-
-        // for(int x = -moveRange; x < moveRange; x++){
-        //     for(int y = -moveRange; y < moveRange; y++){
-        //         if(carrier_costmap->worldToMap(m_workCellStateMachine.m_q_transforms[i].translation.x, m_workCellStateMachine.m_q_transforms[i].translation.y, mx,my)){
-        //             if(mx + x < carrier_costmap->getSizeInCellsX() || my +y < carrier_costmap->getSizeInCellsY()){
-        //                 current_cost = carrier_costmap->getCost(mx+x,my+y);
-        //                 if(cheapest_cost > current_cost){
-        //                     carrier_costmap->mapToWorld(mx+x,my+y,wx,wy);
-        //                     if(pnpoly(world_corners.size(), world_corners_x, world_corners_y, wx, wy)){
-        //                         cheapest_cost = current_cost;
-        //                         cheapest_point = {mx+x,my+y};
-        //                     }
-
-        //                 }
-        //             }
-        //         }
+        // for(auto point : viable_points){
+        //     unsigned char current_cost = carrier_costmap->getCost(point.first,point.second);
+        //     if(cheapest_cost > current_cost){
+        //         cheapest_point = point;
+        //         cheapest_cost = current_cost;
         //     }
         // }
+
+        for(int x = -moveRange; x < moveRange; x++){
+            for(int y = -moveRange; y < moveRange; y++){
+                if(carrier_costmap->worldToMap(it->transform.translation.x, it->transform.translation.y, mx,my)){
+                    if(mx + x < carrier_costmap->getSizeInCellsX() || my +y < carrier_costmap->getSizeInCellsY()){
+                        current_cost = carrier_costmap->getCost(mx+x,my+y);
+                        if(cheapest_cost > current_cost){
+                            carrier_costmap->mapToWorld(mx+x,my+y,wx,wy);
+                            if(pnpoly(world_corners.size(), world_corners_x, world_corners_y, wx, wy)){
+                                cheapest_cost = current_cost;
+                                cheapest_point = {mx+x,my+y};
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
         
         carrier_costmap->mapToWorld(cheapest_point.first, cheapest_point.second, wx, wy);
 
@@ -195,8 +191,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         it->transform.translation.x = queueToMap.getX();
         it->transform.translation.y = queueToMap.getY();
         queueMapPoint = cheapest_point;
-        
-
+        it->lastTime = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds();
         }
         else{
             if(carrier_costmap->worldToMap(it->transform.translation.x + m_workCellStateMachine.m_transform.translation.x, it->transform.translation.y + m_workCellStateMachine.m_transform.translation.y,mx,my));
@@ -206,11 +201,12 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         inflateCostMap(1, carrier_costmap, QUEUE_REP_SLOPE); // Inflate queueu in costmap
         attraction(carrier_costmap, QUEUE_ATT_SLOPE, queueMapPoint); //add attraction to local queue points
         m_workCellStateMachine.publish_transform();
+        
     }
     publish_costmap(carrier_costmap);
 
     m_mutex.unlock();
-    lastTime = std::chrono::system_clock::now();
+    
     return;
 }
 

@@ -50,8 +50,8 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msg
     
     m_entry_transform.translation.x = -STEP_DISTANCE;
     m_exit_transform.translation.x = STEP_DISTANCE;
-    
-    m_queue_manager.initialize_points(3, m_transform);
+    double time = m_nodehandle.get_clock()->now().seconds();
+    m_queue_manager.initialize_points(3, m_transform, time);
 
     m_current_state = WORK_CELL_STATE::STARTUP;
     m_states = {
