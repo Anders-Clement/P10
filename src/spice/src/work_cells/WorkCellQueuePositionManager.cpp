@@ -10,20 +10,20 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
 
     try
     {
-        if(!m_workCellStateMachine.m_nodehandle.get_parameter_or("work_cell_rep_slope", 0.0)) // this if should make the try redundant
-        {
+        //if(!m_workCellStateMachine.m_nodehandle.get_parameter_or("work_cell_rep_slope", 0.0)) // this if should make the try redundant
+        //{
             m_workCellStateMachine.m_nodehandle.declare_parameter("work_cell_rep_slope", 0.05);
             m_workCellStateMachine.m_nodehandle.declare_parameter("carrier_bot_rep_slope", 0.1);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("wall_rep_slope", 0.15);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("queue_rep_slope", 0.2);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("wall_rep_slope", 0.1);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("queue_rep_slope", 0.1);
             m_workCellStateMachine.m_nodehandle.declare_parameter("work_cell_att_slope", 0.05);
             m_workCellStateMachine.m_nodehandle.declare_parameter("queue_att_slope", 0.0);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("map", "");
-        }
+            m_workCellStateMachine.m_nodehandle.declare_parameter("map", "A4.yaml");
+        //}
     }
     catch(rclcpp::exceptions::ParameterAlreadyDeclaredException &e)
     {
-        RCLCPP_WARN(get_logger(), "[debug] params already declared?");
+        //RCLCPP_WARN(get_logger(), "[debug] params already declared?");
     }
 
     WORK_CELL_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("work_cell_rep_slope").get_parameter_value().get<float>();
@@ -57,12 +57,12 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
     // polygon corners in world coordinates:
         
     if(MAP_NAME == "A4.yaml"){ // for A4:
-        world_corners.push_back({2.6586, -0.8671}); // mid mid
-        world_corners.push_back({2.4185, -3.6402}); // top mid
-        world_corners.push_back({-1.7283, -3.5899}); // top right
-        world_corners.push_back({-1.5848, 2.0436}); // bottom right
-        world_corners.push_back({6.9987, 1.7771}); // bottom left
-        world_corners.push_back({7.0078, -0.6922}); // mid left
+        world_corners.push_back({2.85, -1.07}); // mid mid
+        world_corners.push_back({2.63, -3.73}); // top mid
+        world_corners.push_back({-1.81, -3.68}); // top right
+        world_corners.push_back({-1.63, 2.12}); // bottom right
+        world_corners.push_back({7.13, 1.92}); // bottom left
+        world_corners.push_back({7.08, -0.85}); // mid left
     }
     else if(MAP_NAME == "C4.yaml"){ // for C4:
         world_corners.push_back({20.78, 8.91}); //gr window left
@@ -75,7 +75,7 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
         world_corners.push_back({16.98, 9.07}); // gr door west
     }
     else{
-        RCLCPP_ERROR(get_logger(), "[WorkCellQueuePositionManager] %s got no map", m_workCellStateMachine.m_work_cell_name.c_str());
+        RCLCPP_ERROR(get_logger(), "[WorkCellQueuePositionManager] %s did not get a map", m_workCellStateMachine.m_work_cell_name.c_str());
     }
     //std::vector<float> world_corners_x({2.4185,-1.7283,-1.5848,6.9987,7.0078,2.6586});
     //std::vector<float> world_corners_y({-3.6402,-3.5899,-2.0436,1.7771,-0.6922,-0.8671});
