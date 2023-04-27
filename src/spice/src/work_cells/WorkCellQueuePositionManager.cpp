@@ -250,8 +250,8 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
         it->lastTime = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds();
         }
         else{
-            if(carrier_costmap->worldToMap(it->transform.translation.x + m_workCellStateMachine.m_transform.translation.x, it->transform.translation.y + m_workCellStateMachine.m_transform.translation.y,mx,my));
-            queueMapPoint = {mx,my};
+            if(carrier_costmap->worldToMap(it->transform.translation.x + m_workCellStateMachine.m_transform.translation.x, it->transform.translation.y + m_workCellStateMachine.m_transform.translation.y,mx,my))
+                queueMapPoint = {mx,my};
         }
         costpoints = {queueMapPoint};
         inflateCostMap(1, carrier_costmap, QUEUE_REP_SLOPE); // Inflate queueu in costmap
@@ -263,6 +263,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
 
     m_mutex.unlock();
     return;
+    }
 }
 
 void WorkCellQueuePositionManager::timer_update_robots_lists(){
