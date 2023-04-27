@@ -9,6 +9,7 @@ CentralPathPlanner::CentralPathPlanner() : Node("central_path_planner_node")
     m_planner_service = create_service<spice_msgs::srv::GetPlan>(
         "/get_plan", 
         std::bind(&CentralPathPlanner::get_plan_cb, this, std::placeholders::_1, std::placeholders::_2));
+    m_plan_pub = create_publisher<spice_msgs::msg::RobotPlan>("/robot_plans", 10);
     m_marker_array_publisher = create_publisher<visualization_msgs::msg::MarkerArray>("/planned_paths", 10);
     m_debug_publish_timer = rclcpp::create_timer(this, 
                                                 get_clock(), 
@@ -110,6 +111,11 @@ void CentralPathPlanner::get_plan_cb(
 
     RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s. Wait: %d", 
         response->plan.poses.size(), duration, planner_type.c_str(), response->wait);
+
+    spice_msgs::msg::RobotPlan msg;
+    msg.id = request->id;
+    msg.plan = response->plan;
+    m_plan_pub->publish(msg);
 }
 
 

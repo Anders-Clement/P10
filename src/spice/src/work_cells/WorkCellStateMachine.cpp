@@ -9,8 +9,8 @@
 
 using namespace std::chrono_literals;
 
-WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, rclcpp::Node& node_handle, 
-        geometry_msgs::msg::Transform transform, spice_msgs::msg::RobotType::_type_type robot_type)
+WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, spice_msgs::msg::RobotType::_type_type robot_type, 
+    rclcpp::Node& node_handle, geometry_msgs::msg::Transform transform)
 :  m_nodehandle(node_handle), m_work_cell_name(work_cell_name), m_robot_type(robot_type), m_transform(transform)
 {
     // m_nodehandle.declare_parameter("robot_radius",rclcpp::ParameterValue(0.25));
@@ -51,8 +51,7 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, rclcpp::N
     m_entry_transform.translation.x = -STEP_DISTANCE;
     m_exit_transform.translation.x = STEP_DISTANCE;
     double time = m_nodehandle.get_clock()->now().seconds();
-    m_queue_manager = std::make_unique<QueueManager>(m_nodehandle, m_work_cell_name);
-    m_queue_manager->initialize_points(3, time);
+    m_queue_manager.initialize_points(3, m_transform, time);
 
     m_current_state = WORK_CELL_STATE::STARTUP;
     m_states = {
@@ -143,7 +142,7 @@ void WorkCellStateMachine::on_register_work(
     RCLCPP_INFO(m_nodehandle.get_logger(), "On register work from %s", request->robot_id.id.c_str());
     // TODO: do we want to implement simulated checks for work compatibility, queue length etc?
 
-    auto queue_point_opt = m_queue_manager->get_queue_point();
+    auto queue_point_opt = m_queue_manager.get_queue_point();
     if(!queue_point_opt)
     {
         RCLCPP_INFO(m_nodehandle.get_logger(), "Failed to register work due to no space in queue");
@@ -156,7 +155,6 @@ void WorkCellStateMachine::on_register_work(
     carrier_robot robot(queue_point, request->work, request->robot_id, m_nodehandle.now());
     m_enqueued_robots.push_back(robot);
     response->work_is_enqueued = true;
-    response->queue_id = queue_point->id;
     
     response->queue_pose.pose = transform_to_map(queue_point->transform, m_transform);
     response->queue_pose.header.frame_id = "map";
@@ -249,7 +247,7 @@ void WorkCellStateMachine::check_robot_heartbeat_cb()
             RCLCPP_WARN(get_logger(), "Heartbeat timeout on enqueued robot: %s", it->robot_id.id.c_str());
             auto to_delete = it;
             it++;
-            m_queue_manager->free_queue_point(to_delete->queue_point);
+            m_queue_manager.free_queue_point(to_delete->queue_point);
             m_enqueued_robots.erase(to_delete);
         }
         else {
@@ -355,7 +353,7 @@ void WorkCellStateMachine::publish_transform()
     m_tf_static_broadcaster->sendTransform(t);
 
     // publish queue positions
-    auto queue_transforms = m_queue_manager->get_queue_point_transforms();
+    auto queue_transforms = m_queue_manager.get_queue_point_transforms();
     for (size_t i = 0; i < queue_transforms.size(); i++)
     {   
         t.transform = queue_transforms[i];
@@ -379,9 +377,9 @@ spice_msgs::msg::RobotState WorkCellStateMachine::internal_state_to_robot_state(
     {
         robot_state.state = spice_msgs::msg::RobotState::WC_READY_FOR_ROBOTS;
     }
-    int num_queue_points = m_queue_manager->m_queue_points.size();
+    int num_queue_points = m_queue_manager.m_queue_points.size();
     int used_points = 0;
-    for(auto it = m_queue_manager->m_queue_points.begin(); it != m_queue_manager->m_queue_points.end(); it++)
+    for(auto it = m_queue_manager.m_queue_points.begin(); it != m_queue_manager.m_queue_points.end(); it++)
     {
         if(it->occupied)
             used_points++;
@@ -403,7 +401,7 @@ void WorkCellStateMachine::release_robot()
 {
     if(m_current_robot_work)
     {
-        m_queue_manager->free_queue_point(m_current_robot_work->queue_point);
+        m_queue_manager.free_queue_point(m_current_robot_work->queue_point);
         m_current_robot_work.reset();
     }
     else

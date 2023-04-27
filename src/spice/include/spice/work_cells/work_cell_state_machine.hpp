@@ -70,8 +70,8 @@ class WorkCellQueuePositionManager;
 class WorkCellStateMachine
 {
 public:
-    WorkCellStateMachine(std::string work_cell_name, rclcpp::Node& node_handle, 
-        geometry_msgs::msg::Transform transform, spice_msgs::msg::RobotType::_type_type robot_type);
+    WorkCellStateMachine(std::string work_cell_name, spice_msgs::msg::RobotType::_type_type robot_type, 
+        rclcpp::Node& node_handle, geometry_msgs::msg::Transform transform);
     void change_state(WORK_CELL_STATE new_state);
     void activate_heartbeat();
     void deactivate_heartbeat();
@@ -87,7 +87,7 @@ public:
     std::shared_ptr<rclcpp::Client<std_srvs::srv::Trigger>> m_done_processing_client;
     std::unique_ptr<carrier_robot> m_current_robot_work;
     std::string m_work_cell_name;
-    std::unique_ptr<QueueManager> m_queue_manager;
+    QueueManager m_queue_manager;
     geometry_msgs::msg::Transform m_transform;
 
 private:
