@@ -180,6 +180,15 @@ public:
     {
         try
         {
+            declare_parameter("work_cell_rep_slope", 0.05);
+            declare_parameter("carrier_bot_rep_slope", 0.1);
+            declare_parameter("wall_rep_slope", 0.1);
+            declare_parameter("plan_rep_slope", 0.1);
+            declare_parameter("queue_rep_slope", 0.1);
+            declare_parameter("work_cell_att_slope", 0.05);
+            declare_parameter("queue_att_slope", 0.0);
+            declare_parameter("min_move_dist", 5);
+            declare_parameter("q_max_vel", 0.33);
             declare_parameter("map", "");
         }
         catch(rclcpp::exceptions::ParameterAlreadyDeclaredException &e)

@@ -7,31 +7,7 @@ using namespace std::chrono_literals;
 WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine& workCellStateMachine) : m_workCellStateMachine(workCellStateMachine){
     
     lastTime = std::chrono::system_clock::now();
-
-    try
-    {
-        //if(!m_workCellStateMachine.m_nodehandle.get_parameter_or("work_cell_rep_slope", 0.0)) // this if should make the try redundant
-        //{
-            m_workCellStateMachine.m_nodehandle.declare_parameter("work_cell_rep_slope", 0.05);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("carrier_bot_rep_slope", 0.1);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("wall_rep_slope", 0.1);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("plan_rep_slope", 0.1);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("queue_rep_slope", 0.1);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("work_cell_att_slope", 0.05);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("queue_att_slope", 0.0);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("min_move_dist", 5);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("q_max_vel", 0.33);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("map", "");
-
-        //}
-    }
-    catch(rclcpp::exceptions::ParameterAlreadyDeclaredException &e)
-    {
-        //RCLCPP_WARN(get_logger(), "[debug] params already declared?");
-    }
-
-
-
+  
     WORK_CELL_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("work_cell_rep_slope").get_parameter_value().get<float>();
     CARRIER_BOT_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("carrier_bot_rep_slope").get_parameter_value().get<float>();
     WALL_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("wall_rep_slope").get_parameter_value().get<float>();
