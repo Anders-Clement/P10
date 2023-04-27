@@ -47,7 +47,9 @@ def generate_launch_description():
                         {'queue_rep_slope': 0.1}, # other queue point repulsion
                         {'work_cell_att_slope':  0.05}, # own workcell attraction
                         {'queue_att_slope': 0.0}, #own lower queue point attraction
-                        {'map': map_name}
+                        {'map': map_name},
+                        {'min_move_dist': 5},
+                        {'q_max_vel': 0.33}
             ]
         ),
 

@@ -15,16 +15,21 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
             m_workCellStateMachine.m_nodehandle.declare_parameter("work_cell_rep_slope", 0.05);
             m_workCellStateMachine.m_nodehandle.declare_parameter("carrier_bot_rep_slope", 0.1);
             m_workCellStateMachine.m_nodehandle.declare_parameter("wall_rep_slope", 0.1);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("plan_rep_slope", 0.1);
             m_workCellStateMachine.m_nodehandle.declare_parameter("queue_rep_slope", 0.1);
             m_workCellStateMachine.m_nodehandle.declare_parameter("work_cell_att_slope", 0.05);
             m_workCellStateMachine.m_nodehandle.declare_parameter("queue_att_slope", 0.0);
             m_workCellStateMachine.m_nodehandle.declare_parameter("map", "A4.yaml");
+            m_workCellStateMachine.m_nodehandle.declare_parameter("min_move_dist", 5);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("q_max_vel", 0.33);
         //}
     }
     catch(rclcpp::exceptions::ParameterAlreadyDeclaredException &e)
     {
         //RCLCPP_WARN(get_logger(), "[debug] params already declared?");
     }
+
+
 
     WORK_CELL_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("work_cell_rep_slope").get_parameter_value().get<float>();
     CARRIER_BOT_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("carrier_bot_rep_slope").get_parameter_value().get<float>();
@@ -33,6 +38,10 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
     WORK_CELL_ATT_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("work_cell_att_slope").get_parameter_value().get<float>();
     QUEUE_ATT_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("queue_att_slope").get_parameter_value().get<float>();
     MAP_NAME = m_workCellStateMachine.m_nodehandle.get_parameter("map").get_parameter_value().get<std::string>();
+
+    MIN_MOVE_DIST = m_workCellStateMachine.m_nodehandle.get_parameter("min_move_dist").get_parameter_value().get<unsigned int>();
+    MAX_Q_VEL = m_workCellStateMachine.m_nodehandle.get_parameter("q_max_vel").get_parameter_value().get<float>();
+
 
     m_timer_q =  m_workCellStateMachine.m_nodehandle.create_wall_timer(0.1s, std::bind(&WorkCellQueuePositionManager::timer_update_q_locations, this));
     m_timer_robots_lists = m_workCellStateMachine.m_nodehandle.create_wall_timer(2s, std::bind(&WorkCellQueuePositionManager::timer_update_robots_lists, this));
@@ -50,6 +59,12 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
         "/map",
         rclcpp::QoS(rclcpp::QoSInitialization(qos_profile_TL.history, 10), qos_profile_TL),
         std::bind(&WorkCellQueuePositionManager::global_costmap_cb, this, std::placeholders::_1)
+    );
+
+    m_plans_subscriber = m_workCellStateMachine.m_nodehandle.create_subscription<spice_msgs::msg::RobotPlan>(
+        "/robot_plans",
+        10,
+        std::bind(&WorkCellQueuePositionManager::plans_cb, this, std::placeholders::_1)
     );
 
     m_costmapPub =  m_workCellStateMachine.m_nodehandle.create_publisher<nav_msgs::msg::OccupancyGrid>("/queue_costmap/"+ m_workCellStateMachine.m_work_cell_name, 10);
@@ -110,40 +125,20 @@ void WorkCellQueuePositionManager::global_costmap_cb(nav_msgs::msg::OccupancyGri
     inflateCostMap(1, m_global_costmap, WALL_REP_SLOPE); //inflate cost of static map obstacles
 }
 
-void WorkCellQueuePositionManager::timer_update_q_locations(){
-     //RCLCPP_INFO(get_logger, "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
-    if(!workcell_costmap || workcell_list.size()== 0)
+ void WorkCellQueuePositionManager::plans_cb(spice_msgs::msg::RobotPlan::SharedPtr msg){
+    m_all_robot_plans[msg->id.id] = msg->plan;
+ }
+
+void WorkCellQueuePositionManager::timer_update_q_locations()
     {
-        //RCLCPP_WARN(get_logger, "did not get costmap or workcells for queue");
-        return;
-    }
-    m_mutex.lock();
-    std::shared_ptr<nav2_costmap_2d::Costmap2D> carrier_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*workcell_costmap);
-
-    // find coordinates of all carrier bots
-    std::vector<std::pair<unsigned int, unsigned int>> carriers_map_coords;
-    for (auto const &carrier : carrier_list)
+        // RCLCPP_INFO(get_logger, "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
+        if (!workcell_costmap || workcell_list.size() == 0)
         {
-            // if(carrier.id.id == queueing_robot){
-            //     continue;
-            // }
-            try
-            {
-                unsigned int map_x_coord, map_y_coord;
-                auto carrier_tf = tf_buffer_->lookupTransform("map", carrier.id.id+"_base_link", tf2::TimePointZero);
-                m_global_costmap->worldToMap(carrier_tf.transform.translation.x, carrier_tf.transform.translation.y, map_x_coord, map_y_coord);
-                carriers_map_coords.push_back({map_x_coord, map_y_coord});
-            }
-            catch (const tf2::TransformException &ex)
-            {
-                RCLCPP_WARN(get_logger(), "[update_q_location] failed transform");
-                continue;
-            }
+            // RCLCPP_WARN(get_logger, "did not get costmap or workcells for queue");
+            return;
         }
-    
-    costpoints = carriers_map_coords;
-    inflateCostMap(1,carrier_costmap, CARRIER_BOT_REP_SLOPE); // infalte Carrier_bot cost
-
+        m_mutex.lock();
+        
     //setup transforms between world and workcell
      tf2::Quaternion wc_q;
         
@@ -157,12 +152,61 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
     
     tf2::Transform wc_tf_world(wc_rot, wc_t);
     tf2::Transform world_tf_wc = wc_tf_world.inverse();
-    
 
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> carrier_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*workcell_costmap);
+    
     for (auto it = m_workCellStateMachine.m_queue_manager.m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager.m_queue_points.end(); it++)
     {
+        // find coordinates of all carrier bots
+        std::vector<std::pair<unsigned int, unsigned int>> carriers_map_coords;
+        for (auto const &carrier : carrier_list)
+        {
+            if (it->occupied)
+            {
+                if (carrier.id.id == it->queued_robot.id)
+                {
+                    continue;
+                }
+            }
+            try
+            {
+                unsigned int map_x_coord, map_y_coord;
+                auto carrier_tf = tf_buffer_->lookupTransform("map", carrier.id.id+"_base_link", tf2::TimePointZero);
+                m_global_costmap->worldToMap(carrier_tf.transform.translation.x, carrier_tf.transform.translation.y, map_x_coord, map_y_coord);
+                carriers_map_coords.push_back({map_x_coord, map_y_coord});
+            }
+            catch (const tf2::TransformException &ex)
+            {
+                RCLCPP_WARN(get_logger(), "[update_q_location] failed transform");
+                continue;
+            }
+        }
+        costpoints = carriers_map_coords;
+        inflateCostMap(1,carrier_costmap, CARRIER_BOT_REP_SLOPE); // infalte Carrier_bot cost
+
+        costpoints.clear();
+        for (auto robot_plan = m_all_robot_plans.begin(); robot_plan != m_all_robot_plans.end(); robot_plan++)
+        {
+            if (it->occupied)
+            {
+                if (robot_plan->first == it->queued_robot.id)
+                {
+                    continue;
+                }
+            }
+            unsigned int mx, my;
+            for (auto pose : m_all_robot_plans[robot_plan->first].poses)
+            {
+                if (carrier_costmap->worldToMap(pose.pose.position.x, pose.pose.position.y, mx, my))
+                {
+                    costpoints.push_back({mx, my});
+                }
+            }
+        }
+
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         unsigned int current_cost;
+        
         std::pair<unsigned int, unsigned int> cheapest_point;
         double dt = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds() - it->lastTime; // delta time since last pos update
         int moveRange = round((MAX_Q_VEL*dt)/carrier_costmap->getResolution());
@@ -170,8 +214,8 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         unsigned int mx, my;
         double wx, wy;
         std::pair<unsigned int, unsigned int> queueMapPoint;
-
-        if(!it->occupied && moveRange > 0){
+        
+        if(moveRange > MIN_MOVE_DIST){
         
         // for(auto point : viable_points){
         //     unsigned char current_cost = carrier_costmap->getCost(point.first,point.second);
@@ -239,11 +283,10 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         attraction(carrier_costmap, QUEUE_ATT_SLOPE, queueMapPoint); //add attraction to local queue points
         m_workCellStateMachine.publish_transform();
         
+        publish_costmap(carrier_costmap);
     }
-    publish_costmap(carrier_costmap);
 
     m_mutex.unlock();
-    
     return;
 }
 
@@ -278,7 +321,18 @@ void WorkCellQueuePositionManager::timer_update_robots_lists(){
     auto get_carriers_cb = [this](ServiceResponseFuture future)
     { 
         carrier_list = future.get()->robots;
+
+        for (auto robot_plan = m_all_robot_plans.begin(); robot_plan != m_all_robot_plans.end(); robot_plan++)
+        {
+            for(auto carrier: carrier_list){
+                if(carrier.id.id == robot_plan->first){
+                    break;
+                }
+                m_all_robot_plans.erase(robot_plan);
+            }
+        }
     };
+
     auto futureResult_carrier = get_carriers_cli->async_send_request(get_carriers_request, get_carriers_cb);
 
     return;

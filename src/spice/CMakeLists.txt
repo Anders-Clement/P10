@@ -94,6 +94,7 @@ ament_target_dependencies(
   geometry_msgs
   tf2_ros
   nav2_costmap_2d
+  nav_msgs
 )
 
 set(CENTRAL_PLANNER_SOURCES

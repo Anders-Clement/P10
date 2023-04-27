@@ -7,6 +7,7 @@
 #include "nav_msgs/msg/path.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "spice_msgs/srv/get_plan.hpp"
+#include "spice_msgs/msg/robot_plan.hpp"
 #include "spice/planners/global_planner.hpp"
 #include "spice/costmaps/costmap.hpp"
 
@@ -38,6 +39,7 @@ private:
     std::unique_ptr<Costmap> m_prioritized_costmap;
     rclcpp::Service<spice_msgs::srv::GetPlan>::SharedPtr m_planner_service;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr m_marker_array_publisher;
+    rclcpp::Publisher<spice_msgs::msg::RobotPlan>::SharedPtr m_plan_pub;
     rclcpp::TimerBase::SharedPtr m_debug_publish_timer;
     std::unordered_map<std::string, robot_plan> m_planned_paths;
     std::string m_global_frame;
