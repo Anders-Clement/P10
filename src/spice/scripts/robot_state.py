@@ -8,7 +8,7 @@ from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action._navigate_to_pose import NavigateToPose_FeedbackMessage, NavigateToPose_Feedback
 
-from spice_msgs.msg import PlannerType
+from spice_msgs.msg import PlannerType, QueuePoints, QueuePoint
 from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell, RegisterWork, SetPlannerType, RobotReady
 
 from work_tree import WorkTree
@@ -282,6 +282,33 @@ class EnqueuedState(RobotStateTemplate):
         change_planner_type_future = self.sm.change_planner_type_client.call_async(set_planner_type_request)
         change_planner_type_future.add_done_callback(self.set_planner_cb)
 
+        current_task: AllocWorkCell.Response = self.sm.current_task
+        queue_points_topic_name = "/" + current_task.workcell_id.id + "/queue_points"
+        self.queue_points_sub = self.sm.create_subscription(
+            QueuePoints, 
+            queue_points_topic_name,
+            self.queue_points_cb,
+            10
+            )
+        
+        self.timer = self.sm.create_timer(0.1, self.check_service_cb)
+        self.timer.cancel()
+        
+    def queue_points_cb(self, msg: QueuePoints) -> None:
+        print('queue points cb')
+        for queue_point in msg.queue_points:
+            queue_point : QueuePoint = queue_point
+            current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
+            if queue_point.queue_id == current_work_cell_info.queue_id:
+                current_work_cell_info.queue_pose.pose.position.x = queue_point.queue_transform.translation.x
+                current_work_cell_info.queue_pose.pose.position.y = queue_point.queue_transform.translation.y
+                current_work_cell_info.queue_pose.pose.position.z = queue_point.queue_transform.translation.z
+                current_work_cell_info.queue_pose.pose.orientation.x = queue_point.queue_transform.rotation.x
+                current_work_cell_info.queue_pose.pose.orientation.y = queue_point.queue_transform.rotation.y
+                current_work_cell_info.queue_pose.pose.orientation.z = queue_point.queue_transform.rotation.z
+                current_work_cell_info.queue_pose.pose.orientation.w = queue_point.queue_transform.rotation.w
+                return
+
     def set_planner_cb(self, future: Future):
         result: SetPlannerType.Response = future.result()
         if not result.success:
@@ -329,9 +356,6 @@ class EnqueuedState(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.ERROR)
         robot_ready_future = self.robot_ready_client.call_async(robot_ready_request)
         robot_ready_future.add_done_callback(self.robot_ready_cb)
-
-        self.timer = self.sm.create_timer(0.1, self.check_service_cb)
-        self.timer.cancel()
 
     def on_nav_done(self, future: Future):
         nav_goal_result: GoalStatus = future.result().status
@@ -381,6 +405,7 @@ class EnqueuedState(RobotStateTemplate):
     def deinit(self):
         self.timer.destroy()
         self.srv_call_robot.destroy()
+        self.sm.destroy_subscription(self.queue_points_sub)
 
 
 class EnterWorkCellState(RobotStateTemplate):
