@@ -159,7 +159,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
     tf2::Transform world_tf_wc = wc_tf_world.inverse();
     
 
-    for (auto it = m_workCellStateMachine.m_queue_manager.m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager.m_queue_points.end(); it++)
+    for (auto it = m_workCellStateMachine.m_queue_manager->m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager->m_queue_points.end(); it++)
     {
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         unsigned int current_cost;

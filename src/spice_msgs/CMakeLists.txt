@@ -24,6 +24,8 @@ set(msg_files
   "msg/RobotType.msg"
   "msg/PlannerType.msg"
   "msg/Performance.msg"
+  "msg/QueuePoint.msg"
+  "msg/QueuePoints.msg"
 )
 
 set(srv_files

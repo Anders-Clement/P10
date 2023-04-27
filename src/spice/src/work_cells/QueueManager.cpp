@@ -1,7 +1,13 @@
 #include "spice/work_cells/queue_manager.hpp"
 #include "spice/work_cells/work_cell_state_machine.hpp"
 
-void QueueManager::initialize_points(int num_points, geometry_msgs::msg::Transform work_cell_transform, double time)
+QueueManager::QueueManager(rclcpp::Node& nodehandle, std::string work_cell_name) : m_nodehandle(nodehandle)
+{
+    m_queue_points_publisher = m_nodehandle.create_publisher<spice_msgs::msg::QueuePoints>(
+        work_cell_name + "/queue_points", 10);
+}
+
+void QueueManager::initialize_points(int num_points, double time)
 {
     m_queue_points.clear();
     // static queue positions, can be replaced with dynamic positions
@@ -14,6 +20,7 @@ void QueueManager::initialize_points(int num_points, geometry_msgs::msg::Transfo
         q_transform.rotation.w = 0.7071;
         m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
     }
+    publish_queue_points();
 }
 
 std::optional<QueuePoint*> QueueManager::get_queue_point()
@@ -47,4 +54,17 @@ std::vector<geometry_msgs::msg::Transform> QueueManager::get_queue_point_transfo
     for(auto& queue_point : m_queue_points)
         transforms.push_back(queue_point.transform);
     return transforms;
+}
+
+void QueueManager::publish_queue_points()
+{
+    spice_msgs::msg::QueuePoints msg;
+    for(auto& queue_point : m_queue_points)
+    {
+        spice_msgs::msg::QueuePoint queue_point_msg;
+        queue_point_msg.queue_transform = queue_point.transform; 
+        queue_point_msg.queue_id = queue_point.id;
+        msg.queue_points.push_back(queue_point_msg);
+    }
+    m_queue_points_publisher->publish(msg);
 }

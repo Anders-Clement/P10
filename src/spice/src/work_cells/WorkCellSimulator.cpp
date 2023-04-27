@@ -192,49 +192,30 @@ public:
             RCLCPP_WARN(get_logger(), "[WorkCellSimulator] Did not get a map");
         }
         
-
+        //std::string work_cell_name, rclcpp::Node& node_handle, 
+        //geometry_msgs::msg::Transform transform, spice_msgs::msg::RobotType::_type_type robot_type
         PositionGenerator generator(3, 3, 2, MAP_NAME);
         work_cell_state_machines = {
             std::make_shared<WorkCellStateMachine>(
                 "back_cover_cell", 
-                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, 
                 *this,
-                generator.work_cell_locations()),
+                generator.work_cell_locations(),
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER),
             std::make_shared<WorkCellStateMachine>(
-                "drill_cell", spice_msgs::msg::RobotType::WORK_CELL_DRILL, 
+                "drill_cell", 
                 *this,
-                generator.work_cell_locations()),
+                generator.work_cell_locations(),
+                spice_msgs::msg::RobotType::WORK_CELL_DRILL),
             std::make_shared<WorkCellStateMachine>(
                 "lid_cell", 
-                spice_msgs::msg::RobotType::WORK_CELL_TOP, 
                 *this,
-                generator.work_cell_locations()),
+                generator.work_cell_locations(), 
+                spice_msgs::msg::RobotType::WORK_CELL_TOP),
             std::make_shared<WorkCellStateMachine>(
                 "fuses_cell", 
-                spice_msgs::msg::RobotType::WORK_CELL_FUSES, 
                 *this,
-                generator.work_cell_locations())
-
-            /*std::make_shared<WorkCellStateMachine>(
-                 "back_cover_cell_2", 
-                 spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, 
-                 *this,
-                 generator.work_cell_locations()),
-            
-            std::make_shared<WorkCellStateMachine>(
-                "drill_cell_2", spice_msgs::msg::RobotType::WORK_CELL_DRILL, 
-                *this,
-                generator.generate_position()),
-            std::make_shared<WorkCellStateMachine>(
-                "fuses_cell_2", 
-                spice_msgs::msg::RobotType::WORK_CELL_FUSES, 
-                *this,
-                generator.generate_position()),
-            std::make_shared<WorkCellStateMachine>(
-                "lid_cell_2", 
-                spice_msgs::msg::RobotType::WORK_CELL_TOP, 
-                *this,
-                generator.generate_position())*/
+                generator.work_cell_locations(), 
+                spice_msgs::msg::RobotType::WORK_CELL_FUSES)
         };
     }
     std::string MAP_NAME;
