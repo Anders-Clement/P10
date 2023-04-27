@@ -34,6 +34,7 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
     WORK_CELL_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("work_cell_rep_slope").get_parameter_value().get<float>();
     CARRIER_BOT_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("carrier_bot_rep_slope").get_parameter_value().get<float>();
     WALL_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("wall_rep_slope").get_parameter_value().get<float>();
+    PLAN_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("plan_rep_slope").get_parameter_value().get<float>();
     QUEUE_REP_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("queue_rep_slope").get_parameter_value().get<float>();
     WORK_CELL_ATT_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("work_cell_att_slope").get_parameter_value().get<float>();
     QUEUE_ATT_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("queue_att_slope").get_parameter_value().get<float>();
@@ -203,6 +204,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
                 }
             }
         }
+        inflateCostMap(1,carrier_costmap, PLAN_REP_SLOPE);
 
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         unsigned int current_cost;
