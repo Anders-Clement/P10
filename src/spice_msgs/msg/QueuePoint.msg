@@ -1,3 +1,0 @@
-geometry_msgs/Transform queue_transform
-
-int32 queue_id

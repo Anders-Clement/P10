@@ -4,10 +4,8 @@
 #include <list>
 #include <vector>
 #include <optional>
-#include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/transform.hpp"
 #include "spice_msgs/msg/id.hpp"
-#include "spice_msgs/msg/queue_points.hpp"
 
 struct QueuePoint
 {
@@ -23,20 +21,13 @@ struct QueuePoint
 class QueueManager
 {
 public:
-    QueueManager() = delete;
-    QueueManager(rclcpp::Node& nodehandle, std::string work_cell_name);
-    void initialize_points(int num_points, double time);
+    void initialize_points(int num_points, geometry_msgs::msg::Transform work_cell_transform, double time);
     std::optional<QueuePoint*> get_queue_point();
     void free_queue_point(QueuePoint* queuepoint);
     std::vector<geometry_msgs::msg::Transform> get_queue_point_transforms();
-    void publish_queue_points();
 
-    std::list<QueuePoint> m_queue_points;
-
-private:
-    rclcpp::Node& m_nodehandle;
-    rclcpp::Publisher<spice_msgs::msg::QueuePoints>::SharedPtr m_queue_points_publisher;
     unsigned int m_queue_id_counter = 0;
+    std::list<QueuePoint> m_queue_points;
 };
 
 #endif //QUEUE_MANAGER_HPP
