@@ -180,14 +180,14 @@ public:
     {
         try
         {
-            declare_parameter("map", "A4.yaml");
+            declare_parameter("map", "");
         }
         catch(rclcpp::exceptions::ParameterAlreadyDeclaredException &e)
         {
             //RCLCPP_WARN(get_logger(), "[debug] params already declared?");
         }
         MAP_NAME = get_parameter("map").get_parameter_value().get<std::string>();
-        if(MAP_NAME == "N/A")
+        if(MAP_NAME == "")
         {
             RCLCPP_WARN(get_logger(), "[WorkCellSimulator] Did not get a map");
         }
