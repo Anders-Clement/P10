@@ -70,7 +70,7 @@ class WorkCellQueuePositionManager{
     std::vector<spice_msgs::msg::Robot> workcell_list; //list of all workcells
     std::vector<spice_msgs::msg::Robot> carrier_list; //list of all carrier robots
 
-    unsigned int MIN_MOVE_DIST;
+    int MIN_MOVE_DIST = 1;
     float MAX_Q_VEL = 0.30;
 };
 

@@ -19,9 +19,10 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
             m_workCellStateMachine.m_nodehandle.declare_parameter("queue_rep_slope", 0.1);
             m_workCellStateMachine.m_nodehandle.declare_parameter("work_cell_att_slope", 0.05);
             m_workCellStateMachine.m_nodehandle.declare_parameter("queue_att_slope", 0.0);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("map", "");
             m_workCellStateMachine.m_nodehandle.declare_parameter("min_move_dist", 5);
             m_workCellStateMachine.m_nodehandle.declare_parameter("q_max_vel", 0.33);
+            m_workCellStateMachine.m_nodehandle.declare_parameter("map", "");
+
         //}
     }
     catch(rclcpp::exceptions::ParameterAlreadyDeclaredException &e)
@@ -40,7 +41,7 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
     QUEUE_ATT_SLOPE = m_workCellStateMachine.m_nodehandle.get_parameter("queue_att_slope").get_parameter_value().get<float>();
     MAP_NAME = m_workCellStateMachine.m_nodehandle.get_parameter("map").get_parameter_value().get<std::string>();
 
-    MIN_MOVE_DIST = m_workCellStateMachine.m_nodehandle.get_parameter("min_move_dist").get_parameter_value().get<unsigned int>();
+    MIN_MOVE_DIST = m_workCellStateMachine.m_nodehandle.get_parameter("min_move_dist").get_parameter_value().get<int>();
     MAX_Q_VEL = m_workCellStateMachine.m_nodehandle.get_parameter("q_max_vel").get_parameter_value().get<float>();
 
 

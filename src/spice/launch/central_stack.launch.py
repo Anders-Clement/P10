@@ -45,12 +45,13 @@ def generate_launch_description():
                         {'carrier_bot_rep_slope': 0.1}, # carrier bot repulsion
                         {'wall_rep_slope': 0.1}, #static map obstacle repulsion
                         {'queue_rep_slope': 0.1}, # other queue point repulsion
-                         {'plan_rep_slope': 0.1}, # robot plans repulsion
+                        {'plan_rep_slope': 0.1}, # robot plans repulsion
                         {'work_cell_att_slope':  0.05}, # own workcell attraction
                         {'queue_att_slope': 0.0}, #own lower queue point attraction
-                        {'map': map_name},
                         {'min_move_dist': 5},
-                        {'q_max_vel': 0.33}
+                        {'q_max_vel': 0.33},
+                        {'map': map_name}
+
             ]
         ),
 
