@@ -41,11 +41,11 @@ amcl:
     set_initial_pose: true
     #A4
     #initial_pose: {x: 0.334819, y: 1.26002, z: 0.0, yaw: -1.53545}
-    initial_pose: {x: 2.42377, y: 1.36671, z: 0.0, yaw: -1.59121}
+    #initial_pose: {x: 2.42377, y: 1.36671, z: 0.0, yaw: -1.59121}
     #CANTEEN:
     # initial_pose: {x: 0.7, y: 0.6, z: 0.0, yaw: -0.3}
     #C4:
-    # initial_pose: {x: 18.0804, y: 7.08578, z: 0.0, yaw: 1.63992}
+    initial_pose: {x: 18.0804, y: 7.08578, z: 0.0, yaw: 1.63992}
 
 amcl_map_client:
   ros__parameters:
@@ -73,7 +73,7 @@ bt_navigator:
     enable_groot_monitoring: True
     groot_zmq_publisher_port: 1666
     groot_zmq_server_port: 1667
-    default_nav_to_pose_bt_xml: "/home/ubuntu/P10/src/spice_nav/config/behavior_trees/custom_bt_of_navigate_to_pose_w_replanning_and_recovery_with_waitcondition.xml"
+    default_nav_to_pose_bt_xml: "/home/oliver/P10/src/spice_nav/config/behavior_trees/custom_bt_of_navigate_to_pose_w_replanning_and_recovery_with_waitcondition.xml"
     plugin_lib_names:
     - NavWaitHandlerConditionNode
     - nav2_compute_path_to_pose_action_bt_node

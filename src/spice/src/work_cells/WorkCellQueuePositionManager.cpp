@@ -267,8 +267,8 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
 
     m_mutex.unlock();
     return;
-    }
 }
+
 
 void WorkCellQueuePositionManager::timer_update_robots_lists(){
     // get all workcells
