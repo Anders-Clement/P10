@@ -18,7 +18,7 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
             m_workCellStateMachine.m_nodehandle.declare_parameter("queue_rep_slope", 0.1);
             m_workCellStateMachine.m_nodehandle.declare_parameter("work_cell_att_slope", 0.05);
             m_workCellStateMachine.m_nodehandle.declare_parameter("queue_att_slope", 0.0);
-            m_workCellStateMachine.m_nodehandle.declare_parameter("map", "A4.yaml");
+            m_workCellStateMachine.m_nodehandle.declare_parameter("map", "");
         //}
     }
     catch(rclcpp::exceptions::ParameterAlreadyDeclaredException &e)
@@ -202,7 +202,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
                     signed int checkx = mx + x;
                     signed int checky = my + y;
 
-                    if(checkx < carrier_costmap->getSizeInCellsX() || checkx > 0 || checky > 0 || checky < carrier_costmap->getSizeInCellsY()){
+                    if(checkx < carrier_costmap->getSizeInCellsX() && checkx > 0 && checky > 0 && checky < carrier_costmap->getSizeInCellsY()){
                         mx = checkx;
                         my = checky;
                         current_cost = carrier_costmap->getCost(mx,my);
