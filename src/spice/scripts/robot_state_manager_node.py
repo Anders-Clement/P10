@@ -24,7 +24,7 @@ class ROBOT_STATE(enum.IntEnum):
     FIND_WORKCELL = 2
     MOVING = 3
     REGISTER_WORK = 4
-    WAIT_IN_QUEUE = 5
+    ENQUEUED = 5
     ENTER_WORKCELL = 6
     READY_FOR_PROCESS = 7
     PROCESS_DONE = 8
@@ -109,7 +109,7 @@ class RobotStateManager(Node):
             robot_state.FindWorkCell(self),
             robot_state.MovingState(self),
             robot_state.ProcessRegisterWorkState(self),
-            robot_state.ProcessWaitQueueState(self),
+            robot_state.EnqueuedState(self),
             robot_state.EnterWorkCellState(self),
             robot_state.ProcessReadyForProcessingState(self),
             robot_state.ProcessProcessingDoneState(self),
