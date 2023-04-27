@@ -262,6 +262,11 @@ void PrioritizedCostmap::inflateCostMap(int loopsLeft, int maxLoops, nav2_costma
 			{
 				for (int j = -1; j <= 1; j ++)
 				{
+					signed int checkx = it[0] + i;
+					signed int checky = it[1] + j;
+					if(checkx > costmap.getSizeInCellsX() || checkx < 0 || checky > costmap.getSizeInCellsY() || checky < 0){
+						continue;
+					}
 					mx = it[0] + i;
 					my = it[1] + j;
 					if (costmap.getCost(mx, my) < cost)

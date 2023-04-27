@@ -380,12 +380,15 @@ void WorkCellQueuePositionManager::inflateCostMap(int current_loop,  std::shared
             {
                 for (int j = -1; j <= 1; j ++)
                 {
-                    mx = it->first + i;
-                    my = it->second + j;
-                    if (mx > costmap->getSizeInCellsX() || my > costmap->getSizeInCellsY())
+                    int signed checkx = it->first + i;
+                    int signed checky = it->second + j;
+
+                    if (checkx > costmap->getSizeInCellsX() || checky > costmap->getSizeInCellsY() || checkx < 0 || checky < 0)
                     {
                         continue;
                     }
+                    mx = checkx;
+                    my = checky;
                     if (costmap->getCost(mx, my) < cost)
                     {
                         costmap->setCost(mx, my, cost);
