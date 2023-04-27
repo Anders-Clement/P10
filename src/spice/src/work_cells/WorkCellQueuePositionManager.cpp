@@ -130,10 +130,9 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
     
     tf2::Transform wc_tf_world(wc_rot, wc_t);
     tf2::Transform world_tf_wc = wc_tf_world.inverse();
-
     std::shared_ptr<nav2_costmap_2d::Costmap2D> carrier_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*workcell_costmap);
     
-    for (auto it = m_workCellStateMachine.m_queue_manager.m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager.m_queue_points.end(); it++)
+    for (auto it = m_workCellStateMachine.m_queue_manager->m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager->m_queue_points.end(); it++)
     {
         // find coordinates of all carrier bots
         std::vector<std::pair<unsigned int, unsigned int>> carriers_map_coords;
@@ -162,27 +161,24 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
         costpoints = carriers_map_coords;
         inflateCostMap(1,carrier_costmap, CARRIER_BOT_REP_SLOPE); // infalte Carrier_bot cost
 
-        costpoints.clear();
-        for (auto robot_plan = m_all_robot_plans.begin(); robot_plan != m_all_robot_plans.end(); robot_plan++)
-        {
-            if (it->occupied)
-            {
-                if (robot_plan->first == it->queued_robot.id)
-                {
-                    continue;
-                }
-            }
-            unsigned int mx, my;
-            for (auto pose : m_all_robot_plans[robot_plan->first].poses)
-            {
-                if (carrier_costmap->worldToMap(pose.pose.position.x, pose.pose.position.y, mx, my))
-                {
-                    costpoints.push_back({mx, my});
-                }
-            }
-        }
-        inflateCostMap(1,carrier_costmap, PLAN_REP_SLOPE);
+    //setup transforms between world and workcell
+     tf2::Quaternion wc_q;
+        
+    wc_q.setW(m_workCellStateMachine.m_transform.rotation.w);
+    wc_q.setX(m_workCellStateMachine.m_transform.rotation.x);
+    wc_q.setY(m_workCellStateMachine.m_transform.rotation.y);
+    wc_q.setZ(m_workCellStateMachine.m_transform.rotation.z);
+    tf2::Matrix3x3 wc_rot(wc_q);
 
+    tf2::Vector3 wc_t(m_workCellStateMachine.m_transform.translation.x, m_workCellStateMachine.m_transform.translation.y, m_workCellStateMachine.m_transform.translation.z);
+    
+    tf2::Transform wc_tf_world(wc_rot, wc_t);
+    tf2::Transform world_tf_wc = wc_tf_world.inverse();
+
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> carrier_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*workcell_costmap);
+    
+    for (auto it = m_workCellStateMachine.m_queue_manager->m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager->m_queue_points.end(); it++)
+    {
         unsigned int cheapest_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         unsigned int current_cost;
         
