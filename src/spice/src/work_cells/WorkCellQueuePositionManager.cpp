@@ -199,13 +199,18 @@ void WorkCellQueuePositionManager::timer_update_q_locations(){
         for(int x = -moveRange; x < moveRange; x++){
             for(int y = -moveRange; y < moveRange; y++){
                 if(carrier_costmap->worldToMap(queueToMap.getX(), queueToMap.getY(), mx,my)){
-                    if(mx + x < carrier_costmap->getSizeInCellsX() || my +y < carrier_costmap->getSizeInCellsY()){
-                        current_cost = carrier_costmap->getCost(mx+x,my+y);
+                    signed int checkx = mx + x;
+                    signed int checky = my + y;
+
+                    if(checkx < carrier_costmap->getSizeInCellsX() || checkx > 0 || checky > 0 || checky < carrier_costmap->getSizeInCellsY()){
+                        mx = checkx;
+                        my = checky;
+                        current_cost = carrier_costmap->getCost(mx,my);
                         if(cheapest_cost > current_cost){
-                            carrier_costmap->mapToWorld(mx+x,my+y,wx,wy);
+                            carrier_costmap->mapToWorld(mx,my,wx,wy);
                             if(pnpoly(world_corners.size(), world_corners_x, world_corners_y, wx, wy)){
                                 cheapest_cost = current_cost;
-                                cheapest_point = {mx+x,my+y};
+                                cheapest_point = {mx,my};
                             }
 
                         }
