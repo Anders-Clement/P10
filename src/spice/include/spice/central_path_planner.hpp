@@ -15,10 +15,10 @@
 
 struct robot_plan{
     nav_msgs::msg::Path plan;
+    bool waiting;
     geometry_msgs::msg::PoseStamped start;
     geometry_msgs::msg::PoseStamped goal;
     rclcpp::Time timestamp;
-
 };
 
 class Costmap;

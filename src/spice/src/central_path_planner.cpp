@@ -108,6 +108,7 @@ void CentralPathPlanner::get_plan_cb(
     auto duration = (now()-start_time).nanoseconds()*10e-9;
     m_planned_paths[request->id.id].plan = response->plan;
     m_planned_paths[request->id.id].timestamp = now();
+    m_planned_paths[request->id.id].waiting = response->wait;
 
     RCLCPP_INFO(get_logger(), "Created a plan with %ld poses in %f ms using %s. Wait: %d", 
         response->plan.poses.size(), duration, planner_type.c_str(), response->wait);
@@ -233,8 +234,27 @@ void CentralPathPlanner::debug_publish_timer_cb()
         goal_marker.header.frame_id = path.second.plan.header.frame_id;
         goal_marker.color = color;
         goal_marker.pose = path.second.goal.pose;
-
         msg.markers.push_back(goal_marker);
+
+        if(path.second.waiting)
+        {
+            visualization_msgs::msg::Marker wait_marker;
+            wait_marker.type = 2; //sphere
+            wait_marker.action = 0;
+            wait_marker.scale.x = 0.2;
+            wait_marker.pose = path.second.start.pose;
+            wait_marker.id = 2;
+            wait_marker.ns = path.first;
+            wait_marker.header.frame_id = path.second.plan.header.frame_id;
+            wait_marker.lifetime = rclcpp::Duration::from_seconds(1.0);
+            std_msgs::msg::ColorRGBA yellow;
+            yellow.a = 1.0;
+            yellow.r = 0.0;
+            yellow.g = 1.0;
+            yellow.b = 1.0;
+            wait_marker.color = yellow;
+            msg.markers.push_back(wait_marker);
+        }
     }
 
     m_marker_array_publisher->publish(std::move(msg));
