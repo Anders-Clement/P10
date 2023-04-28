@@ -264,7 +264,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
         
         publish_costmap(carrier_costmap);
     }
-
+    m_workCellStateMachine.m_queue_manager->publish_queue_points();
     m_mutex.unlock();
     return;
 }
