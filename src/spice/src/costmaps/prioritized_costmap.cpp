@@ -305,8 +305,8 @@ void PrioritizedCostmap::AddRobotsToGlobalCostmap(nav2_costmap_2d::Costmap2D& co
 			for (int i = 0; i < m_robot_points; i++)
 			{
 
-				float wx = robot_obs_tf.transform.translation.x + (ROBOT_RADIUS * std::cos(angle_increment * i));
-				float wy = robot_obs_tf.transform.translation.y + (ROBOT_RADIUS * std::sin(angle_increment * i));
+				float wx = robot_obs_tf.transform.translation.x + (ROBOT_RADIUS*2.0 * std::cos(angle_increment * i));
+				float wy = robot_obs_tf.transform.translation.y + (ROBOT_RADIUS*2.0 * std::sin(angle_increment * i));
 
 				if (costmap.worldToMap(wx, wy, mx, my))
 				{

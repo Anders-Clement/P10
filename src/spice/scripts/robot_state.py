@@ -274,6 +274,7 @@ class EnqueuedState(RobotStateTemplate):
 
         self.robot_is_ready = False
         self.robot_is_called = False
+        self.robot_is_at_queue_point = False
         self.srv_call_robot = self.sm.create_service(
                     Trigger, 'call_robot', self.call_robot_cb)
         
@@ -308,6 +309,9 @@ class EnqueuedState(RobotStateTemplate):
                 current_work_cell_info.queue_pose.pose.orientation.z = queue_point.queue_transform.rotation.z
                 current_work_cell_info.queue_pose.pose.orientation.w = queue_point.queue_transform.rotation.w
                 return
+            
+        self.robot_is_at_queue_point = False
+        self.navigate_to_queue_point()
 
     def set_planner_cb(self, future: Future):
         result: SetPlannerType.Response = future.result()
@@ -318,12 +322,13 @@ class EnqueuedState(RobotStateTemplate):
         self.navigate_to_queue_point()
 
     def navigate_to_queue_point(self):
-        nav_goal = NavigateToPose.Goal()
-        nav_goal.pose = self.sm.current_work_cell_info.queue_pose
-        self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
-            nav_goal,
-            self.sm.on_nav_feedback)
-        self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
+        if not self.robot_is_at_queue_point:
+            nav_goal = NavigateToPose.Goal()
+            nav_goal.pose = self.sm.current_work_cell_info.queue_pose
+            self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
+                nav_goal,
+                self.sm.on_nav_feedback)
+            self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
 
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
@@ -361,8 +366,8 @@ class EnqueuedState(RobotStateTemplate):
         nav_goal_result: GoalStatus = future.result().status
         #self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
+            self.robot_is_at_queue_point = True
             self.call_robot_ready_in_queue()
-            self.navigate_to_queue_point()
         else:
             self.num_navigation_erorrs += 1
             self.sm.get_logger().info(f'Failed navigation, number of tries: {self.num_navigation_erorrs}')
@@ -370,7 +375,6 @@ class EnqueuedState(RobotStateTemplate):
                 self.sm.get_logger().info(f'Too many navigation failures {self.MAX_NAVIGATION_RETRIES}, going to ERROR')
                 self.sm.change_state(ROBOT_STATE.ERROR)
                 return
-            
             self.navigate_to_queue_point()
 
     def robot_ready_cb(self, future: Future):
@@ -629,6 +633,7 @@ class ErrorState(RobotStateTemplate):
         # clear job and task tree
         self.sm.current_task = None
         self.sm.task_tree = None
+        self.sm.work_cell_heartbeat.deactivate()
         self.sm.work_cell_heartbeat = None
         
     def deinit(self):
