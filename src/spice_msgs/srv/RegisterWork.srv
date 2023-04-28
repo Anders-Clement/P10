@@ -2,6 +2,7 @@ Work work
 Id robot_id
 ---
 bool work_is_enqueued
+int32 queue_id
 geometry_msgs/PoseStamped queue_pose
 geometry_msgs/PoseStamped entry_pose
 geometry_msgs/PoseStamped processing_pose

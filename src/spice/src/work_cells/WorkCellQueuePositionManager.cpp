@@ -133,7 +133,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
 
     std::shared_ptr<nav2_costmap_2d::Costmap2D> carrier_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*workcell_costmap);
     
-    for (auto it = m_workCellStateMachine.m_queue_manager.m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager.m_queue_points.end(); it++)
+    for (auto it = m_workCellStateMachine.m_queue_manager->m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager->m_queue_points.end(); it++)
     {
         // find coordinates of all carrier bots
         std::vector<std::pair<unsigned int, unsigned int>> carriers_map_coords;
