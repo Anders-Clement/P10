@@ -254,8 +254,10 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
         it->lastTime = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds();
         }
         else{
-            if(carrier_costmap->worldToMap(it->transform.translation.x + m_workCellStateMachine.m_transform.translation.x, it->transform.translation.y + m_workCellStateMachine.m_transform.translation.y,mx,my));
-            queueMapPoint = {mx,my};
+            if(carrier_costmap->worldToMap(it->transform.translation.x + m_workCellStateMachine.m_transform.translation.x, it->transform.translation.y + m_workCellStateMachine.m_transform.translation.y,mx,my)){
+                queueMapPoint = {mx,my};
+            }
+            
         }
         costpoints = {queueMapPoint};
         inflateCostMap(1, carrier_costmap, QUEUE_REP_SLOPE); // Inflate queueu in costmap
@@ -300,14 +302,19 @@ void WorkCellQueuePositionManager::timer_update_robots_lists(){
     auto get_carriers_cb = [this](ServiceResponseFuture future)
     { 
         carrier_list = future.get()->robots;
+        std::vector<std::string> mapKeys;
 
-        for (auto robot_plan = m_all_robot_plans.begin(); robot_plan != m_all_robot_plans.end(); robot_plan++)
+        for(auto keys : m_all_robot_plans){
+            mapKeys.push_back(keys.first);
+        }
+
+        for (auto robot_plan = mapKeys.begin(); robot_plan != mapKeys.end(); robot_plan++)
         {
             for(auto carrier: carrier_list){
-                if(carrier.id.id == robot_plan->first){
+                if(carrier.id.id == *robot_plan){
                     break;
                 }
-                m_all_robot_plans.erase(robot_plan);
+                m_all_robot_plans.erase(*robot_plan);
             }
         }
     };
