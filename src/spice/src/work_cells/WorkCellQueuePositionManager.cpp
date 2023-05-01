@@ -58,14 +58,14 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
         world_corners.push_back({7.08, -0.85}); // mid left
     }
     else if(MAP_NAME == "C4.yaml"){ // for C4:
-        world_corners.push_back({20.78, 8.91}); //gr window left
-        world_corners.push_back({20.72, 6.08}); //gr window right
-        world_corners.push_back({16.91, 6.18}); //gr door tv-side
-        world_corners.push_back({16.82, 3.29}); //hall door gr-side
-        world_corners.push_back({14.92, 3.36}); //hall door south
-        world_corners.push_back({15.20, 18.33}); // hall tri-way south wall
-        world_corners.push_back({17.25, 18.30}); // hall tri-way north wall
-        world_corners.push_back({16.98, 9.07}); // gr door west
+        world_corners.push_back({21.0, 9.2}); //gr window left
+        world_corners.push_back({20.9, 6.08}); //gr window right
+        world_corners.push_back({17.1, 6.07}); //gr door tv-side
+        world_corners.push_back({16.95, 3.12}); //hall door gr-side
+        world_corners.push_back({14.5, 3.2}); //hall door south
+        world_corners.push_back({15, 18.0}); // hall tri-way south wall
+        world_corners.push_back({17.37, 18.0}); // hall tri-way north wall
+        world_corners.push_back({17.3, 9.4}); // gr door west
     }
     else{
         RCLCPP_ERROR(get_logger(), "[WorkCellQueuePositionManager] %s did not get a map", m_workCellStateMachine.m_work_cell_name.c_str());
