@@ -228,8 +228,6 @@ class ProcessRegisterWorkState(RobotStateTemplate):
         response : RegisterWork.Response = future.result()
         if response.work_is_enqueued:
             self.sm.current_work_cell_info = response
-            if self.sm.work_cell_heartbeat is not None:
-                del self.sm.work_cell_heartbeat
             self.sm.work_cell_heartbeat = HeartBeatHandler(
                 "/" + self.sm.current_task.workcell_id.id + "/heartbeat",
                 2.5,
@@ -634,7 +632,6 @@ class ErrorState(RobotStateTemplate):
         self.sm.current_task = None
         self.sm.task_tree = None
         self.sm.work_cell_heartbeat.deactivate()
-        self.sm.work_cell_heartbeat = None
         
     def deinit(self):
         self.recovery_timer.cancel()
