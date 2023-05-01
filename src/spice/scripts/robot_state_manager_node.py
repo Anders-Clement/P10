@@ -67,6 +67,8 @@ class HeartBeatHandler:
     def deactivate(self):
         self.heartbeat_timer.cancel()
         self.heartbeat_future = None
+        self.nodehandle.destroy_timer(self.heartbeat_timer)
+        self.nodehandle.destroy_client(self.heartbeat_client)
    
 
 class RobotStateManager(Node):

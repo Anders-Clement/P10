@@ -228,8 +228,6 @@ class ProcessRegisterWorkState(RobotStateTemplate):
         response : RegisterWork.Response = future.result()
         if response.work_is_enqueued:
             self.sm.current_work_cell_info = response
-            if self.sm.work_cell_heartbeat is not None:
-                del self.sm.work_cell_heartbeat
             self.sm.work_cell_heartbeat = HeartBeatHandler(
                 "/" + self.sm.current_task.workcell_id.id + "/heartbeat",
                 2.5,
@@ -582,11 +580,13 @@ class ProcessExitWorkCellState(RobotStateTemplate):
     
     def init(self):
         self.sm.get_logger().info(self.sm.id.id+  ' is done processing at ' + self.sm.current_task.workcell_id.id + ' exiting work cell')
+        self.robot_exited_client = self.sm.create_client(
+            Trigger, '/'+self.sm.current_task.workcell_id.id + "/robot_exited")
+        
         change_planner_type_request = SetPlannerType.Request()
         change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
         change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
         change_planner_type_future.add_done_callback(self.navigate_exit_cell)
-        self.sm.work_cell_heartbeat.deactivate()
 
     def navigate_exit_cell(self, future: Future):
         result: SetPlannerType.Response = future.result()
@@ -614,13 +614,28 @@ class ProcessExitWorkCellState(RobotStateTemplate):
         nav_goal_result: GoalStatus = future.result().status
         self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
-            self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)
+            self.call_robot_exited_cell()
         else:
             self.sm.current_task = None
             self.sm.change_state(ROBOT_STATE.ERROR)
 
+    def call_robot_exited_cell(self):
+        robot_exited_request = Trigger.Request()
+        robot_exited_future = self.robot_exited_client.call_async(robot_exited_request)
+        robot_exited_future.add_done_callback(self.robot_exited_cb)
+
+    def robot_exited_cb(self, future: Future):
+        result: Trigger.Response = future.result()
+        if result.success:
+            self.sm.work_cell_heartbeat.deactivate()
+            self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)
+        else:
+            self.sm.get_logger().warn(
+                f"Call to {'/'+self.sm.current_task.workcell_id.id + '/robot_exited'} failed, workcell may be in invalid state, retrying")
+            self.call_robot_exited_cell()
+
     def deinit(self):
-        pass
+        self.robot_exited_client.destroy()
 
 class ErrorState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
@@ -634,7 +649,6 @@ class ErrorState(RobotStateTemplate):
         self.sm.current_task = None
         self.sm.task_tree = None
         self.sm.work_cell_heartbeat.deactivate()
-        self.sm.work_cell_heartbeat = None
         
     def deinit(self):
         self.recovery_timer.cancel()
