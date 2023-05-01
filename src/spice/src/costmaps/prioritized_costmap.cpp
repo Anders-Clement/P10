@@ -301,18 +301,24 @@ void PrioritizedCostmap::AddRobotsToGlobalCostmap(nav2_costmap_2d::Costmap2D& co
 				costmap.setCost(mx, my, nav2_costmap_2d::LETHAL_OBSTACLE);
 			}
 
-			double angle_increment = 2.0 * M_PI / m_robot_points;
-			for (int i = 0; i < m_robot_points; i++)
-			{
+		double angle_increment = 2.0 * M_PI / m_robot_points;
 
-				float wx = robot_obs_tf.transform.translation.x + (ROBOT_RADIUS*2.0 * std::cos(angle_increment * i));
-				float wy = robot_obs_tf.transform.translation.y + (ROBOT_RADIUS*2.0 * std::sin(angle_increment * i));
-
-				if (costmap.worldToMap(wx, wy, mx, my))
+		for (int y = -2 * ROBOT_RADIUS; y <= 2 * ROBOT_RADIUS; y++)
+		{
+				for (int x = -2 * ROBOT_RADIUS; x <= 2 * ROBOT_RADIUS; x++)
 				{
-					costmap.setCost(mx, my, nav2_costmap_2d::LETHAL_OBSTACLE);
+
+					if (x * x + y * y <= 2 * ROBOT_RADIUS * 2 * ROBOT_RADIUS)
+					{
+						signed int checkx = mx + x;
+						signed int checky = my + y;
+						if (checkx < 0 || checky < 0 || checkx > costmap.getSizeInCellsX() || checky > costmap.getSizeInCellsY())
+						{
+							costmap.setCost(mx + x, my + y, nav2_costmap_2d::LETHAL_OBSTACLE);
+						}
+					}
 				}
-			}
+		}
 		}
 		catch (const tf2::TransformException &ex)
 		{
