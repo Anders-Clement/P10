@@ -101,9 +101,6 @@ private:
     void on_robot_ready_in_queue(
         const std::shared_ptr<spice_msgs::srv::RobotReady::Request> request,
         std::shared_ptr<spice_msgs::srv::RobotReady::Response> response);
-    void on_robot_exited(
-        const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
-        std::shared_ptr<std_srvs::srv::Trigger::Response> response);
     void on_robot_heartbeat(
         const std::shared_ptr<spice_msgs::srv::Heartbeat::Request> request,
         std::shared_ptr<spice_msgs::srv::Heartbeat::Response> response);
@@ -133,7 +130,6 @@ private:
     std::shared_ptr<rclcpp::Service<spice_msgs::srv::RegisterWork>> m_register_work_service;
     std::shared_ptr<rclcpp::Service<spice_msgs::srv::RobotReady>> m_robot_ready_in_queue_service;
     std::shared_ptr<rclcpp::Service<std_srvs::srv::Trigger>> m_robot_ready_for_processing_service;
-    std::shared_ptr<rclcpp::Service<std_srvs::srv::Trigger>> m_robot_exited_service;
     std::shared_ptr<rclcpp::Service<spice_msgs::srv::Heartbeat>> m_heartbeat_service;
     std::shared_ptr<rclcpp::Publisher<spice_msgs::msg::RobotStateTransition>> m_state_transition_event_pub;
     std::list<carrier_robot> m_enqueued_robots;

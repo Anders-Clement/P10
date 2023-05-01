@@ -19,15 +19,9 @@ public:
     virtual void on_robot_ready_for_processing(
         const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
         std::shared_ptr<std_srvs::srv::Trigger::Response> response) 
-    {
-        response->success = false;
-    }
-    virtual void on_robot_exited(
-        const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
-        std::shared_ptr<std_srvs::srv::Trigger::Response> response)
-    {
-        response->success = false;
-    }
+        {
+            response->success = false;
+        }
 };
 
 class StartupState : public WorkCellState
@@ -86,11 +80,9 @@ public:
     RobotExitingState(WorkCellStateMachine& sm);
     void init() override;
     void deinit() override;
-    void on_robot_exited(
-        const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
-        std::shared_ptr<std_srvs::srv::Trigger::Response> response) override;
 private:
     WorkCellStateMachine& m_sm;
+    rclcpp::TimerBase::SharedPtr m_timer;
 };
 
 

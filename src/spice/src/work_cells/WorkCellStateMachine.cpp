@@ -30,8 +30,6 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, rclcpp::N
     m_heartbeat_service = m_nodehandle.create_service<spice_msgs::srv::Heartbeat>(
         m_work_cell_name + "/heartbeat",
         std::bind(&WorkCellStateMachine::on_robot_heartbeat, this, std::placeholders::_1, std::placeholders::_2));
-    m_robot_exited_service = m_nodehandle.create_service<std_srvs::srv::Trigger>(m_work_cell_name + "/robot_exited",
-        std::bind(&WorkCellStateMachine::on_robot_exited, this, std::placeholders::_1, std::placeholders::_2));
     m_robot_heartbeat_timer = rclcpp::create_timer(&m_nodehandle, m_nodehandle.get_clock(), 
         rclcpp::Duration::from_seconds(ROBOT_HEARTBEAT_TIMEOUT_PERIOD),
         std::bind(&WorkCellStateMachine::check_robot_heartbeat_cb, this));
@@ -260,9 +258,7 @@ void WorkCellStateMachine::check_robot_heartbeat_cb()
     }
 
     // check robot in cell (or in its way into the cell)
-    // TODO: consider adding a service call between cell and carrier once exited
-    // Here, we omit heartbeat when carrier robot is exiting, due to lack of this last synchronization
-    if(m_current_robot_work && m_current_state != WORK_CELL_STATE::ROBOT_EXITING)
+    if(m_current_robot_work)
     {
         auto timeout_period = (current_time-m_current_robot_work->last_heartbeat_time).seconds();
         if(timeout_period > ROBOT_HEARTBEAT_TIMEOUT_PERIOD)
@@ -416,9 +412,3 @@ void WorkCellStateMachine::release_robot()
     }
 }
 
-void WorkCellStateMachine::on_robot_exited(
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response)
-{
-    m_states[static_cast<int>(m_current_state)]->on_robot_exited(request, response);
-}
