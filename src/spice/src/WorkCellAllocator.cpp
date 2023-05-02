@@ -91,7 +91,7 @@ private:
               
                 workcellType = workcell.id;
                 minDist = dist;
-                response->found_job = true;
+
             //goal = tf_buffer_->lookupTransform("map", fromFrameRel, tf2::TimePointZero);
             }
           }
@@ -121,7 +121,12 @@ private:
     // goalPose.pose.orientation = goal.transform.rotation;
     //response->goal_pose = goalPose;
     //response->found_job = true;
+    if(workcellType == spice_msgs::msg::Id {}){
+      response->found_job = false;
+      return;
+    }
     response->workcell_id = workcellType;
+    response->found_job = true;
   }
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
