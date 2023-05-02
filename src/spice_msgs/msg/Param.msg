@@ -1,0 +1,13 @@
+uint8 WORK_CELL_REP_SLOPE = 0
+uint8 WALL_REP_SLOPE = 1
+uint8 PLAN_REP_SLOPE = 2
+uint8 QUEUE_REP_SLOPE = 3
+uint8 WORK_CELL_ATT_SLOPE = 4
+uint8 QUEUE_ATT_SLOPE = 5
+uint8 MIN_MOVE_DIST = 6
+uint8 MAX_Q_VEL = 7
+uint8 CARRIER_BOT_REP_SLOPE = 8
+
+uint8 param
+
+float32 value

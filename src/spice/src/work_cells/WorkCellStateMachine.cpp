@@ -17,7 +17,7 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, rclcpp::N
     // m_nodehandle.declare_parameter("workcell_radius",rclcpp::ParameterValue(0.25));
     // ROBOT_RADIUS = m_nodehandle.get_parameter("robot_radius").as_double();
     // WORKCELL_RADIUS = m_nodehandle.get_parameter("workcell_radius").as_double();
-    // m_work_cell_queue_manager = std::make_unique<WorkCellQueuePositionManager>(*this);
+    m_work_cell_queue_manager = std::make_unique<WorkCellQueuePositionManager>(*this);
     m_register_work_service = m_nodehandle.create_service<spice_msgs::srv::RegisterWork>(
         m_work_cell_name + "/register_work", 
         std::bind(&WorkCellStateMachine::on_register_work, this, std::placeholders::_1, std::placeholders::_2));
