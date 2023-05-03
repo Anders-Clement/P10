@@ -165,21 +165,17 @@ RobotExitingState::RobotExitingState(WorkCellStateMachine& sm) : m_sm(sm)
 }
 void RobotExitingState::init()
 {
-    // TODO: do we want to add check and ensure robot is out of the cell
-    // or just call the next one immediately?
-    m_timer = rclcpp::create_timer(
-        &m_sm.m_nodehandle, 
-        m_sm.m_nodehandle.get_clock(),
-        rclcpp::Duration::from_seconds(5),
-        [this]() -> void {
-            this->m_sm.change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
-        }
-    );
-
-    m_sm.release_robot();
     
 }
 void RobotExitingState::deinit()
 {
-    m_timer.reset();
+    m_sm.release_robot();
+}
+
+void RobotExitingState::on_robot_exited(
+        const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
+        std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+    response->success = true;
+    m_sm.change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
 }
