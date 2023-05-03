@@ -51,12 +51,12 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
     // polygon corners in world coordinates:
         
     if(MAP_NAME == "A4.yaml"){ // for A4:
-        world_corners.push_back({2.85, -1.07}); // mid mid
-        world_corners.push_back({2.63, -3.73}); // top mid
-        world_corners.push_back({-1.81, -3.68}); // top right
-        world_corners.push_back({-1.63, 2.12}); // bottom right
-        world_corners.push_back({7.13, 1.92}); // bottom left
-        world_corners.push_back({7.08, -0.85}); // mid left
+        world_corners.push_back({2.8104, -1.0494}); // mid mid
+        world_corners.push_back({2.6282, -3.9158}); // top mid
+        world_corners.push_back({-1.9368, -3.9276}); // top right
+        world_corners.push_back({-1.7121, 2.1869}); // bottom right
+        world_corners.push_back({7.2171, 1.9909}); // bottom left
+        world_corners.push_back({7.1994, -0.8825}); // mid left
     }
     else if(MAP_NAME == "C4.yaml"){ // for C4:
         world_corners.push_back({21.0, 9.2}); //gr window left
@@ -125,7 +125,7 @@ void WorkCellQueuePositionManager::update_static_map_cost(){
 void WorkCellQueuePositionManager::timer_update_q_locations()
     {
         // RCLCPP_INFO(get_logger, "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
-        if (!workcell_costmap || workcell_list.size() == 0)
+        if (!workcell_costmap || workcell_list.size() == 0 || !m_global_costmap)
         {
             // RCLCPP_WARN(get_logger, "did not get costmap or workcells for queue");
             return;
@@ -197,7 +197,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
         }
         inflateCostMap(1,carrier_costmap, param_map[spice_msgs::msg::Param::PLAN_REP_SLOPE], carriers_plan_coords);
 
-        unsigned int cheapest_cost = 255;
+        unsigned int cheapest_cost = nav2_costmap_2d::NO_INFORMATION;
         unsigned int current_cost;
         
         std::pair<unsigned int, unsigned int> cheapest_point;
@@ -245,7 +245,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
                             mx = checkx;
                             my = checky;
                             current_cost = carrier_costmap->getCost(mx, my);
-                            if (cheapest_cost > current_cost)
+                            if (cheapest_cost >= current_cost)
                             {
                                 carrier_costmap->mapToWorld(mx, my, wx, wy);
                                 if (pnpoly(world_corners.size(), world_corners_x, world_corners_y, wx, wy))
@@ -273,7 +273,11 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
             q_to_entry.setRPY(0.0,0.0,angle);
             
             q_to_entry = q_to_entry * world_tf_wc.getRotation();
-
+            
+            if(queue_to_wc.getX() == 0.0 || queue_to_wc.getY() == 0.0)
+            {
+                continue;
+            }
             it->transform.translation.x = queue_to_wc.getX();
             it->transform.translation.y = queue_to_wc.getY();
             it->transform.rotation.x = q_to_entry.getX();
@@ -404,7 +408,6 @@ void WorkCellQueuePositionManager::update_workcell_costmap()
 
 void WorkCellQueuePositionManager::attraction(std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope, std::pair<unsigned int, unsigned int> attraction_center)
 {   
-    //slope = 1;
     unsigned char current_cost;
     float sqr_distance_to_center;
     signed int new_cost;
