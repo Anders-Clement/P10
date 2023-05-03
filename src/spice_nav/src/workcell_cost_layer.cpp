@@ -215,9 +215,9 @@ namespace nav2_costmap_2d
             double work_cell_length = zero_rot_exit.getX() - zero_rot_entry.getX();
             
             std::vector<std::vector<double>> inflate_exit_w_points;
-			for (double y = -WORKCELL_RADIUS; y < WORKCELL_RADIUS; y+=getResolution())
+			for (double y = -WORKCELL_RADIUS; y < WORKCELL_RADIUS; y+=getResolution()) // width of a work cell
 			{
-				for (double x = -work_cell_length; x < ROBOT_RADIUS; x+=getResolution())
+				for (double x = -(work_cell_length+ROBOT_RADIUS); x < (ROBOT_RADIUS*1.5); x+=getResolution()) // goes from 1.5 robot radius before entry to 1.5 robot radius after exit
 				{
                     inflate_exit_w_points.push_back({zero_rot_exit.getX() + x, zero_rot_exit.getY() + y});
 				}
