@@ -229,7 +229,6 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
 
             tf2::Matrix3x3 queue_rot(queue_q);
             tf2::Vector3 queue_t(it->transform.translation.x, it->transform.translation.y, it->transform.translation.z);
-            tf2::Transform queue_tf_wc(queue_rot, queue_t);
             tf2::Vector3 queueToMap = wc_tf_world * queue_t;
 
             for (int x = -moveRange; x < moveRange; x++)
@@ -265,6 +264,15 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
             // calc queue pose in work_cell space
             tf2::Vector3 queue_translation(wx, wy, 0.0);
             tf2::Vector3 queue_to_wc = world_tf_wc * queue_translation;
+            tf2::Vector3 norm_vec_to_entry = (wc_tf_world*tf2::Vector3(m_workCellStateMachine.m_entry_transform.translation.x, m_workCellStateMachine.m_entry_transform.translation.y, 0.0));
+            norm_vec_to_entry = (norm_vec_to_entry-queue_translation).normalize();
+
+            double angle =atan2(norm_vec_to_entry.getY(),norm_vec_to_entry.getX());
+        
+            tf2::Quaternion q_to_entry;
+            q_to_entry.setRPY(0.0,0.0,angle);
+            
+            q_to_entry = q_to_entry * world_tf_wc.getRotation();
             
             if(queue_to_wc.getX() == 0.0 || queue_to_wc.getY() == 0.0)
             {
@@ -272,12 +280,18 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
             }
             it->transform.translation.x = queue_to_wc.getX();
             it->transform.translation.y = queue_to_wc.getY();
+            it->transform.rotation.x = q_to_entry.getX();
+            it->transform.rotation.y = q_to_entry.getY();
+            it->transform.rotation.z = q_to_entry.getZ();
+            it->transform.rotation.w = q_to_entry.getW();
+
             queueMapPoint = cheapest_point;
             it->lastTime = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds();
         }
         else
-        {
-            if (carrier_costmap->worldToMap(it->transform.translation.x + m_workCellStateMachine.m_transform.translation.x, it->transform.translation.y + m_workCellStateMachine.m_transform.translation.y, mx, my))
+        {   
+            tf2::Vector3 q_w_position =  wc_tf_world * tf2::Vector3(it->transform.translation.x,it->transform.translation.y, 0.0 );
+            if (carrier_costmap->worldToMap(q_w_position.getX(), q_w_position.getY(), mx, my))
             {
                 queueMapPoint = {mx, my};
             }
