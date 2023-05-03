@@ -89,6 +89,9 @@ public:
     std::string m_work_cell_name;
     std::unique_ptr<QueueManager> m_queue_manager;
     geometry_msgs::msg::Transform m_transform;
+    geometry_msgs::msg::Transform m_entry_transform;
+    geometry_msgs::msg::Transform m_exit_transform;
+
 
 private:
 
@@ -110,8 +113,6 @@ private:
 
 
     spice_msgs::msg::RobotType::_type_type m_robot_type;
-    geometry_msgs::msg::Transform m_entry_transform;
-    geometry_msgs::msg::Transform m_exit_transform;
 
     std::vector<spice_msgs::msg::Robot> workcell_list; //list of all workcells
     std::vector<spice_msgs::msg::Robot> carrier_list; //list of all carrier robots
