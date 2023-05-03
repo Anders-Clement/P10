@@ -287,6 +287,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
 
             queueMapPoint = cheapest_point;
             it->lastTime = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds();
+            m_workCellStateMachine.m_queue_manager->publish_queue_points();
         }
         else
         {   
@@ -302,7 +303,6 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
         
     }
     publish_costmap(carrier_costmap);
-    m_workCellStateMachine.m_queue_manager->publish_queue_points();
     return;
 }
 

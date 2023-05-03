@@ -13,6 +13,8 @@ from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell, RegisterWork
 
 from work_tree import WorkTree
 from robot_state_manager_node import RobotStateManager, ROBOT_STATE, HeartBeatHandler
+from geometry_msgs.msg import PoseStamped
+from datetime import *
 
 class RobotStateTemplate():
     def __init__(self) -> None:
@@ -306,10 +308,13 @@ class EnqueuedState(RobotStateTemplate):
                 current_work_cell_info.queue_pose.pose.orientation.y = queue_point.queue_transform.rotation.y
                 current_work_cell_info.queue_pose.pose.orientation.z = queue_point.queue_transform.rotation.z
                 current_work_cell_info.queue_pose.pose.orientation.w = queue_point.queue_transform.rotation.w
+                #self.update_nav_goal()
                 return
             
-        self.robot_is_at_queue_point = False
-        self.navigate_to_queue_point()
+        # self.robot_is_at_queue_point = False
+        # self.navigate_to_queue_point()
+        
+
 
     def set_planner_cb(self, future: Future):
         result: SetPlannerType.Response = future.result()
@@ -321,12 +326,21 @@ class EnqueuedState(RobotStateTemplate):
 
     def navigate_to_queue_point(self):
         if not self.robot_is_at_queue_point:
+            self.sm.get_logger().warn('Robot is not at queue point')
             nav_goal = NavigateToPose.Goal()
             nav_goal.pose = self.sm.current_work_cell_info.queue_pose
             self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
                 nav_goal,
                 self.sm.on_nav_feedback)
             self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
+
+    def update_nav_goal(self):
+        msg = PoseStamped()
+        msg.header.frame_id = "map"
+        msg.header.stamp = self.sm.get_clock().now().to_msg()  #datetime.now()
+        msg.pose = self.sm.current_work_cell_info.queue_pose.pose
+        self.sm.goal_update_pub.publish(msg)
+
 
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
@@ -470,6 +484,7 @@ class EnterWorkCellState(RobotStateTemplate):
         self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
             nav_goal, self.sm.on_nav_feedback)
         self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
+
 
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()

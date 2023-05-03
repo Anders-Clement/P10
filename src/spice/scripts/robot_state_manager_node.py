@@ -16,6 +16,7 @@ from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType
 from spice_msgs.srv import Heartbeat, RobotTask, SetPlannerType
 from work_tree import WorkTree
 import robot_state
+from geometry_msgs.msg import PoseStamped
 
 
 class ROBOT_STATE(enum.IntEnum):
@@ -93,6 +94,8 @@ class RobotStateManager(Node):
                 depth = 10
             )
         
+        self.goal_update_pub = self.create_publisher(PoseStamped, 'goal_update',10)
+
         self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', qos)
 
         self.heartbeat = HeartBeatHandler('/heartbeat', 2.5, self.id, lambda arg : arg.change_state(ROBOT_STATE.STARTUP), self)
