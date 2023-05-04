@@ -123,14 +123,14 @@ void WorkCellQueuePositionManager::update_static_map_cost(){
 }
 
 void WorkCellQueuePositionManager::timer_update_q_locations()
+{
+    // RCLCPP_INFO(get_logger, "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
+    if (!workcell_costmap || workcell_list.size() == 0 || !m_global_costmap)
     {
-        // RCLCPP_INFO(get_logger, "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
-        if (!workcell_costmap || workcell_list.size() == 0 || !m_global_costmap)
-        {
-            // RCLCPP_WARN(get_logger, "did not get costmap or workcells for queue");
-            return;
-        }
-        
+        // RCLCPP_WARN(get_logger, "did not get costmap or workcells for queue");
+        return;
+    }
+    
     //setup transforms between world and workcell
     tf2::Quaternion wc_q;
         
@@ -144,13 +144,13 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
     
     tf2::Transform wc_tf_world(wc_rot, wc_t);
     tf2::Transform world_tf_wc = wc_tf_world.inverse();
-
-    std::shared_ptr<nav2_costmap_2d::Costmap2D> carrier_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*workcell_costmap);
-    
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> queue_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*workcell_costmap);
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> carrier_costmap;
     for (auto it = m_workCellStateMachine.m_queue_manager->m_queue_points.begin(); it != m_workCellStateMachine.m_queue_manager->m_queue_points.end(); it++)
     {
         // find coordinates of all carrier bots
         std::vector<std::pair<unsigned int, unsigned int>> carriers_map_coords;
+        carrier_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*workcell_costmap);
         for (auto const &carrier : carrier_list)
         {
             if (it->occupied)
@@ -196,6 +196,14 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
             }
         }
         inflateCostMap(1,carrier_costmap, param_map[spice_msgs::msg::Param::PLAN_REP_SLOPE], carriers_plan_coords);
+
+        for(unsigned int x = 0; x < queue_costmap->getSizeInCellsX(); x++){
+            for(unsigned int y = 0; y < queue_costmap->getSizeInCellsY(); y++){
+                if(queue_costmap->getCost(x,y) > carrier_costmap->getCost(x,y) && queue_costmap->getCost(x,y) != nav2_costmap_2d::NO_INFORMATION){
+                    carrier_costmap->setCost(x,y,queue_costmap->getCost(x,y));
+                }
+            }
+        }
 
         unsigned int cheapest_cost = nav2_costmap_2d::NO_INFORMATION;
         unsigned int current_cost;
@@ -301,11 +309,12 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
                 queueMapPoint = {mx, my};
             }
         }
-        inflateCostMap(1, carrier_costmap, param_map[spice_msgs::msg::Param::QUEUE_REP_SLOPE],{queueMapPoint}); // Inflate queueu in costmap
-        attraction(carrier_costmap, param_map[spice_msgs::msg::Param::QUEUE_ATT_SLOPE], queueMapPoint); //add attraction to local queue points
+        inflateCostMap(1, queue_costmap, param_map[spice_msgs::msg::Param::QUEUE_REP_SLOPE],{queueMapPoint}); // Inflate queueu in costmap
+        attraction(queue_costmap, param_map[spice_msgs::msg::Param::QUEUE_ATT_SLOPE], queueMapPoint); //add attraction to local queue points
     }
     m_workCellStateMachine.publish_transform();
     m_workCellStateMachine.m_queue_manager->publish_queue_points();
+
     publish_costmap(carrier_costmap);
     return;
 }
