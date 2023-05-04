@@ -1,0 +1,4 @@
+Location goal
+spice_msgs/Id id
+---
+bool success # whether the goal was allocated
