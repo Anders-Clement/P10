@@ -1,5 +1,6 @@
 #include "spice/work_cells/queue_manager.hpp"
 #include "spice/work_cells/work_cell_state_machine.hpp"
+#include "tf2/LinearMath/Matrix3x3.h"
 
 QueueManager::QueueManager(rclcpp::Node& nodehandle, std::string work_cell_name) : m_nodehandle(nodehandle)
 {
@@ -51,6 +52,7 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
 std::vector<geometry_msgs::msg::Transform> QueueManager::get_queue_point_transforms()
 {
     std::vector<geometry_msgs::msg::Transform> transforms;
+    
     for(auto& queue_point : m_queue_points)
         transforms.push_back(queue_point.transform);
     return transforms;

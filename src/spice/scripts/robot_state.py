@@ -285,6 +285,7 @@ class EnqueuedState(RobotStateTemplate):
 
         current_task: AllocWorkCell.Response = self.sm.current_task
         queue_points_topic_name = "/" + current_task.workcell_id.id + "/queue_points"
+        self.sm.get_logger().info(f'queue_points:topic: {queue_points_topic_name}')
         self.queue_points_sub = self.sm.create_subscription(
             QueuePoints, 
             queue_points_topic_name,
@@ -296,11 +297,11 @@ class EnqueuedState(RobotStateTemplate):
         self.timer.cancel()
         
     def queue_points_cb(self, msg: QueuePoints) -> None:
-        print('queue points cb')
         for queue_point in msg.queue_points:
             queue_point : QueuePoint = queue_point
             current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
             if queue_point.queue_id == current_work_cell_info.queue_id:
+                self.sm.get_logger().info(f'new queue point: {queue_point.queue_transform.translation}')
                 current_work_cell_info.queue_pose.pose.position.x = queue_point.queue_transform.translation.x
                 current_work_cell_info.queue_pose.pose.position.y = queue_point.queue_transform.translation.y
                 current_work_cell_info.queue_pose.pose.position.z = queue_point.queue_transform.translation.z
@@ -308,11 +309,13 @@ class EnqueuedState(RobotStateTemplate):
                 current_work_cell_info.queue_pose.pose.orientation.y = queue_point.queue_transform.rotation.y
                 current_work_cell_info.queue_pose.pose.orientation.z = queue_point.queue_transform.rotation.z
                 current_work_cell_info.queue_pose.pose.orientation.w = queue_point.queue_transform.rotation.w
-                #self.update_nav_goal()
-                return
+
+                # self.update_nav_goal()
+                # return
             
-        # self.robot_is_at_queue_point = False
-        # self.navigate_to_queue_point()
+                self.robot_is_at_queue_point = False
+                self.num_navigation_erorrs -= 1
+                self.navigate_to_queue_point()
         
 
 
@@ -329,6 +332,8 @@ class EnqueuedState(RobotStateTemplate):
             self.sm.get_logger().warn('Robot is not at queue point')
             nav_goal = NavigateToPose.Goal()
             nav_goal.pose = self.sm.current_work_cell_info.queue_pose
+            self.sm.get_logger().info(f'Navigating to queue pose: {nav_goal.pose.pose.position}')
+
             self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
                 nav_goal,
                 self.sm.on_nav_feedback)
@@ -376,7 +381,7 @@ class EnqueuedState(RobotStateTemplate):
 
     def on_nav_done(self, future: Future):
         nav_goal_result: GoalStatus = future.result().status
-        #self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
+        self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.robot_is_at_queue_point = True
             self.call_robot_ready_in_queue()
@@ -387,7 +392,7 @@ class EnqueuedState(RobotStateTemplate):
                 self.sm.get_logger().info(f'Too many navigation failures {self.MAX_NAVIGATION_RETRIES}, going to ERROR')
                 self.sm.change_state(ROBOT_STATE.ERROR)
                 return
-            self.navigate_to_queue_point()
+            # self.navigate_to_queue_point()
 
     def robot_ready_cb(self, future: Future):
         result: RobotReady.Response = future.result()

@@ -269,25 +269,34 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
 
             double angle =atan2(norm_vec_to_entry.getY(),norm_vec_to_entry.getX());
         
-            tf2::Quaternion q_to_entry;
-            q_to_entry.setRPY(0.0,0.0,angle);
+            tf2::Quaternion q_to_entry_world;
+            q_to_entry_world.setRPY(0.0,0.0,angle);
             
-            q_to_entry = q_to_entry * world_tf_wc.getRotation();
+            tf2::Quaternion q_to_entry_wc = q_to_entry_world * world_tf_wc.getRotation();
             
             if(queue_to_wc.getX() == 0.0 || queue_to_wc.getY() == 0.0)
             {
                 continue;
             }
-            it->transform.translation.x = queue_to_wc.getX();
-            it->transform.translation.y = queue_to_wc.getY();
-            it->transform.rotation.x = q_to_entry.getX();
-            it->transform.rotation.y = q_to_entry.getY();
-            it->transform.rotation.z = q_to_entry.getZ();
-            it->transform.rotation.w = q_to_entry.getW();
+            it->transform.translation.x = queue_translation.getX();
+            it->transform.translation.y = queue_translation.getY();
+            it->transform.rotation.x = q_to_entry_world.getX();
+            it->transform.rotation.y = q_to_entry_world.getY();
+            it->transform.rotation.z = q_to_entry_world.getZ();
+            it->transform.rotation.w = q_to_entry_world.getW();
 
             queueMapPoint = cheapest_point;
             it->lastTime = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds();
             m_workCellStateMachine.m_queue_manager->publish_queue_points();
+
+            it->transform.translation.x = queue_to_wc.getX();
+            it->transform.translation.y = queue_to_wc.getY();
+            it->transform.rotation.x = q_to_entry_wc.getX();
+            it->transform.rotation.y = q_to_entry_wc.getY();
+            it->transform.rotation.z = q_to_entry_wc.getZ();
+            it->transform.rotation.w = q_to_entry_wc.getW();
+
+            m_workCellStateMachine.publish_transform();
         }
         else
         {   
@@ -299,8 +308,6 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
         }
         inflateCostMap(1, carrier_costmap, param_map[spice_msgs::msg::Param::QUEUE_REP_SLOPE],{queueMapPoint}); // Inflate queueu in costmap
         attraction(carrier_costmap, param_map[spice_msgs::msg::Param::QUEUE_ATT_SLOPE], queueMapPoint); //add attraction to local queue points
-        m_workCellStateMachine.publish_transform();
-        
     }
     publish_costmap(carrier_costmap);
     return;
