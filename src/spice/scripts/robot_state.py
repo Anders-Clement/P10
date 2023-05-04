@@ -19,14 +19,19 @@ from datetime import *
 class RobotStateTemplate():
     def __init__(self) -> None:
         raise NotImplementedError()
+    
     def init(self):
         raise NotImplementedError()
+    
     def deinit(self):
         raise NotImplementedError()
+    
     def on_nav_feedback(self, msg):
         pass
+
     def on_nav_done(self, msg):
         pass
+
     def on_allocate_task(self, request: RobotTask.Request, response: RobotTask.Response) -> RobotTask.Response:
         response.job_accepted = False
         return response
@@ -90,7 +95,6 @@ class StartUpState(RobotStateTemplate):
         self.register_future = self.register_robot_client.call_async(register_robot_request)
         self.register_future.add_done_callback(self.register_robot_done_callback)
 
-
     def register_robot_done_callback(self, future: Future):
         response: RegisterRobot.Response = future.result()
         if response.success:
@@ -98,7 +102,6 @@ class StartUpState(RobotStateTemplate):
         else:
             self.sm.get_logger().info('Failed to register robot, is it already registered?')
             
-
     def deinit(self):
         if self.register_future:
             if not self.register_future.cancelled():
@@ -190,14 +193,11 @@ class FindWorkCell(RobotStateTemplate):
             self.sm.get_logger().info('Failed to allocate workcell to robot, are they available?')
             self.sm.change_state(ROBOT_STATE.ERROR)
 
-
     def deinit(self):
         self.work_cell_allocator_client.destroy()
 
 
-
 class ProcessRegisterWorkState(RobotStateTemplate):
-
     def __init__(self, sm: RobotStateManager) -> None:
         self.sm = sm
 
@@ -209,7 +209,6 @@ class ProcessRegisterWorkState(RobotStateTemplate):
                     RegisterWork, '/'+self.sm.current_task.workcell_id.id+'/register_work')
         self.register_work_future = None
         self.register_work()
-
 
     def register_work(self):
         register_work_request = RegisterWork.Request()
@@ -223,7 +222,6 @@ class ProcessRegisterWorkState(RobotStateTemplate):
         
         self.register_work_future = self.register_work_client.call_async(register_work_request)
         self.register_work_future.add_done_callback(self.register_work_cb)
-
 
     def register_work_cb(self, future:Future):
         self.sm.get_logger().info(self.sm.id.id+  ' register_work_cb')
@@ -255,15 +253,15 @@ class ProcessRegisterWorkState(RobotStateTemplate):
 class MovingState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
         self.sm = sm
+
     def init(self):
         pass
+
     def deinit(self):
         pass
     
 
-
 class EnqueuedState(RobotStateTemplate):
-    
     def __init__(self, sm: RobotStateManager) -> None:
         self.sm = sm
     
@@ -317,8 +315,6 @@ class EnqueuedState(RobotStateTemplate):
                 self.num_navigation_erorrs -= 1
                 self.navigate_to_queue_point()
         
-
-
     def set_planner_cb(self, future: Future):
         result: SetPlannerType.Response = future.result()
         if not result.success:
@@ -345,7 +341,6 @@ class EnqueuedState(RobotStateTemplate):
         msg.header.stamp = self.sm.get_clock().now().to_msg()  #datetime.now()
         msg.pose = self.sm.current_work_cell_info.queue_pose.pose
         self.sm.goal_update_pub.publish(msg)
-
 
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
@@ -490,7 +485,6 @@ class EnterWorkCellState(RobotStateTemplate):
             nav_goal, self.sm.on_nav_feedback)
         self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
 
-
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
         if not goal_handle.accepted:
@@ -506,8 +500,7 @@ class EnterWorkCellState(RobotStateTemplate):
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.sm.change_state(ROBOT_STATE.READY_FOR_PROCESS)
         else:
-            pass
-            #self.sm.change_state(ROBOT_STATE.ERROR)
+            self.sm.change_state(ROBOT_STATE.ERROR)
 
     def deinit(self):
         pass
@@ -546,7 +539,6 @@ class ProcessReadyForProcessingState(RobotStateTemplate):
         
             self.sm.get_logger().info(self.sm.id.id+  ' robot_ready_process_done_cb')
 
-
     def deinit(self):
         if self.robot_ready_process_future:
             if not self.robot_ready_process_future.cancelled():
@@ -582,13 +574,11 @@ class ProcessProcessingDoneState(RobotStateTemplate):
         response.success = True
         self.processing_is_done = True
         return response  
-
-    
+  
     def check_service_cb(self):
         if self.processing_is_done:
             self.sm.change_state(ROBOT_STATE.EXIT_WORKCELL)
-    
-   
+       
     def deinit(self):
         self.timer.cancel()
         self.srv_done_processing.destroy()
@@ -656,6 +646,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
 
     def deinit(self):
         self.robot_exited_client.destroy()
+
 
 class ErrorState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
