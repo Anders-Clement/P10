@@ -278,16 +278,10 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
             {
                 continue;
             }
-            it->transform.translation.x = queue_translation.getX();
-            it->transform.translation.y = queue_translation.getY();
-            it->transform.rotation.x = q_to_entry_world.getX();
-            it->transform.rotation.y = q_to_entry_world.getY();
-            it->transform.rotation.z = q_to_entry_world.getZ();
-            it->transform.rotation.w = q_to_entry_world.getW();
-
+            
+            //RCLCPP_WARN(get_logger(), "queue point world space x: %f ,y: %f",it->transform.translation.x, it->transform.translation.y);
             queueMapPoint = cheapest_point;
             it->lastTime = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds();
-            m_workCellStateMachine.m_queue_manager->publish_queue_points();
 
             it->transform.translation.x = queue_to_wc.getX();
             it->transform.translation.y = queue_to_wc.getY();
@@ -295,8 +289,9 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
             it->transform.rotation.y = q_to_entry_wc.getY();
             it->transform.rotation.z = q_to_entry_wc.getZ();
             it->transform.rotation.w = q_to_entry_wc.getW();
-
-            m_workCellStateMachine.publish_transform();
+            
+            //RCLCPP_WARN(get_logger(), "queue point workcell space x: %f ,y: %f",it->transform.translation.x, it->transform.translation.y);
+           
         }
         else
         {   
@@ -309,6 +304,8 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
         inflateCostMap(1, carrier_costmap, param_map[spice_msgs::msg::Param::QUEUE_REP_SLOPE],{queueMapPoint}); // Inflate queueu in costmap
         attraction(carrier_costmap, param_map[spice_msgs::msg::Param::QUEUE_ATT_SLOPE], queueMapPoint); //add attraction to local queue points
     }
+    m_workCellStateMachine.publish_transform();
+    m_workCellStateMachine.m_queue_manager->publish_queue_points();
     publish_costmap(carrier_costmap);
     return;
 }

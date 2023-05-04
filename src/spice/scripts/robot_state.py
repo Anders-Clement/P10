@@ -280,6 +280,7 @@ class EnqueuedState(RobotStateTemplate):
         set_planner_type_request.planner_type = PlannerType(type=PlannerType.PLANNER_PRIORITIZED)
         change_planner_type_future = self.sm.change_planner_type_client.call_async(set_planner_type_request)
         change_planner_type_future.add_done_callback(self.set_planner_cb)
+        self.goal_update_pub = self.sm.create_publisher(PoseStamped, 'goal_update',10)
 
         current_task: AllocWorkCell.Response = self.sm.current_task
         queue_points_topic_name = "/" + current_task.workcell_id.id + "/queue_points"
@@ -299,7 +300,7 @@ class EnqueuedState(RobotStateTemplate):
             queue_point : QueuePoint = queue_point
             current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
             if queue_point.queue_id == current_work_cell_info.queue_id:
-                self.sm.get_logger().info(f'new queue point: {queue_point.queue_transform.translation}')
+                # self.sm.get_logger().info(f'new queue point: {queue_point.queue_transform.translation}')
                 current_work_cell_info.queue_pose.pose.position.x = queue_point.queue_transform.translation.x
                 current_work_cell_info.queue_pose.pose.position.y = queue_point.queue_transform.translation.y
                 current_work_cell_info.queue_pose.pose.position.z = queue_point.queue_transform.translation.z
@@ -309,12 +310,13 @@ class EnqueuedState(RobotStateTemplate):
                 current_work_cell_info.queue_pose.pose.orientation.w = queue_point.queue_transform.rotation.w
 
                 # self.update_nav_goal()
-                # return
+                
             
                 self.robot_is_at_queue_point = False
                 self.num_navigation_erorrs -= 1
                 self.navigate_to_queue_point()
-        
+                return
+            
     def set_planner_cb(self, future: Future):
         result: SetPlannerType.Response = future.result()
         if not result.success:
@@ -325,14 +327,12 @@ class EnqueuedState(RobotStateTemplate):
 
     def navigate_to_queue_point(self):
         if not self.robot_is_at_queue_point:
-            self.sm.get_logger().warn('Robot is not at queue point')
+            #self.sm.get_logger().warn('Robot is not at queue point')
             nav_goal = NavigateToPose.Goal()
             nav_goal.pose = self.sm.current_work_cell_info.queue_pose
-            self.sm.get_logger().info(f'Navigating to queue pose: {nav_goal.pose.pose.position}')
+            #self.sm.get_logger().info(f'Navigating to queue pose: {nav_goal.pose.pose.position}')
 
-            self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
-                nav_goal,
-                self.sm.on_nav_feedback)
+            self.nav_reponse_future = self.sm.navigation_client.send_goal_async(nav_goal, self.sm.on_nav_feedback)
             self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
 
     def update_nav_goal(self):
@@ -340,7 +340,7 @@ class EnqueuedState(RobotStateTemplate):
         msg.header.frame_id = "map"
         msg.header.stamp = self.sm.get_clock().now().to_msg()  #datetime.now()
         msg.pose = self.sm.current_work_cell_info.queue_pose.pose
-        self.sm.goal_update_pub.publish(msg)
+        self.goal_update_pub.publish(msg)
 
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
@@ -376,15 +376,15 @@ class EnqueuedState(RobotStateTemplate):
 
     def on_nav_done(self, future: Future):
         nav_goal_result: GoalStatus = future.result().status
-        self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
+        #self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.robot_is_at_queue_point = True
             self.call_robot_ready_in_queue()
         else:
             self.num_navigation_erorrs += 1
-            self.sm.get_logger().info(f'Failed navigation, number of tries: {self.num_navigation_erorrs}')
+            #self.sm.get_logger().info(f'Failed navigation, number of tries: {self.num_navigation_erorrs}/{self.MAX_NAVIGATION_RETRIES}')
             if self.num_navigation_erorrs > self.MAX_NAVIGATION_RETRIES:
-                self.sm.get_logger().info(f'Too many navigation failures {self.MAX_NAVIGATION_RETRIES}, going to ERROR')
+                self.sm.get_logger().info(f'Too many navigation failures {self.num_navigation_erorrs}/{self.MAX_NAVIGATION_RETRIES}, going to ERROR')
                 self.sm.change_state(ROBOT_STATE.ERROR)
                 return
             # self.navigate_to_queue_point()
@@ -422,6 +422,7 @@ class EnqueuedState(RobotStateTemplate):
         self.timer.destroy()
         self.srv_call_robot.destroy()
         self.sm.destroy_subscription(self.queue_points_sub)
+        self.sm.destroy_publisher(self.goal_update_pub)
 
 
 class EnterWorkCellState(RobotStateTemplate):
@@ -433,6 +434,8 @@ class EnterWorkCellState(RobotStateTemplate):
         change_planner_type_request.planner_type.type = PlannerType.PLANNER_PRIORITIZED
         change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
         change_planner_type_future.add_done_callback(self.navigate_to_cell_entry)
+        self.num_navigation_errors_enter_w = 0
+        self.MAX_NAVIGATION_RETRIES = 5
 
     def navigate_to_cell_entry(self, future: Future):
         result: SetPlannerType.Response = future.result()
@@ -500,7 +503,16 @@ class EnterWorkCellState(RobotStateTemplate):
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.sm.change_state(ROBOT_STATE.READY_FOR_PROCESS)
         else:
-            self.sm.change_state(ROBOT_STATE.ERROR)
+            self.num_navigation_errors_enter_w += 1
+            self.sm.get_logger().info(f'Failed navigation to enter work cell, number of tries: {self.num_navigation_errors_enter_w}/{self.MAX_NAVIGATION_RETRIES}')
+            if self.num_navigation_errors_enter_w > self.MAX_NAVIGATION_RETRIES:
+                self.sm.get_logger().warn(f'Too many navigation failures to enter work cell: {self.num_navigation_errors_enter_w}/{self.MAX_NAVIGATION_RETRIES}, going to ERROR')
+                self.sm.change_state(ROBOT_STATE.ERROR)
+                return
+
+            # pass
+            # self.sm.get_logger().error('Nav 2 goal failed, aborting enter work cell')
+            # self.sm.change_state(ROBOT_STATE.ERROR)
 
     def deinit(self):
         pass

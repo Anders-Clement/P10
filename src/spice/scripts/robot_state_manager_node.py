@@ -94,7 +94,7 @@ class RobotStateManager(Node):
                 depth = 10
             )
         
-        self.goal_update_pub = self.create_publisher(PoseStamped, 'goal_update',10)
+        
 
         self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', qos)
 
