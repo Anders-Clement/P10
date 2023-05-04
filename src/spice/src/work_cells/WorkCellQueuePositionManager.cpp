@@ -106,6 +106,10 @@ void WorkCellQueuePositionManager::global_costmap_cb(nav_msgs::msg::OccupancyGri
         }
     }
     update_static_map_cost();
+    for (auto queue_point = m_workCellStateMachine.m_queue_manager->m_queue_points.begin(); queue_point != m_workCellStateMachine.m_queue_manager->m_queue_points.end(); queue_point++)
+    {
+        queue_point->lastTime = m_workCellStateMachine.m_nodehandle.get_clock()->now().seconds();
+    }
 }
 
  void WorkCellQueuePositionManager::plans_cb(spice_msgs::msg::RobotPlan::SharedPtr msg){
@@ -217,16 +221,6 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
         std::pair<unsigned int, unsigned int> queueMapPoint;
         
         if(moveRange > param_map[spice_msgs::msg::Param::MIN_MOVE_DIST]){
-        
-        // for(auto point : viable_points){
-        //     unsigned char current_cost = carrier_costmap->getCost(point.first,point.second);
-        //     if(cheapest_cost > current_cost){
-        //         cheapest_point = point;
-        //         cheapest_cost = current_cost;
-        //     }
-        // }
-
-        //transform queue point to world space
 
             tf2::Quaternion queue_q;
 
@@ -428,8 +422,8 @@ void WorkCellQueuePositionManager::attraction(std::shared_ptr<nav2_costmap_2d::C
     for(auto point : viable_points)
     {
         current_cost = costmap->getCost(point.first, point.second);
-        sqr_distance_to_center = pow(std::max(point.first, attraction_center.first) - std::min(point.first, attraction_center.first), 2) + pow(std::max(point.second, attraction_center.second) - std::min(point.second, attraction_center.second), 2);
-        new_cost = std::floor((nav2_costmap_2d::LETHAL_OBSTACLE/200)*sqr_distance_to_center*slope);
+        sqr_distance_to_center = sqrt(pow(std::max(point.first, attraction_center.first) - std::min(point.first, attraction_center.first), 2) + pow(std::max(point.second, attraction_center.second) - std::min(point.second, attraction_center.second), 2));
+        new_cost = std::floor((nav2_costmap_2d::LETHAL_OBSTACLE)*sqr_distance_to_center*slope);
         if(new_cost > nav2_costmap_2d::LETHAL_OBSTACLE || new_cost < 0) new_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         if(new_cost > current_cost)
         {

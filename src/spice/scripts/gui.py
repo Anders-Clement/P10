@@ -121,7 +121,7 @@ class Ui(Node):
 
 
         ttk.Label(self.queue_param_tab, text="work_cell_att_slope",padding=10).grid(column=cloumn_start+coloumn_offset,row=0,rowspan=2, pady=ypadding)
-        self.work_cell_att_slope = tk.Scale(self.queue_param_tab, from_=0, to=0.5, resolution=0.005,orient='horizontal')
+        self.work_cell_att_slope = tk.Scale(self.queue_param_tab, from_=0, to=0.05, resolution=0.0005,orient='horizontal')
         self.work_cell_att_slope.grid(column=cloumn_start+coloumn_offset, row=1, rowspan=2, pady=10)
 
 

@@ -434,8 +434,10 @@ class EnterWorkCellState(RobotStateTemplate):
         change_planner_type_request.planner_type.type = PlannerType.PLANNER_PRIORITIZED
         change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
         change_planner_type_future.add_done_callback(self.navigate_to_cell_entry)
-        self.num_navigation_errors_enter_w = 0
-        self.MAX_NAVIGATION_RETRIES = 5
+        self.num_navigation_errors_entry = 0
+        self.num_navigation_errors_center = 0
+        self.MAX_NAVIGATION_RETRIES_ENTRY = 5
+        self.MAX_NAVIGATION_RETRIES_CENTER = 5
 
     def navigate_to_cell_entry(self, future: Future):
         result: SetPlannerType.Response = future.result()
@@ -448,14 +450,13 @@ class EnterWorkCellState(RobotStateTemplate):
 
         nav_goal = NavigateToPose.Goal()
         nav_goal.pose = current_work_cell_info.entry_pose
-        self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
-            nav_goal, self.sm.on_nav_feedback)
+        self.nav_reponse_future = self.sm.navigation_client.send_goal_async(nav_goal, self.sm.on_nav_feedback)
         self.nav_reponse_future.add_done_callback(self.cell_entry_nav_goal_response_cb)
 
     def cell_entry_nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
         if not goal_handle.accepted:
-            self.sm.get_logger().error('Nav 2 goal was rejected, aborting enter work cell')
+            self.sm.get_logger().error('Nav 2 goal was rejected, aborting going to entry of work cell')
             self.sm.change_state(ROBOT_STATE.ERROR)
         
         self.nav_goal_done_future: Future = goal_handle.get_result_async()
@@ -464,14 +465,22 @@ class EnterWorkCellState(RobotStateTemplate):
     def on_cell_entry_nav_done(self, future: Future):
         nav_result = future.result()
         nav_goal_result: GoalStatus = nav_result.status
-        self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
+        #self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             change_planner_type_request = SetPlannerType.Request()
             change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
             change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
             change_planner_type_future.add_done_callback(self.navigate_into_cell)
         else:
-            self.sm.change_state(ROBOT_STATE.ERROR)
+            self.num_navigation_errors_entry += 1
+            self.sm.get_logger().warn(f'Goal status not succeeded to go to entry of work cell, number of tries: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}')
+            if self.num_navigation_errors_entry > self.MAX_NAVIGATION_RETRIES_ENTRY:
+                self.sm.get_logger().error(f'Too many failures to go to entry of work cell: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}, going to ERROR')
+                self.sm.change_state(ROBOT_STATE.ERROR)
+                return
+
+            # self.sm.get_logger().warn('Goal status not succeeded')
+            # self.sm.change_state(ROBOT_STATE.ERROR)
 
     def navigate_into_cell(self, future: Future):
         result: SetPlannerType.Response = future.result()
@@ -491,7 +500,7 @@ class EnterWorkCellState(RobotStateTemplate):
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
         if not goal_handle.accepted:
-            self.sm.get_logger().error('Nav 2 goal was rejected, aborting enter work cell')
+            self.sm.get_logger().error('Nav 2 goal was rejected, aborting going to center of work cell')
             self.sm.change_state(ROBOT_STATE.ERROR)
         
         self.nav_goal_done_future: Future = goal_handle.get_result_async()
@@ -503,10 +512,10 @@ class EnterWorkCellState(RobotStateTemplate):
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.sm.change_state(ROBOT_STATE.READY_FOR_PROCESS)
         else:
-            self.num_navigation_errors_enter_w += 1
-            self.sm.get_logger().info(f'Failed navigation to enter work cell, number of tries: {self.num_navigation_errors_enter_w}/{self.MAX_NAVIGATION_RETRIES}')
-            if self.num_navigation_errors_enter_w > self.MAX_NAVIGATION_RETRIES:
-                self.sm.get_logger().warn(f'Too many navigation failures to enter work cell: {self.num_navigation_errors_enter_w}/{self.MAX_NAVIGATION_RETRIES}, going to ERROR')
+            self.num_navigation_errors_center += 1
+            self.sm.get_logger().info(f'Failed navigation to center of work cell, number of tries: {self.num_navigation_errors_center}/{self.MAX_NAVIGATION_RETRIES_CENTER}')
+            if self.num_navigation_errors_center > self.MAX_NAVIGATION_RETRIES_CENTER:
+                self.sm.get_logger().warn(f'Too many navigation failures to center of work cell: {self.num_navigation_errors_center}/{self.MAX_NAVIGATION_RETRIES_CENTER}, going to ERROR')
                 self.sm.change_state(ROBOT_STATE.ERROR)
                 return
 
@@ -639,6 +648,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
             self.call_robot_exited_cell()
         else:
             self.sm.current_task = None
+            self.sm.get_logger().warn('Robot error when going to exit of work cell')
             self.sm.change_state(ROBOT_STATE.ERROR)
 
     def call_robot_exited_cell(self):
