@@ -22,7 +22,7 @@ public:
     geometry_msgs::msg::Transform work_cell_locations(){
 
         geometry_msgs::msg::Transform poses[4];
-        if(m_map_name == "A4.yaml") //A4
+        if(m_map_name == "A4.yaml" || m_map_name == "A4_legless.yaml") //A4
         {  
             poses[0].rotation.w = 0.709132;
             poses[0].rotation.x = 0.0;
