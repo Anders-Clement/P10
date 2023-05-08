@@ -426,10 +426,10 @@ void WorkCellQueuePositionManager::attraction(std::shared_ptr<nav2_costmap_2d::C
         current_cost = costmap->getCost(point.first, point.second);
         dist_goal = sqrt(pow(std::max(point.first, attraction_center.first) - std::min(point.first, attraction_center.first), 2) + pow(std::max(point.second, attraction_center.second) - std::min(point.second, attraction_center.second), 2));
         if(dist_goal > dist_threshold){
-            new_cost = std::floor((nav2_costmap_2d::LETHAL_OBSTACLE)/0.5*slope*pow(dist_goal,2));
+            new_cost = std::floor(nav2_costmap_2d::LETHAL_OBSTACLE/0.5*slope*pow(dist_goal,2));
         }
         else{
-            new_cost = dist_threshold * slope * dist_goal - 0.5*slope*pow(dist_threshold,2);
+            new_cost = std::floor(nav2_costmap_2d::LETHAL_OBSTACLE/(dist_threshold * slope * dist_goal - 0.5*slope*pow(dist_threshold,2)));
         }
         new_cost = new_cost+current_cost;
                     
