@@ -50,7 +50,7 @@ WorkCellQueuePositionManager::WorkCellQueuePositionManager(WorkCellStateMachine&
 
     // polygon corners in world coordinates:
         
-    if(MAP_NAME == "A4.yaml"){ // for A4:
+    if(MAP_NAME == "A4.yaml" || MAP_NAME == "A4_legless.yaml"){ // for A4:
         world_corners.push_back({2.8104, -1.0494}); // mid mid
         world_corners.push_back({2.6282, -3.9158}); // top mid
         world_corners.push_back({-1.9368, -3.9276}); // top right
