@@ -42,12 +42,12 @@ def generate_launch_description():
             executable='work_cell_simulator',
             name='work_cell_simulator',
             parameters=[
-                {'work_cell_rep_slope': 0.075}, # workcell repulsion for queue pos
-                {'carrier_bot_rep_slope': 0.1}, # carrier bot repulsion
-                {'wall_rep_slope': 0.075}, #static map obstacle repulsion
-                {'queue_rep_slope': 0.1}, # other queue point repulsion
-                {'plan_rep_slope': 0.1}, # robot plans repulsion
-                {'work_cell_att_slope':  0.006}, # own workcell attraction
+                {'work_cell_rep_slope': 400.0}, # workcell repulsion for queue pos
+                {'carrier_bot_rep_slope': 300.0}, # carrier bot repulsion
+                {'wall_rep_slope': 300.0}, #static map obstacle repulsion
+                {'queue_rep_slope': 225.0}, # other queue point repulsion
+                {'plan_rep_slope': 275.0}, # robot plans repulsion
+                {'work_cell_att_slope':  0.025}, # own workcell attraction
                 {'queue_att_slope': 0.0}, #own lower queue point attraction
                 {'min_move_dist': 10},
                 {'q_max_vel': 0.5},
