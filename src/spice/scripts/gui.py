@@ -86,7 +86,10 @@ class Ui(Node):
         number_of_coloums = 3
         number_of_sliders = 9
         self.scaleArray = []
-        
+        rep_max = 700
+        rep_res = 0.5
+        att_max = 0.25
+        att_res = 0.001
         current_coloumn = 0
 
         
@@ -108,35 +111,35 @@ class Ui(Node):
 
         #self.robot_state_tab.grid
         ttk.Label(self.queue_param_tab, text="work_cell_rep_slope",padding=10).grid(column=cloumn_start,row=0,rowspan=2, pady=ypadding)
-        self.work_cell_rep_slope = tk.Scale(self.queue_param_tab, from_=0, to=0.5, resolution=0.005, orient='horizontal')
+        self.work_cell_rep_slope = tk.Scale(self.queue_param_tab, from_=0, to=rep_max, resolution=rep_res, orient='horizontal')
         self.work_cell_rep_slope.grid(column=cloumn_start, row=1, rowspan=2, pady=10)
 
         ttk.Label(self.queue_param_tab, text="carrier_bot_rep_slope",padding=10).grid(column=cloumn_start,row=2,rowspan=2, pady=ypadding)
-        self.carrier_bot_rep_slope = tk.Scale(self.queue_param_tab, from_=0, to=0.5,resolution=0.005, orient='horizontal')
+        self.carrier_bot_rep_slope = tk.Scale(self.queue_param_tab, from_=0, to=rep_max,resolution=rep_res, orient='horizontal')
         self.carrier_bot_rep_slope.grid(column=cloumn_start, row=3, rowspan=2, pady=10)
 
         ttk.Label(self.queue_param_tab, text="wall_rep_slope",padding=10).grid(column=cloumn_start,row=4,rowspan=2, pady=ypadding)
-        self.wall_rep_slope = tk.Scale(self.queue_param_tab, from_=0, to=0.5,resolution=0.005, orient='horizontal')
+        self.wall_rep_slope = tk.Scale(self.queue_param_tab, from_=0, to=rep_max,resolution=rep_res, orient='horizontal')
         self.wall_rep_slope.grid(column=cloumn_start, row=5, rowspan=2, pady=10)
 
 
         ttk.Label(self.queue_param_tab, text="work_cell_att_slope",padding=10).grid(column=cloumn_start+coloumn_offset,row=0,rowspan=2, pady=ypadding)
-        self.work_cell_att_slope = tk.Scale(self.queue_param_tab, from_=0, to=0.05, resolution=0.0005,orient='horizontal')
+        self.work_cell_att_slope = tk.Scale(self.queue_param_tab, from_=0, to=att_max, resolution=att_res,orient='horizontal')
         self.work_cell_att_slope.grid(column=cloumn_start+coloumn_offset, row=1, rowspan=2, pady=10)
 
 
         ttk.Label(self.queue_param_tab, text="queue_att_slope",padding=10).grid(column=cloumn_start+coloumn_offset,row=2,rowspan=2, pady=ypadding)
-        self.queue_att_slope = tk.Scale(self.queue_param_tab, from_=0, to=0.5, resolution=0.005,orient='horizontal')
+        self.queue_att_slope = tk.Scale(self.queue_param_tab, from_=0, to=att_max, resolution=att_res,orient='horizontal')
         self.queue_att_slope.grid(column=cloumn_start+coloumn_offset, row=3, rowspan=2, pady=10)
 
         
         ttk.Label(self.queue_param_tab, text="queue_rep_slope",padding=10).grid(column=cloumn_start+coloumn_offset,row=4,rowspan=2, pady=ypadding)
-        self.queue_rep_slope = tk.Scale(self.queue_param_tab, from_=0, to=0.5, resolution=0.005,orient='horizontal')
+        self.queue_rep_slope = tk.Scale(self.queue_param_tab, from_=0, to=rep_max, resolution=rep_res,orient='horizontal')
         self.queue_rep_slope.grid(column=cloumn_start+coloumn_offset, row=5, rowspan=2, pady=10)
 
 
         ttk.Label(self.queue_param_tab, text="plan_rep_slope",padding=10).grid(column=cloumn_start+2*coloumn_offset,row=0,rowspan=2, pady=ypadding)
-        self.plan_rep_slope = tk.Scale(self.queue_param_tab, from_=0, to=0.5,resolution=0.005, orient='horizontal')
+        self.plan_rep_slope = tk.Scale(self.queue_param_tab, from_=0, to=rep_max,resolution=rep_res, orient='horizontal')
         self.plan_rep_slope.grid(column=cloumn_start+2*coloumn_offset, row=1, rowspan=2, pady=10)
 
 
