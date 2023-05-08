@@ -121,15 +121,18 @@ void WorkCellQueuePositionManager::param_cb(spice_msgs::msg::Param::SharedPtr ms
 }
 
 void WorkCellQueuePositionManager::update_static_map_cost(){
-    
-    inflateCostMap(1, m_global_costmap, param_map[spice_msgs::msg::Param::WALL_REP_SLOPE], static_map_cost_points); //inflate cost of static map obstacles
+    if(!m_global_costmap){
+        return;
+    }
+    static_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
+    inflateCostMap(1, static_costmap, param_map[spice_msgs::msg::Param::WALL_REP_SLOPE], static_map_cost_points); //inflate cost of static map obstacles
     update_workcell_costmap();
 }
 
 void WorkCellQueuePositionManager::timer_update_q_locations()
 {
     // RCLCPP_INFO(get_logger, "[debug] timer for updating q frames for %s",m_work_cell_name.c_str());
-    if (!workcell_costmap || workcell_list.size() == 0 || !m_global_costmap)
+    if (!workcell_costmap || workcell_list.size() == 0 || !m_global_costmap || !static_costmap)
     {
         // RCLCPP_WARN(get_logger, "did not get costmap or workcells for queue");
         return;
@@ -368,13 +371,13 @@ void WorkCellQueuePositionManager::timer_update_robots_lists(){
 
 void WorkCellQueuePositionManager::update_workcell_costmap()
 {   
-    if(!m_global_costmap || workcell_list.size()== 0)
+    if(!m_global_costmap || workcell_list.size()== 0 || !static_costmap)
     {
         //RCLCPP_WARN(get_logger(), "did not get costmap or workcells for queue");
         return;
     }
 
-    workcell_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*m_global_costmap);
+    workcell_costmap = std::make_shared<nav2_costmap_2d::Costmap2D>(*static_costmap);
     std::vector<std::pair<unsigned int, unsigned int>> workcells_map_coords;
     
     // find coordinates of all workcell bots
@@ -426,10 +429,10 @@ void WorkCellQueuePositionManager::attraction(std::shared_ptr<nav2_costmap_2d::C
         current_cost = costmap->getCost(point.first, point.second);
         dist_goal = sqrt(pow(std::max(point.first, attraction_center.first) - std::min(point.first, attraction_center.first), 2) + pow(std::max(point.second, attraction_center.second) - std::min(point.second, attraction_center.second), 2));
         if(dist_goal > dist_threshold){
-            new_cost = std::floor(nav2_costmap_2d::LETHAL_OBSTACLE/0.5*slope*pow(dist_goal,2));
+            new_cost = std::floor(0.5*slope*pow(dist_goal,2));
         }
         else{
-            new_cost = std::floor(nav2_costmap_2d::LETHAL_OBSTACLE/(dist_threshold * slope * dist_goal - 0.5*slope*pow(dist_threshold,2)));
+            new_cost = std::floor((dist_threshold * slope * dist_goal - 0.5*slope*pow(dist_threshold,2)));
         }
         new_cost = new_cost+current_cost;
                     
@@ -437,55 +440,63 @@ void WorkCellQueuePositionManager::attraction(std::shared_ptr<nav2_costmap_2d::C
         
             new_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
         }   
-
             costmap->setCost(point.first, point.second, new_cost);
     }
   return;
-}
+}   
 
 
 void WorkCellQueuePositionManager::inflateCostMap(int current_loop,  std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap, float slope, std::vector<std::pair<unsigned int, unsigned int>> cost_points)
 {
     unsigned int mx, my;
     double wx, wy;
-    unsigned int cost = std::floor(nav2_costmap_2d::LETHAL_OBSTACLE/0.5*slope*pow(1+(current_loop),2));
+    unsigned int cost = std::floor(0.5*slope*pow(1.0/(1.0+(current_loop)*0.05),2));
     std::vector<std::pair<unsigned int, unsigned int>> nextcosts;
+
+
+    if (cost > 255)
+    {
+        cost = 255;
+    }
+                
     if(!costmap){
         RCLCPP_WARN(get_logger(), "got no costmap");
+        return;
     }
 
-    if (cost < 5 || cost_points.size() == 0 || cost > 255 || current_loop > 50)
+    if (cost < 5 || cost_points.size() == 0 || cost > 255 || current_loop > 250)
     {
-        //RCLCPP_WARN(get_logger(), "Exiting at loop: %d",current_loop);
+        // RCLCPP_WARN(get_logger(), "Exiting at loop: %d",current_loop);
         return;
     }
     for (auto it = cost_points.begin(); it < cost_points.end(); it++)
     {
-        costmap->mapToWorld(it->first, it->second, wx,wy);
-        if(!pnpoly(world_corners.size(), world_corners_x,world_corners_y,wx,wy)){
+        costmap->mapToWorld(it->first, it->second, wx, wy);
+        if (!pnpoly(world_corners.size(), world_corners_x, world_corners_y, wx, wy))
+        {
             continue;
         }
-            for (int i = -1; i <= 1; i ++)
+        for (int i = -1; i <= 1; i++)
+        {
+            for (int j = -1; j <= 1; j++)
             {
-                for (int j = -1; j <= 1; j ++)
-                {
-                    int signed checkx = it->first + i;
-                    int signed checky = it->second + j;
+                int signed checkx = it->first + i;
+                int signed checky = it->second + j;
 
-                    if (checkx > costmap->getSizeInCellsX() || checky > costmap->getSizeInCellsY() || checkx < 0 || checky < 0)
-                    {
-                        continue;
-                    }
-                    mx = checkx;
-                    my = checky;
-                    if (costmap->getCost(mx, my) < cost)
-                    {
-                        costmap->setCost(mx, my, cost);
-                        nextcosts.push_back({mx,my});
-                    }
+                if (checkx > costmap->getSizeInCellsX() || checky > costmap->getSizeInCellsY() || checkx < 0 || checky < 0)
+                {
+                    continue;
                 }
-            }  
+                mx = checkx;
+                my = checky;
+                unsigned int current_cost = costmap->getCost(mx, my);
+                if(cost > current_cost){
+                    costmap->setCost(mx, my, cost);
+                nextcosts.push_back({mx, my});
+                }
+            }
         }
+    }
 
     cost_points = nextcosts;
     nextcosts.clear();
