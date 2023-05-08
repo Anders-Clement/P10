@@ -418,19 +418,28 @@ void WorkCellQueuePositionManager::attraction(std::shared_ptr<nav2_costmap_2d::C
     unsigned char current_cost;
     float sqr_distance_to_center;
     signed int new_cost;
+    float dist_goal;
+    float dist_threshold = 5.0; // meters until switch from quadratic attraction to conic
 
     for(auto point : viable_points)
     {
         current_cost = costmap->getCost(point.first, point.second);
-        sqr_distance_to_center = sqrt(pow(std::max(point.first, attraction_center.first) - std::min(point.first, attraction_center.first), 2) + pow(std::max(point.second, attraction_center.second) - std::min(point.second, attraction_center.second), 2));
-        new_cost = std::floor((nav2_costmap_2d::LETHAL_OBSTACLE)*sqr_distance_to_center*slope);
-        if(new_cost > nav2_costmap_2d::LETHAL_OBSTACLE || new_cost < 0) new_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
-        if(new_cost > current_cost)
-        {
-            costmap->setCost(point.first, point.second, new_cost);
+        dist_goal = sqrt(pow(std::max(point.first, attraction_center.first) - std::min(point.first, attraction_center.first), 2) + pow(std::max(point.second, attraction_center.second) - std::min(point.second, attraction_center.second), 2));
+        if(dist_goal > dist_threshold){
+            new_cost = std::floor((nav2_costmap_2d::LETHAL_OBSTACLE)/0.5*slope*pow(dist_goal,2));
         }
-    }
+        else{
+            new_cost = dist_threshold * slope * dist_goal - 0.5*slope*pow(dist_threshold,2);
+        }
+        new_cost = new_cost+current_cost;
+                    
+        if(new_cost > nav2_costmap_2d::LETHAL_OBSTACLE || new_cost < 0){
+        
+            new_cost = nav2_costmap_2d::LETHAL_OBSTACLE;
+        }   
 
+            costmap->setCost(point.first, point.second, new_cost);
+    }
   return;
 }
 
@@ -439,7 +448,7 @@ void WorkCellQueuePositionManager::inflateCostMap(int current_loop,  std::shared
 {
     unsigned int mx, my;
     double wx, wy;
-    unsigned int cost = std::floor(nav2_costmap_2d::LETHAL_OBSTACLE/pow(1+(current_loop*slope),2));
+    unsigned int cost = std::floor(nav2_costmap_2d::LETHAL_OBSTACLE/0.5*slope*pow(1+(current_loop),2));
     std::vector<std::pair<unsigned int, unsigned int>> nextcosts;
     if(!costmap){
         RCLCPP_WARN(get_logger(), "got no costmap");
