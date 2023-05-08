@@ -42,6 +42,7 @@ class Ui(Node):
     def init_ros(self):
         self.get_robots_client = self.create_client(sm_srv.GetRobots, '/get_robots')
         self.pub_queue_params = self.create_publisher(sm_msg.Param, '/queue_params', qos_profile=10)
+        self.sub_system_monitor = self.create_subscription(sm_msg.Performance, '/system_performance',self.perfomance_monitor_cb, 10)
         while not self.get_robots_client.wait_for_service(1.0):
             self.get_logger().info('Timeout waiting for service /get_robots')
         self.get_robots_timer_cb()
@@ -54,11 +55,14 @@ class Ui(Node):
         self.tab_control = ttk.Notebook(self.root)
         self.robot_state_tab = ttk.Frame(self.tab_control)
         self.queue_param_tab = ttk.Frame(self.tab_control)
+        self.system_monitor_tab = ttk.Frame(self.tab_control)
         self.tab_control.add(self.robot_state_tab, text="Robot state")
         self.tab_control.add(self.queue_param_tab, text="Queue costmap Params")
+        self.tab_control.add(self.system_monitor_tab, text="System monitor")
         self.tab_control.pack(expand=1, fill='both')
         self.reset_robot_state_tab()
         self.reset_queue_param_tab()
+        self.reset_system_monitor_tab()
 
     def reset_robot_state_tab(self):
         if self.robot_state_tab:
@@ -70,7 +74,7 @@ class Ui(Node):
             self.tab_control.pack(expand=1, fill='both')
         
         self.robot_state_label = ttk.Label(self.robot_state_tab, text="Number of robots: ?", padding=5).grid(column=0, row=0, rowspan=2)
-    
+
     def reset_queue_param_tab(self):
         if self.queue_param_tab:
             pass
@@ -154,8 +158,36 @@ class Ui(Node):
 
 
         ttk.Label(self.queue_param_tab, text="",padding=10).grid(column=cloumn_start+coloumn_offset,row=6,rowspan=2, pady=ypadding)
+    
+    def reset_system_monitor_tab(self):
 
+        ypadding = 5
+        coloumn_offset = 1
+        cloumn_start = 0
+        self.cpu_usage_text = ttk.Label(self.system_monitor_tab, text="cpu_usage: ?",padding=10).grid(column=cloumn_start,row=0,rowspan=2)
+        self.mega_bit_upload_text = ttk.Label(self.system_monitor_tab, text="mega_bit_upload: ?",padding=10).grid(column=cloumn_start,row=2,rowspan=2)
+        self.mega_bit_download_text = ttk.Label(self.system_monitor_tab, text="mega_bit_download: ?",padding=10).grid(column=cloumn_start,row=4,rowspan=2)
+        self.packet_loss_percent_text = ttk.Label(self.system_monitor_tab, text="packet_loss_percent: ?",padding=10).grid(column=cloumn_start,row=6,rowspan=2)
+        self.packets_sent_text = ttk.Label(self.system_monitor_tab, text="packets_sent: ?",padding=10).grid(column=cloumn_start+1,row=0,rowspan=2)
+        self.packets_received_text = ttk.Label(self.system_monitor_tab, text="packets_received: ?",padding=10).grid(column=cloumn_start+1,row=2,rowspan=2)
+        self.packets_sent_dropped_text = ttk.Label(self.system_monitor_tab, text="packets_sent_dropped: ?",padding=10).grid(column=cloumn_start+1,row=4,rowspan=2)
+        self.packets_received_dropped_text = ttk.Label(self.system_monitor_tab, text="packets_received_dropped: ?",padding=10).grid(column=cloumn_start+1,row=6,rowspan=2)
+    
+    def perfomance_monitor_cb(self, msg : sm_msg.Performance):
 
+        ypadding = 5
+        coloumn_offset = 1
+        cloumn_start = 0
+        self.cpu_usage_text = ttk.Label(self.system_monitor_tab, text="cpu_usage: " + str(msg.cpu_usage),padding=10).grid(column=cloumn_start,row=0,rowspan=2)
+        self.mega_bit_upload_text = ttk.Label(self.system_monitor_tab, text="mega_bit_upload: " + str(msg.mega_bit_upload),padding=10).grid(column=cloumn_start,row=2,rowspan=2)
+        self.mega_bit_download_text = ttk.Label(self.system_monitor_tab, text="mega_bit_download: " + str(msg.mega_bit_download),padding=10).grid(column=cloumn_start,row=4,rowspan=2)
+        self.packet_loss_percent_text = ttk.Label(self.system_monitor_tab, text="packet_loss_percent: " + str(msg.packet_loss_percent),padding=10).grid(column=cloumn_start,row=6,rowspan=2)
+        self.packets_sent_text = ttk.Label(self.system_monitor_tab, text="packets_sent: " + str(msg.packets_sent),padding=10).grid(column=cloumn_start+1,row=0,rowspan=2)
+        self.packets_received_text = ttk.Label(self.system_monitor_tab, text="packets_received: " + str(msg.packets_received),padding=10).grid(column=cloumn_start+1,row=2,rowspan=2)
+        self.packets_sent_dropped_text = ttk.Label(self.system_monitor_tab, text="packets_sent_dropped: " + str(msg.packets_sent_dropped),padding=10).grid(column=cloumn_start+1,row=4,rowspan=2)
+        self.packets_received_dropped_text = ttk.Label(self.system_monitor_tab, text="packets_received_dropped: " + str(msg.packets_received_dropped),padding=10).grid(column=cloumn_start+1,row=6,rowspan=2)
+        return
+        
     def updateParamVal(self):
         self.param_msg_array = []
         msg = sm_msg.Param()
