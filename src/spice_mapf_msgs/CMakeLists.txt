@@ -16,8 +16,8 @@ find_package(rosidl_default_generators REQUIRED)
 
 set(msg_files
   "msg/Location.msg"
-  "msg/Path.msg"
-  "msg/Paths.msg"
+  "msg/RobotPose.msg"
+  "msg/RobotPoses.msg"
   "msg/Position.msg"
 )
 

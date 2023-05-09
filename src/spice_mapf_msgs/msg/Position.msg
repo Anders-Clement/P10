@@ -1,3 +1,2 @@
-float64 x
-float64 y
-spice_msgs/Id id
+float64 x # position in world
+float64 y # position in world

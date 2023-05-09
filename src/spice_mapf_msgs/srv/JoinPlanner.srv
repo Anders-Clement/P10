@@ -1,4 +1,3 @@
-spice_msgs/Id id # id of joining robot
-Location location # current location of robot
+RobotPose robot_pose
 ---
 bool success # whether robot is allowed to join or not

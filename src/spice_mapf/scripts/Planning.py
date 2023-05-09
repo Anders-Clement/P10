@@ -17,6 +17,11 @@ class Planner:
         self.planning_time = 0
 
     def tick(self, timestep: int):
+
+        # clear now old constraints, done here, instead of after, to allow agent planning between ticks
+        if len(self.constraints) > 0:
+            self.constraints.pop(0)
+
         self.goal_constraints = []
         # add waiting agents as goal constraints
         for agent in self.agents:
@@ -30,15 +35,11 @@ class Planner:
             if len(agent.path) == 0 and agent.current_loc == agent.current_goal:
                 # agent is either at goal, or at start without plan
                 self.replan_agent(agent)
-            if len(agent.path) > 0:
-                self.goal_constraints.append((agent.path[-1], 0, agent.id))
-        print(f'INFO: a* planning time for all agents: {self.planning_time:.3f}')
+        # print(f'INFO: a* planning time for all agents: {self.planning_time:.3f}')
         # print(f'constraints:')
         # for constraint in self.constraints:
         #     print(constraint)
-        # clear now old constraints
-        if len(self.constraints) > 0:
-            self.constraints.pop(0)
+        
 
         # for agent in self.agents:
         #     print(f'Path for agent {agent.id}: {agent.path}')
@@ -73,6 +74,7 @@ class Planner:
             agent.target_goal = None
             agent.waiting = False
             agent.current_loc = path[0]
+            self.goal_constraints.append((agent.path[-1], 0, agent.id)) # add goal constraints for other agents
             self.add_constraints(path, agent)
             return True
 

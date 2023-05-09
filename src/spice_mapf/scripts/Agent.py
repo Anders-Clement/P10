@@ -1,13 +1,15 @@
 import spice_msgs.msg as spice_msgs
+from geometry_msgs.msg import Quaternion
 
 class Agent:
     """Container for an agent, encapsulating pose and current plan"""
-    def __init__(self, start_loc: tuple[int,int], id: spice_msgs.Id, is_simulated = False) -> None:
+    def __init__(self, start_loc: tuple[int,int], heading: Quaternion, id: spice_msgs.Id, is_simulated = False) -> None:
         self.id = id
         self.start_loc = start_loc
         self.current_loc = start_loc
         self.current_pos = self.current_loc
         self.next_loc = start_loc
+        self.next_heading = heading
         self.target_goal = None
         self.current_goal = start_loc
         self.waiting = False
@@ -15,5 +17,5 @@ class Agent:
         self.path = []
         self.is_simulated = is_simulated
 
-    def __str__(self) -> str:
-        return f'Id: {self.id.id}, next_loc: {self.next_loc}, cur_pos: {self.current_pos}'
+    def debug_str(self, mapf_planner) -> str:
+        return f'Id: {self.id.id}, next_loc world: {mapf_planner.map_to_world(self.next_loc)}, cur_pos world: {mapf_planner.map_to_world(self.current_pos)}'

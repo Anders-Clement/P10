@@ -99,7 +99,7 @@ class PrioritizedPlanner:
 
         map_width = len(my_map[0])
         map_height = len(my_map)
-        max_iter = map_width*map_height
+        max_iter = map_width*map_height*32
         open_list = []
         closed_list = {}
         h_values = PrioritizedPlanner.compute_heuristics(my_map, goal_loc)
@@ -116,7 +116,7 @@ class PrioritizedPlanner:
             num_nodes_visited += 1
 
             if num_nodes_visited >= max_iter:
-                print(f'Got to max iterations for agent {agent.id}')
+                print(f'Got to max iterations for agent {agent.id} from: {start_loc} to {goal_loc}')
                 return None
             # #############################
             # # Task 1.4: Adjust the goal test condition to handle goal constraints
@@ -132,7 +132,7 @@ class PrioritizedPlanner:
             # add child nodes for four cardinal directions
             for direction in range(4):
                 child_loc = PrioritizedPlanner.move(curr['loc'], direction)
-                x,y = child_loc
+                y,x = child_loc
                 if x < 0 or y < 0:
                     continue
                 if x >= map_width or y >= map_height:

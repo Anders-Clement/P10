@@ -1,4 +1,4 @@
-Location goal
-spice_msgs/Id id
+RobotPose robot_pose
 ---
+Position goal_position # exact goal position from map in world coordinates
 bool success # whether the goal was allocated
