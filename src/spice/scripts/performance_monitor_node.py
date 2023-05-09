@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import psutil
 import dataclasses
 import time

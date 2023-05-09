@@ -6,7 +6,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
 
-DEFAULT_MAP_NAME = "A4_legless.yaml" # change to the name.yaml of the default map here
+DEFAULT_MAP_NAME = "A4.yaml" # change to the name.yaml of the default map here
 
 def generate_launch_description():
 
@@ -31,23 +31,23 @@ def generate_launch_description():
             name='work_cell_allocator'
         ),
 
-        Node(
-            package='spice',
-            executable='task_allocator',
-            name='task_allocator'
-        ),
+        # Node(
+        #     package='spice',
+        #     executable='task_allocator',
+        #     name='task_allocator'
+        # ),
 
         Node(
             package='spice',
             executable='work_cell_simulator',
             name='work_cell_simulator',
             parameters=[
-                {'work_cell_rep_slope': 400.0}, # workcell repulsion for queue pos
+                {'work_cell_rep_slope': 350.0}, # workcell repulsion for queue pos
                 {'carrier_bot_rep_slope': 300.0}, # carrier bot repulsion
                 {'wall_rep_slope': 300.0}, #static map obstacle repulsion
-                {'queue_rep_slope': 225.0}, # other queue point repulsion
+                {'queue_rep_slope': 270.0}, # other queue point repulsion
                 {'plan_rep_slope': 275.0}, # robot plans repulsion
-                {'work_cell_att_slope':  0.025}, # own workcell attraction
+                {'work_cell_att_slope':  0.033}, # own workcell attraction
                 {'queue_att_slope': 0.0}, #own lower queue point attraction
                 {'min_move_dist': 10},
                 {'q_max_vel': 0.5},
