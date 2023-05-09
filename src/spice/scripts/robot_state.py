@@ -517,12 +517,11 @@ class EnterWorkCellState(RobotStateTemplate):
             change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
             change_planner_type_future.add_done_callback(self.navigate_into_cell)
         else:
-            self.num_navigation_errors_entry += 1
             self.sm.get_logger().warn(f'Goal status not succeeded to go to entry of work cell, number of tries: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}')
-            if self.num_navigation_errors_entry > self.MAX_NAVIGATION_RETRIES_ENTRY:
-                self.sm.get_logger().error(f'Too many failures to go to entry of work cell: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}, going to ERROR')
-                self.sm.change_state(ROBOT_STATE.ERROR)
-                return
+          
+            self.sm.get_logger().error(f'Too many failures to go to entry of work cell: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}, going to ERROR')
+            self.sm.change_state(ROBOT_STATE.ERROR)
+            return
 
             # self.sm.get_logger().warn('Goal status not succeeded')
             # self.sm.change_state(ROBOT_STATE.ERROR)
