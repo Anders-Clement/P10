@@ -321,7 +321,7 @@ public:
             }
 
             //tree_counter = rand() % 4 + 1;
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "random number: %d", tree_counter); //debug
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "task_id: %d", tree_counter); //debug
             tree = std::make_unique<handmadeTrees>(this,tree_counter);
 
             auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();

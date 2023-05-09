@@ -90,12 +90,12 @@ def generate_launch_description():
                         ("/tf", "tf"),
                         ("/tf_static", "tf_static")],
             namespace=namespace
-        ),
-        Node
-        (
-            package='spice',
-            executable='robot_state_manager_node.py',
-            name='robot_state_manager_node',
-            namespace=namespace
         )
+        # Node
+        # (
+        #     package='spice',
+        #     executable='robot_state_manager_node.py',
+        #     name='robot_state_manager_node',
+        #     namespace=namespace
+        # )
     ])
