@@ -8,7 +8,7 @@ from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action._navigate_to_pose import NavigateToPose_FeedbackMessage, NavigateToPose_Feedback
 
-from spice_msgs.msg import PlannerType, QueuePoints, QueuePoint
+from spice_msgs.msg import PlannerType, QueuePoints, QueuePoint, TaskData
 from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell, RegisterWork, SetPlannerType, RobotReady
 
 from work_tree import WorkTree
@@ -144,8 +144,21 @@ class ReadyForJobState(RobotStateTemplate):
                                       ignoring the task")
             return response
         
-        self.sm.task_tree = WorkTree(request.task.layers) # create task tree of robot task
-                   
+        self.sm.task_tree = WorkTree(request.task.layers)# create task tree of robot task
+        self.msg = TaskData()
+        
+        self.msg.task_state = TaskData.TASKSTART
+        self.msg.robot_id = self.sm.id
+        self.msg.task_id = request.task_id
+        self.sm.current_task_id = request.task_id
+
+
+        self.msg.stamp = self.sm.get_clock().now().to_msg()
+        self.sm.task_start_time = self.sm.get_clock().now().seconds_nanoseconds()[0]
+        self.msg.total_time = 0
+        
+        self.sm.state_data_pub.publish(self.msg)
+
         response.job_accepted = True
         self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)
         return response
@@ -161,6 +174,15 @@ class FindWorkCell(RobotStateTemplate):
         if len(self.sm.current_work) == 0: # no more work
             self.sm.task_tree = None
             self.sm.get_logger().info("Job done, getting ready for a new job")
+        
+            self.msg = TaskData()
+            self.msg.task_state = TaskData.TASKDONE
+            self.msg.robot_id = self.sm.id
+            self.msg.stamp = self.sm.get_clock().now().to_msg()
+            self.msg.total_time = self.sm.get_clock().now().seconds_nanoseconds()[0] - self.sm.task_start_time
+            self.msg.task_id = self.sm.current_task_id
+            
+            self.sm.state_data_pub.publish(self.msg)
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
             return
 
@@ -276,6 +298,17 @@ class EnqueuedState(RobotStateTemplate):
         self.srv_call_robot = self.sm.create_service(
                     Trigger, 'call_robot', self.call_robot_cb)
         
+        self.msg = TaskData()
+
+        self.msg.task_state = TaskData.ENQUEUED
+        self.msg.robot_id = self.sm.id
+        self.msg.stamp = self.sm.get_clock().now().to_msg()
+        self.sm.enqueud_start_time = self.sm.get_clock().now().seconds_nanoseconds()[0]
+        self.msg.total_time = 0#self.sm.get_clock().now().seconds_nanoseconds()[0] - self.sm.task_start_time
+        self.msg.task_id = self.sm.current_task_id
+
+        self.sm.state_data_pub.publish(self.msg)
+        
         set_planner_type_request = SetPlannerType.Request()
         set_planner_type_request.planner_type = PlannerType(type=PlannerType.PLANNER_PRIORITIZED)
         change_planner_type_future = self.sm.change_planner_type_client.call_async(set_planner_type_request)
@@ -294,6 +327,8 @@ class EnqueuedState(RobotStateTemplate):
         
         self.timer = self.sm.create_timer(0.1, self.check_service_cb)
         self.timer.cancel()
+
+
         
     def queue_points_cb(self, msg: QueuePoints) -> None:
         for queue_point in msg.queue_points:
@@ -438,6 +473,16 @@ class EnterWorkCellState(RobotStateTemplate):
         self.num_navigation_errors_center = 0
         self.MAX_NAVIGATION_RETRIES_ENTRY = 5
         self.MAX_NAVIGATION_RETRIES_CENTER = 5
+                            
+        self.msg = TaskData()
+        self.msg.task_state = TaskData.ENTERWORKCELL
+        self.msg.robot_id = self.sm.id
+        self.msg.stamp = self.sm.get_clock().now().to_msg()
+        self.msg.total_time = self.sm.get_clock().now().seconds_nanoseconds()[0] - self.sm.enqueud_start_time
+        self.msg.task_id = self.sm.current_task_id
+
+
+        self.sm.state_data_pub.publish(self.msg)
 
     def navigate_to_cell_entry(self, future: Future):
         result: SetPlannerType.Response = future.result()
@@ -679,9 +724,18 @@ class ErrorState(RobotStateTemplate):
     def init(self):
         self.recovery_timer.reset()
         # clear job and task tree
+        self.msg = TaskData()
+        self.msg.task_state = TaskData.ERROR
+        self.msg.robot_id = self.sm.id
+        self.msg.stamp = self.sm.get_clock().now().to_msg()
+        self.msg.total_time = self.sm.get_clock().now().seconds_nanoseconds()[0] - self.sm.task_start_time
+        self.msg.task_id = self.sm.current_task_id
+        
+        self.sm.state_data_pub.publish(self.msg)
         self.sm.current_task = None
         self.sm.task_tree = None
-        self.sm.work_cell_heartbeat.deactivate()
+        if(self.sm.work_cell_heartbeat is not None):
+            self.sm.work_cell_heartbeat.deactivate()
         
     def deinit(self):
         self.recovery_timer.cancel()

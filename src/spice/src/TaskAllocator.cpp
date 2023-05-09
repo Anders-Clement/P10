@@ -323,11 +323,13 @@ public:
             //tree_counter = rand() % 4 + 1;
             RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "random number: %d", tree_counter); //debug
             tree = std::make_unique<handmadeTrees>(this,tree_counter);
+
+            auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();
+            jobRequest->task = this->tree->to_task_msg();
+            jobRequest->task_id = tree_counter;
             tree_counter++;
             if (tree_counter > 4)
                 tree_counter = 1;
-            auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();
-            jobRequest->task = this->tree->to_task_msg();
 
             RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to %s", robot.id.id.c_str());
 

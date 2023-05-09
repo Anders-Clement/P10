@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 
 set(msg_files
   "msg/LedOutput.msg"
@@ -28,6 +29,7 @@ set(msg_files
   "msg/QueuePoint.msg"
   "msg/QueuePoints.msg"
   "msg/Param.msg"
+  "msg/TaskData.msg"
 )
 
 set(srv_files
@@ -48,7 +50,7 @@ set(srv_files
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}
   ${srv_files}  
-  DEPENDENCIES geometry_msgs nav_msgs
+  DEPENDENCIES geometry_msgs nav_msgs std_msgs builtin_interfaces
 )
 
 ament_export_dependencies(rosidl_default_runtime)

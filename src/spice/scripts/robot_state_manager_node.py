@@ -12,7 +12,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoS
 
 from nav2_msgs.action import NavigateToPose
 
-from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType
+from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType, TaskData
 from spice_msgs.srv import Heartbeat, RobotTask, SetPlannerType
 from work_tree import WorkTree
 import robot_state
@@ -86,6 +86,10 @@ class RobotStateManager(Node):
         self.current_work = None
         self.current_work_cell_info = None
         self.task_tree = None
+        self.current_task_id = 0
+        self.task_start_time = 0
+        self.enqueud_start_time = 0
+        self.state_data_pub = self.create_publisher(TaskData, "/task_data", 10)
 
         qos = QoSProfile(
                 history = QoSHistoryPolicy.KEEP_LAST, 
