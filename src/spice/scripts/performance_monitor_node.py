@@ -1,6 +1,7 @@
 import psutil
 import dataclasses
 import time
+import os
 import rclpy
 from rclpy.node import Node
 from spice_msgs.msg import Performance
@@ -64,7 +65,7 @@ class PerformanceMonitorNode(Node) :
     def __init__(self) -> None:
         super().__init__('performance_monitor_node')
         self.publish_timer = self.create_timer(1.0, self.publish_readings)
-        self.performance_publisher = self.create_publisher(Performance, self.get_namespace()+'system_performance',10)
+        self.performance_publisher = self.create_publisher(Performance, os.path.join(self.get_namespace(),'system_performance'),10)
         self.performance_monitor = PerformanceMonitor()
 
     def publish_readings(self):
