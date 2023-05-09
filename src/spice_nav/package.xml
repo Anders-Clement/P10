@@ -17,6 +17,7 @@
   <depend>nav2_costmap_2d</depend>
   <depend>pluginlib</depend>
   <depend>tf2_geometry_msgs</depend>
+  <depend>spice_control</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
