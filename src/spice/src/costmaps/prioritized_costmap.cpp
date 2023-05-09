@@ -302,20 +302,23 @@ void PrioritizedCostmap::AddRobotsToGlobalCostmap(nav2_costmap_2d::Costmap2D& co
 			}
 
 		double angle_increment = 2.0 * M_PI / m_robot_points;
+		int r_radious_costmap = round(ROBOT_RADIUS/costmap.getResolution());
+		
 
-		for (int y = -2 * ROBOT_RADIUS; y <= 2 * ROBOT_RADIUS; y++)
+		for (int y = -2 * r_radious_costmap; y <= 2 * r_radious_costmap; y++)
 		{
-				for (int x = -2 * ROBOT_RADIUS; x <= 2 * ROBOT_RADIUS; x++)
+				for (int x = -2 * r_radious_costmap; x <= 2 * r_radious_costmap; x++)
 				{
 
-					if (x * x + y * y <= 2 * ROBOT_RADIUS * 2 * ROBOT_RADIUS)
+					if (x * x + y * y <= 2 * r_radious_costmap * 2 * r_radious_costmap)
 					{
 						signed int checkx = mx + x;
 						signed int checky = my + y;
 						if (checkx < 0 || checky < 0 || checkx > costmap.getSizeInCellsX() || checky > costmap.getSizeInCellsY())
 						{
-							costmap.setCost(mx + x, my + y, nav2_costmap_2d::LETHAL_OBSTACLE);
+							continue;
 						}
+						costmap.setCost(mx + x, my + y, nav2_costmap_2d::LETHAL_OBSTACLE);
 					}
 				}
 		}
