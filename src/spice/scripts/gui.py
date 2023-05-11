@@ -178,10 +178,10 @@ class Ui(Node):
         ypadding = 5
         coloumn_offset = 1
         cloumn_start = 0
-        self.cpu_usage_text = ttk.Label(self.system_monitor_tab, text="cpu_usage: " + str(msg.cpu_usage),padding=10).grid(column=cloumn_start,row=0,rowspan=2)
-        self.mega_bit_upload_text = ttk.Label(self.system_monitor_tab, text="mega_bit_upload: " + str(msg.mega_bit_upload),padding=10).grid(column=cloumn_start,row=2,rowspan=2)
-        self.mega_bit_download_text = ttk.Label(self.system_monitor_tab, text="mega_bit_download: " + str(msg.mega_bit_download),padding=10).grid(column=cloumn_start,row=4,rowspan=2)
-        self.packet_loss_percent_text = ttk.Label(self.system_monitor_tab, text="packet_loss_percent: " + str(msg.packet_loss_percent),padding=10).grid(column=cloumn_start,row=6,rowspan=2)
+        self.cpu_usage_text = ttk.Label(self.system_monitor_tab, text="cpu_usage: " + str(round(msg.cpu_usage,3)),padding=10).grid(column=cloumn_start,row=0,rowspan=2)
+        self.mega_bit_upload_text = ttk.Label(self.system_monitor_tab, text="mega_bit_upload: " + str(round(msg.mega_bit_upload,3)),padding=10).grid(column=cloumn_start,row=2,rowspan=2)
+        self.mega_bit_download_text = ttk.Label(self.system_monitor_tab, text="mega_bit_download: " + str(round(msg.mega_bit_download,3)),padding=10).grid(column=cloumn_start,row=4,rowspan=2)
+        self.packet_loss_percent_text = ttk.Label(self.system_monitor_tab, text="packet_loss_percent: " + str(round(msg.packet_loss_percent,3)),padding=10).grid(column=cloumn_start,row=6,rowspan=2)
         self.packets_sent_text = ttk.Label(self.system_monitor_tab, text="packets_sent: " + str(msg.packets_sent),padding=10).grid(column=cloumn_start+1,row=0,rowspan=2)
         self.packets_received_text = ttk.Label(self.system_monitor_tab, text="packets_received: " + str(msg.packets_received),padding=10).grid(column=cloumn_start+1,row=2,rowspan=2)
         self.packets_sent_dropped_text = ttk.Label(self.system_monitor_tab, text="packets_sent_dropped: " + str(msg.packets_sent_dropped),padding=10).grid(column=cloumn_start+1,row=4,rowspan=2)
@@ -258,7 +258,7 @@ class Ui(Node):
         result: sm_srv.GetRobots.Response = future.result()
         if self.robot_manager.check_new_robots(result.robots):
             robot_info = self.robot_manager.get_robot_infos()
-            self.reset_robot_state_tab()
+            #self.reset_robot_state_tab()
             self.robot_state_label = ttk.Label(self.robot_state_tab, text='Number of robots: ' + str(len(robot_info)), padding=5).grid(column=0, row=0, rowspan=2)
             #+ str(len(robot_info)))
             for i, info in enumerate(robot_info):
