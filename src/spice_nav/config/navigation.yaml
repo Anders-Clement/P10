@@ -46,7 +46,7 @@ amcl:
     # initial_pose: {x: 0.7, y: 0.6, z: 0.0, yaw: -0.3}
     #C4:
     # initial_pose: {x: 18.0804, y: 7.08578, z: 0.0, yaw: 1.63992}
-    # A42 (A4 at 0.5m resolution, cropped to room)
+    # A4 low res (A4 at 0.5m resolution, cropped to room)
     initial_pose: {x: 4.25, y: 5.25, z: 0.0, yaw: -1.56}
     # C4_low rest
     # initial_pose: {x: 4.0, y: 7.0, z: 0.0, yaw: 1.56}
