@@ -165,10 +165,20 @@ RobotExitingState::RobotExitingState(WorkCellStateMachine& sm) : m_sm(sm)
 }
 void RobotExitingState::init()
 {
-    
+    max_exiting_timer = rclcpp::create_timer(
+        &m_sm.m_nodehandle, 
+        m_sm.m_nodehandle.get_clock(), 
+        rclcpp::Duration::from_seconds(30.0),
+        [this]() -> void {
+            this->max_exiting_timer->cancel();
+            m_sm.change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
+        }
+    );
 }
+
 void RobotExitingState::deinit()
 {
+    max_exiting_timer.reset();
     m_sm.release_robot();
 }
 

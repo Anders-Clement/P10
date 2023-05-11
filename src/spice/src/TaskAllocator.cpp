@@ -319,11 +319,17 @@ public:
                 RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "could not find %s task service ", robot.id.id.c_str());
                 continue;
             }
-            auto randnr = rand() % 4 + 1;
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "random number: %d", randnr); //debug
-            tree = std::make_unique<handmadeTrees>(this,randnr);
+
+            //tree_counter = rand() % 4 + 1;
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "task_id: %d", tree_counter); //debug
+            tree = std::make_unique<handmadeTrees>(this,tree_counter);
+
             auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();
             jobRequest->task = this->tree->to_task_msg();
+            jobRequest->task_id = tree_counter;
+            tree_counter++;
+            if (tree_counter > 4)
+                tree_counter = 1;
 
             RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to %s", robot.id.id.c_str());
 
@@ -361,6 +367,7 @@ private:
     std::vector<spice_msgs::msg::Robot> robots_;
     rclcpp::TimerBase::SharedPtr timerReadyBots_{nullptr};
     std::map<std::string,rclcpp::Client<spice_msgs::srv::RobotTask>::SharedPtr> robot_clients;
+    int tree_counter = 1;
 
     std::unique_ptr<handmadeTrees> tree;
 };

@@ -48,6 +48,11 @@ static const std::string WORK_CELL_STATE_NAMES[static_cast<uint8_t>(WORK_CELL_ST
     "ROBOT_EXITING"
 };
 
+struct QueuePoint;
+class WorkCellState;
+class QueueManager;
+class WorkCellQueuePositionManager;
+
 // all data for a specific client carrier robot
 struct carrier_robot
 {
@@ -63,10 +68,6 @@ struct carrier_robot
             work(_work), robot_id(_id), ready_in_queue(false), last_heartbeat_time(now) {};
 };
 
-class WorkCellState;
-class QueueManager;
-class WorkCellQueuePositionManager;
-
 class WorkCellStateMachine
 {
 public:
@@ -78,9 +79,11 @@ public:
     void publish_transform();
     std::optional<carrier_robot> get_enqueued_robot();
     void release_robot();
+    geometry_msgs::msg::Pose transform_to_map(geometry_msgs::msg::Transform& target_transform, geometry_msgs::msg::Transform& cell_transform);
     float get_processing_time() {return 5.0;} // TODO: add and use processing time in Work msg
     spice_msgs::msg::Id get_work_cell_id();
     rclcpp::Logger get_logger() { return m_nodehandle.get_logger(); }
+
 
     rclcpp::Node& m_nodehandle;
     std::shared_ptr<rclcpp::Client<std_srvs::srv::Trigger>> m_call_robot_client;

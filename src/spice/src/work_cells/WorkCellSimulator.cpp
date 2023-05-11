@@ -22,7 +22,7 @@ public:
     geometry_msgs::msg::Transform work_cell_locations(){
 
         geometry_msgs::msg::Transform poses[4];
-        if(m_map_name == "A4.yaml") //A4
+        if(m_map_name == "A4.yaml" || m_map_name == "A4_legless.yaml") //A4
         {  
             poses[0].rotation.w = 0.709132;
             poses[0].rotation.x = 0.0;
@@ -240,10 +240,10 @@ public:
         PositionGenerator generator(3, 3, 2, MAP_NAME);
         work_cell_state_machines = {
             std::make_shared<WorkCellStateMachine>(
-                "back_cover_cell", 
+                "fuses_cell", 
                 *this,
-                generator.work_cell_locations(),
-                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER),
+                generator.work_cell_locations(), 
+                spice_msgs::msg::RobotType::WORK_CELL_FUSES),
             std::make_shared<WorkCellStateMachine>(
                 "drill_cell", 
                 *this,
@@ -255,10 +255,10 @@ public:
                 generator.work_cell_locations(), 
                 spice_msgs::msg::RobotType::WORK_CELL_TOP),
             std::make_shared<WorkCellStateMachine>(
-                "fuses_cell", 
+                "back_cover_cell", 
                 *this,
-                generator.work_cell_locations(), 
-                spice_msgs::msg::RobotType::WORK_CELL_FUSES)
+                generator.work_cell_locations(),
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)
         };
     }
     std::string MAP_NAME;

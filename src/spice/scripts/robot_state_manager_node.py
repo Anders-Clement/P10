@@ -12,11 +12,12 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoS
 
 from nav2_msgs.action import NavigateToPose
 
-from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType
+from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType, TaskData
 from spice_msgs.srv import Heartbeat, RobotTask, SetPlannerType
 from spice_mapf_msgs.action import NavigateMapf
 from work_tree import WorkTree
 import robot_state
+from geometry_msgs.msg import PoseStamped
 
 
 class ROBOT_STATE(enum.IntEnum):
@@ -86,6 +87,10 @@ class RobotStateManager(Node):
         self.current_work = None
         self.current_work_cell_info = None
         self.task_tree = None
+        self.current_task_id = 0
+        self.task_start_time = 0
+        self.enqueud_start_time = 0
+        self.state_data_pub = self.create_publisher(TaskData, "/task_data", 10)
 
         qos = QoSProfile(
                 history = QoSHistoryPolicy.KEEP_LAST, 
@@ -94,6 +99,8 @@ class RobotStateManager(Node):
                 depth = 10
             )
         
+        
+
         self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', qos)
 
         self.heartbeat = HeartBeatHandler('/heartbeat', 2.5, self.id, lambda arg : arg.change_state(ROBOT_STATE.STARTUP), self)

@@ -60,6 +60,7 @@ class WorkCellQueuePositionManager{
     std::shared_ptr<nav2_costmap_2d::Costmap2D> m_global_costmap;
     std::shared_ptr<nav2_costmap_2d::Costmap2D> workcell_costmap;
     std::shared_ptr<nav2_costmap_2d::Costmap2D> m_robot_plan_costmap;
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> static_costmap;
 
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmap_subscriber;
     rclcpp::Subscription<spice_msgs::msg::RobotPlan>::SharedPtr m_plans_subscriber;

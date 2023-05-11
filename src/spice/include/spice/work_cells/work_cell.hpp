@@ -84,6 +84,7 @@ class RobotExitingState : public WorkCellState
 {
 public:
     RobotExitingState(WorkCellStateMachine& sm);
+    rclcpp::TimerBase::SharedPtr max_exiting_timer;
     void init() override;
     void deinit() override;
     void on_robot_exited(

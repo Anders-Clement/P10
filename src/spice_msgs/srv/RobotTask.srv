@@ -1,3 +1,4 @@
 Task task
+uint8 task_id
 ---
 bool job_accepted
