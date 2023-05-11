@@ -5,8 +5,11 @@ import random
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rclpy.task import Future
+from rclpy.time import Time
 from geometry_msgs.msg import Quaternion
 import spice_msgs.msg as spice_msgs
+import spice_msgs.srv as spice_srvs
 import spice_mapf_msgs.msg as spice_mapf_msgs
 import spice_mapf_msgs.srv as spice_mapf_srvs
 from Planning import Planner, PlanningResult
@@ -14,6 +17,8 @@ from Agent import Agent
 from Map import Map
 from Visualizer import Visualizer
 
+import tf2_ros
+from tf2_ros import TransformException
 import tf_transformations
 
 class MapfPlanner(Node):
@@ -23,6 +28,7 @@ class MapfPlanner(Node):
         self.agents: list[Agent] = []
         self.planner = Planner(self.map, self.agents, self)
         self.visualizer = Visualizer(self.map, self.agents)
+        self.workcell_obstacles = WorkcellObstacle(self)
         self.visualizer.visualize()
         self.timer = self.create_timer(0.1, self.tick)
 
@@ -111,6 +117,7 @@ class MapfPlanner(Node):
                     self.get_logger().warn(f'Agent: {request.robot_pose.id.id} tried to preempt goal, but it is not supported')
                     return response
                 
+                agent.workcell_id = request.workcell_id                
                 agent.target_goal = goal
                 goal_in_world = self.map_to_world(goal)
                 response.goal_position.x = goal_in_world[0]
@@ -181,7 +188,7 @@ class MapfPlanner(Node):
                 if agent.target_goal is None and len(agent.path) == 0:
                     self.make_random_goal_for_agent(agent)
 
-        self.planner.tick(self.timestep)
+        self.planner.tick(self.timestep, self.workcell_obstacles.workcell_locations)
 
         self.publish_robot_paths()
 
@@ -272,6 +279,57 @@ class MapfPlanner(Node):
         return True
 
 
+class WorkcellObstacle():
+    def __init__(self, mapf_planner: MapfPlanner):
+        self.mapf_planner = mapf_planner
+        self.get_robots_timer = self.mapf_planner.create_timer(5.0, self.get_robots_timer_cb)
+        self.get_workcells_client = self.mapf_planner.create_client(spice_srvs.GetRobotsByType, "/get_robots_by_type")
+        self.workcell_ids: list[spice_msgs.Id] = []
+        self.workcell_locations: list[tuple[spice_msgs.Id, tuple[int,int]]] = []
+        self.tf_buffer = tf2_ros.buffer.Buffer()
+        self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self)
+
+    def get_robots_timer_cb(self):
+        request = spice_srvs.GetRobotsByType.Request()
+        request.type = spice_msgs.RobotType.WORK_CELL_ANY
+        self.get_workcells_client.call_async(request).add_done_callback()
+
+    def get_robots_cb(self, future: Future):
+        result: spice_srvs.GetRobotsByType.Response = future.result()
+        robots: list[spice_msgs.Robot] = result.robots
+        for robot in robots:
+            if robot.id not in self.workcell_ids:
+                self.workcell_ids.append(robot.id)
+
+        self.get_workcell_locations()
+
+    def get_workcell_locations(self):
+        self.workcell_locations = []
+        for workcell_id in self.workcell_ids:
+            post_fixes = ["", "_entry", "_exit"]
+            for post_fix in post_fixes:
+                obstacle = self.get_workcell_obstacle(workcell_id, post_fix)
+                if obstacle is not None:
+                    self.workcell_locations.append(obstacle)
+            
+                
+    def get_workcell_obstacle(self, workcell_id: spice_msgs.Id, frame_postfix: str) -> tuple[spice_msgs.Id, tuple[int,int]]:
+        
+        from_frame_rel = workcell_id.id + frame_postfix
+        to_frame_rel = "map"
+        try:
+            workcell_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, Time())
+        except TransformException as e:
+            self.get_logger().info(
+                        f'Could not transform {to_frame_rel} to {from_frame_rel}: {e}', once=True)
+            return None
+        
+        pos = spice_mapf_msgs.Position()
+        pos.x = workcell_transform.transform.translation.x
+        pos.y = workcell_transform.transform.translation.y
+        return (workcell_id, self.mapf_planner.world_to_map(pos))
+
+        
 
 if __name__ == '__main__':
     rclpy.init()

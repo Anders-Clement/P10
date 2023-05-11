@@ -1,4 +1,5 @@
 import heapq
+import spice_msgs.msg as spice_msgs
 
 class PrioritizedPlanner:
     @staticmethod
@@ -58,7 +59,8 @@ class PrioritizedPlanner:
         return path
 
     @staticmethod
-    def is_constrained(curr_loc, next_loc, next_time, constraint_table: list[dict], goal_constraints: list, agent, goal_loc):
+    def is_constrained(curr_loc, next_loc, next_time, constraint_table: list[dict], 
+                       goal_constraints: list, agent, goal_loc, workcell_constraints: list[tuple[spice_msgs.Id, tuple[int,int]]]):
         if next_time < len(constraint_table):
             constraint = constraint_table[next_time].get(next_loc)
             if constraint is not None:
@@ -70,6 +72,11 @@ class PrioritizedPlanner:
                 continue
             if timestep <= next_time-1 and (constraint_pos == next_loc or constraint_pos == curr_loc):
                 return True
+            
+        for workcell_id, workcell_loc in workcell_constraints:
+            if agent.workcell_id != workcell_id:
+                if workcell_loc == next_loc:
+                    return True
         
         return False
 
@@ -88,7 +95,8 @@ class PrioritizedPlanner:
         return n1['g_val'] + n1['h_val'] < n2['g_val'] + n2['h_val']
 
     @staticmethod
-    def a_star(my_map, agent, constraint_table, earliest_goal_timestep, goal_constraints, h_values):
+    def a_star(my_map, agent, constraint_table, earliest_goal_timestep, goal_constraints, h_values, 
+               workcell_constraints: list[tuple[spice_msgs.Id, tuple[int,int]]]):
         """ my_map      - binary obstacle map
             start_loc   - start position
             goal_loc    - goal position

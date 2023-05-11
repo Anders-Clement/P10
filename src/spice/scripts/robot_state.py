@@ -347,6 +347,7 @@ class EnqueuedState(RobotStateTemplate):
             # TODO: NAV
             nav_goal = NavigateMapf.Goal()
             nav_goal.goal_pose = self.sm.current_work_cell_info.queue_pose
+            nav_goal.workcell_id = self.sm.current_task.workcell_id
             self.nav_response_future = self.sm.mapf_navigation_client.send_goal_async(
                 nav_goal,
                 self.sm.on_nav_feedback
@@ -467,6 +468,7 @@ class EnterWorkCellState(RobotStateTemplate):
         # TODO: NAV
         current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
         nav_goal = NavigateMapf.Goal()
+        nav_goal.workcell_id = self.sm.current_task.workcell_id
         nav_goal.goal_pose = current_work_cell_info.entry_pose
         self.nav_response_future = self.sm.mapf_navigation_client.send_goal_async(
             nav_goal, self.sm.on_nav_feedback)
@@ -510,6 +512,7 @@ class EnterWorkCellState(RobotStateTemplate):
         # TODO: NAV
         nav_goal = NavigateMapf.Goal()
         nav_goal.goal_pose = current_work_cell_info.processing_pose
+        nav_goal.workcell_id = self.sm.current_task.workcell_id
         self.nav_response_future = self.sm.mapf_navigation_client.send_goal_async(
             nav_goal, self.sm.on_nav_feedback
         )
@@ -647,6 +650,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
         # TODO: NAV
         nav_goal = NavigateMapf.Goal()
         nav_goal.goal_pose = self.sm.current_work_cell_info.exit_pose
+        nav_goal.workcell_id = self.sm.current_task.workcell_id
         self.nav_response_future = self.sm.mapf_navigation_client.send_goal_async(
             nav_goal, self.sm.on_nav_feedback
         )

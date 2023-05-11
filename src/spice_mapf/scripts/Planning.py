@@ -3,6 +3,7 @@ import time
 import random
 from enum import IntEnum
 from rclpy.node import Node
+import spice_msgs.msg as spice_msgs
 import PrioritizedPlanner
 from Map import Map
 from Agent import Agent
@@ -23,9 +24,10 @@ class Planner:
         self.prio_planner = PrioritizedPlanner.PrioritizedPlanner()
         self.paths_planned = 0
         self.planning_time = 0
+        self.workcell_constraints: list[tuple[spice_msgs.Id, tuple[int,int]]] = []
 
-    def tick(self, timestep: int):
-
+    def tick(self, timestep: int, workcell_constraints: list[tuple[spice_msgs.Id, tuple[int,int]]]):
+        self.workcell_constraints = workcell_constraints
         # clear now old constraints, done here, instead of after planning, to allow agent planning between ticks
         if len(self.constraints) > 0:
             self.constraints.pop(0)
@@ -62,7 +64,8 @@ class Planner:
             self.constraints,
             len(self.constraints),
             self.goal_constraints,
-            h_values
+            h_values,
+            self.workcell_constraints
         )
         duration = time.time() - start_time
         # print(f'Planned path in {duration} seconds')

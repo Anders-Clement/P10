@@ -86,6 +86,7 @@ class MAPFNavigator(Node):
         self.current_nav_goal.position.y = goal.goal_pose.pose.position.y
         self.current_nav_goal.id = self.id
         request_goal = spice_mapf_srvs.RequestGoal.Request()
+        request_goal.workcell_id = goal.workcell_id
         request_goal.robot_pose = self.current_nav_goal
         request_goal_future = self.request_goal_client.call_async(request_goal)
         rate = self.create_rate(10, self.get_clock())
