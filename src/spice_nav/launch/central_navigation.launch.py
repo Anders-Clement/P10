@@ -21,7 +21,7 @@ from launch.conditions import IfCondition
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 
-DEFAULT_MAP_NAME = 'low_res/C4_nav.yaml' # change to the name.yaml of the default map here
+DEFAULT_MAP_NAME = 'low_res/A42.yaml' # change to the name.yaml of the default map here
 
 def generate_launch_description():
 
