@@ -65,7 +65,11 @@ def generate_launch_description():
                 {'cost': 254} # cost of other higher priority robots' plans 
             ]
         ),
-
+        Node(
+            package='spice_mapf',
+            executable='mapf_planner_node.py',
+            name='mapf_planner_node'
+        ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(

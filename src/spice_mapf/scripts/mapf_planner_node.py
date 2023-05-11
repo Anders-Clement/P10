@@ -19,7 +19,7 @@ import tf_transformations
 class MapfPlanner(Node):
     def __init__(self):
         super().__init__('MapfPlanner')
-        self.map = Map(self)
+        self.map = Map(self, load_map_from_topic=True)
         self.agents: list[Agent] = []
         self.planner = Planner(self.map, self.agents, self)
         self.visualizer = Visualizer(self.map, self.agents)
@@ -69,6 +69,13 @@ class MapfPlanner(Node):
         self.get_logger().info(
             f'Trying to add agent {request.robot_pose.id.id} at world x,y: {request.robot_pose.position.x:.2f},{request.robot_pose.position.y:.2f}'
             )
+        
+        # check if agent is already present, but old, if so, remove it before adding it
+        for agent in self.agents:
+                if agent.id.id == request.robot_pose.id.id:
+                    self.agents.remove(agent)
+                    self.get_logger().warn(f'Agent: {agent.id.id} has rejoined the planner')
+                    break
         if self.can_add_agent_at_loc(join_location):
             self.add_agent(join_location, request.robot_pose)
             self.publish_robot_paths() # to give initial pose to robots
@@ -85,6 +92,14 @@ class MapfPlanner(Node):
         goal = self.world_to_map(request.robot_pose.position)
 
         self.get_logger().info(f'Got goal world x,y: {request.robot_pose.position.x},{request.robot_pose.position.y}, map y,x: {goal} from agent: {request.robot_pose.id.id}')
+
+        for agent in self.agents:
+            if agent.id.id == request.robot_pose.id.id:
+                if goal == agent.current_loc: # robot is already at requested goal
+                    response.success = True
+                    response.goal_position = goal
+                    return response
+
         if not self.is_goal_free(goal):
             self.get_logger().warn(f'Agent: {request.robot_pose.id.id} requested a goal which was not free')
             return response

@@ -58,18 +58,17 @@ class PrioritizedPlanner:
         return path
 
     @staticmethod
-    def is_constrained(curr_loc, next_loc, next_time, constraint_table: list[dict], goal_constraints: list, agent_id: int, goal_loc):
+    def is_constrained(curr_loc, next_loc, next_time, constraint_table: list[dict], goal_constraints: list, agent, goal_loc):
         if next_time < len(constraint_table):
             constraint = constraint_table[next_time].get(next_loc)
             if constraint is not None:
-                if constraint != agent_id:
+                if constraint != agent.id:
                     return True
         
-        for constraint in goal_constraints:
-            constraint_pos, timestep, constraint_id = constraint
-            if agent_id == constraint_id: # do not constrain oneself
+        for constraint_pos, timestep, constraint_id  in goal_constraints:
+            if agent.id == constraint_id: # do not constrain oneself
                 continue
-            if constraint_pos == next_loc or constraint_pos == curr_loc:
+            if timestep <= next_time-1 and (constraint_pos == next_loc or constraint_pos == curr_loc):
                 return True
         
         return False
@@ -99,11 +98,10 @@ class PrioritizedPlanner:
         
         start_loc = agent.current_loc
         goal_loc = agent.target_goal
-        agent_id = agent.id
 
         map_width = len(my_map[0])
         map_height = len(my_map)
-        max_iter = map_width*map_height*32
+        max_iter = map_width*map_height*4
         open_list = []
         closed_list = {}
         root = {'loc': start_loc, 'g_val': 0, 'h_val': h_values[start_loc], 'parent': None, 'time': 0}
@@ -147,7 +145,7 @@ class PrioritizedPlanner:
                         'time': curr['time']+1}
                 
                 # do not add constrained nodes
-                if PrioritizedPlanner.is_constrained(curr['loc'], child_loc, child['time'], constraint_table, goal_constraints, agent_id, goal_loc):
+                if PrioritizedPlanner.is_constrained(curr['loc'], child_loc, child['time'], constraint_table, goal_constraints, agent, goal_loc):
                     continue
                 
                 if (child['loc'], curr['time']+1) in closed_list:
@@ -170,7 +168,7 @@ class PrioritizedPlanner:
             if child['loc'] == goal_loc:
                 child['g_val'] = curr['g_val'] + 0.01 # very low cost for waiting at goal
 
-            if PrioritizedPlanner.is_constrained(curr['loc'], child['loc'], curr['time']+1, constraint_table, goal_constraints, agent_id, goal_loc):
+            if PrioritizedPlanner.is_constrained(curr['loc'], child['loc'], curr['time']+1, constraint_table, goal_constraints, agent, goal_loc):
                     continue
             if (child['loc'], child['time']) in closed_list:
                 existing_node = closed_list[(child['loc'],child['time'])]

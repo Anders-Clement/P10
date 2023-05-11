@@ -43,7 +43,7 @@ class Planner:
                 if len(agent.path) == 0 and agent.current_loc == agent.current_goal:
                     # agent is either at goal, or at startup without initial plan
                     result = self.replan_agent(agent)
-                    self.logger.info(f'Planning result for agent {agent.id.id}: {result.name}')
+                    self.logger.info(f'Planning result for simulated agent {agent.id.id}: {result.name}')
 
     def replan_agent(self, agent: Agent) -> PlanningResult:
         if agent.target_goal is None:
@@ -79,8 +79,8 @@ class Planner:
             agent.current_goal = agent.target_goal
             agent.target_goal = None
             agent.waiting = False
-            agent.current_loc = path[0]
-            self.goal_constraints.append((agent.path[-1], 0, agent.id)) # add goal constraints for other agents
+
+            self.goal_constraints.append((agent.path[-1], len(agent.path)-1, agent.id)) # add goal constraints for other agents
             self.add_constraints(path, agent)
             return PlanningResult(value=PlanningResult.SUCCESS)
 
@@ -102,7 +102,7 @@ class Planner:
             goal = self.map.get_random_freespace()
             valid = True
             for agent in self.agents:
-                if agent.waiting and agent.target_goal == goal:
+                if agent.target_goal == goal:
                     valid = False
                     break
                 if agent.current_goal == goal and not agent.waiting:

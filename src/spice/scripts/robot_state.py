@@ -10,6 +10,8 @@ from nav2_msgs.action._navigate_to_pose import NavigateToPose_FeedbackMessage, N
 
 from spice_msgs.msg import PlannerType, QueuePoints, QueuePoint
 from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell, RegisterWork, SetPlannerType, RobotReady
+from spice_mapf_msgs.action import NavigateMapf
+from spice_mapf_msgs.action._navigate_mapf import NavigateMapf_FeedbackMessage
 
 from work_tree import WorkTree
 from robot_state_manager_node import RobotStateManager, ROBOT_STATE, HeartBeatHandler
@@ -39,6 +41,7 @@ class StartUpState(RobotStateTemplate):
         self.nav_stack_is_active = False
         self.registered_robot = False
         self.set_planner_type_ready = False
+        self.set_planner_type = False
         self.timer = self.sm.create_timer(1, self.try_initialize)
 
         self.register_robot_client = self.sm.create_client(RegisterRobot, '/register_robot')
@@ -46,6 +49,7 @@ class StartUpState(RobotStateTemplate):
 
         self.register_future = None
         self.nav_stack_is_active_future = None
+        self.set_planner_future = None
 
         # ensure no heartbeat in this state
         self.sm.heartbeat.deactivate()
@@ -57,8 +61,27 @@ class StartUpState(RobotStateTemplate):
             self.register_robot()
         elif not self.set_planner_type_ready:
             self.wait_for_planner_type_service()
+        elif not self.set_planner_type:
+            self.set_planner()
         else: # nav_stack is good, and we are registered
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
+
+    def set_planner(self):
+        if self.set_planner_future is not None:
+            return
+        set_planner_type_request = SetPlannerType.Request()
+        set_planner_type_request.planner_type = PlannerType(type=PlannerType.PLANNER_STRAIGHT_LINE)
+        self.set_planner_future = self.sm.change_planner_type_client.call_async(set_planner_type_request)
+        self.set_planner_future.add_done_callback(self.set_planner_cb)
+
+    def set_planner_cb(self, future: Future):
+        result = future.result()
+        if result.success:
+            self.set_planner_type = True
+        else:
+            self.sm.get_logger().warn('Failed to set planner type during startup, retrying...')
+            self.set_planner_future = None
+            self.set_planner()
 
     def check_nav2_stack_status(self):
         self.sm.get_logger().info('wait for service: lifecycle_manager_navigation/is_active')
@@ -132,7 +155,7 @@ class ReadyForJobState(RobotStateTemplate):
                                        ignoring new task")
             return response
         
-        if not self.sm.navigation_client.wait_for_server(5):
+        if not self.sm.mapf_navigation_client.wait_for_server(5):
             response.job_accepted = False
             self.sm.get_logger().warn("Got a new task, but received timeout \
                                       on wait for navigation client server, \
@@ -277,7 +300,7 @@ class EnqueuedState(RobotStateTemplate):
                     Trigger, 'call_robot', self.call_robot_cb)
         
         set_planner_type_request = SetPlannerType.Request()
-        set_planner_type_request.planner_type = PlannerType(type=PlannerType.PLANNER_PRIORITIZED)
+        set_planner_type_request.planner_type = PlannerType(type=PlannerType.PLANNER_STRAIGHT_LINE)
         change_planner_type_future = self.sm.change_planner_type_client.call_async(set_planner_type_request)
         change_planner_type_future.add_done_callback(self.set_planner_cb)
 
@@ -321,12 +344,20 @@ class EnqueuedState(RobotStateTemplate):
 
     def navigate_to_queue_point(self):
         if not self.robot_is_at_queue_point:
-            nav_goal = NavigateToPose.Goal()
-            nav_goal.pose = self.sm.current_work_cell_info.queue_pose
-            self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
+            # TODO: NAV
+            nav_goal = NavigateMapf.Goal()
+            nav_goal.goal_pose = self.sm.current_work_cell_info.queue_pose
+            self.nav_response_future = self.sm.mapf_navigation_client.send_goal_async(
                 nav_goal,
-                self.sm.on_nav_feedback)
-            self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
+                self.sm.on_nav_feedback
+            )
+            self.nav_response_future.add_done_callback(self.nav_goal_response_cb)
+            # nav_goal = NavigateToPose.Goal()
+            # nav_goal.pose = self.sm.current_work_cell_info.queue_pose
+            # self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
+            #     nav_goal,
+            #     self.sm.on_nav_feedback)
+            # self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
 
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
@@ -337,12 +368,18 @@ class EnqueuedState(RobotStateTemplate):
         self.nav_goal_done_future: Future = goal_handle.get_result_async()
         self.nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
 
-    def on_nav_feedback(self, msg: NavigateToPose_FeedbackMessage):
+    def on_nav_feedback(self, msg: NavigateMapf_FeedbackMessage):
+        pass
+        # TODO: NAV
+        # should only be 0.0 when actually at goal
+        # if msg.feedback.distance_to_goal < self.ROBOT_READY_AT_CELL_DIST:
+        #     self.call_robot_ready_in_queue()
+
         # can be 0 at very start of a navigation task
-        if msg.feedback.distance_remaining == 0.0:
-            return
-        if msg.feedback.distance_remaining < self.ROBOT_READY_AT_CELL_DIST:
-            self.call_robot_ready_in_queue()
+        # if msg.feedback.distance_remaining == 0.0:
+        #     return
+        # if msg.feedback.distance_remaining < self.ROBOT_READY_AT_CELL_DIST:
+        #     self.call_robot_ready_in_queue()
 
     def call_robot_ready_in_queue(self):
         if self.robot_is_ready:
@@ -416,7 +453,7 @@ class EnterWorkCellState(RobotStateTemplate):
 
     def init(self):
         change_planner_type_request = SetPlannerType.Request()
-        change_planner_type_request.planner_type.type = PlannerType.PLANNER_PRIORITIZED
+        change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
         change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
         change_planner_type_future.add_done_callback(self.navigate_to_cell_entry)
 
@@ -427,13 +464,18 @@ class EnterWorkCellState(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.ERROR)
             return
 
+        # TODO: NAV
         current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
-
-        nav_goal = NavigateToPose.Goal()
-        nav_goal.pose = current_work_cell_info.entry_pose
-        self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
+        nav_goal = NavigateMapf.Goal()
+        nav_goal.goal_pose = current_work_cell_info.entry_pose
+        self.nav_response_future = self.sm.mapf_navigation_client.send_goal_async(
             nav_goal, self.sm.on_nav_feedback)
-        self.nav_reponse_future.add_done_callback(self.cell_entry_nav_goal_response_cb)
+        self.nav_response_future.add_done_callback(self.cell_entry_nav_goal_response_cb)
+        # nav_goal = NavigateToPose.Goal()
+        # nav_goal.pose = current_work_cell_info.entry_pose
+        # self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
+        #     nav_goal, self.sm.on_nav_feedback)
+        # self.nav_reponse_future.add_done_callback(self.cell_entry_nav_goal_response_cb)
 
     def cell_entry_nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
@@ -465,11 +507,18 @@ class EnterWorkCellState(RobotStateTemplate):
 
         current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
 
-        nav_goal = NavigateToPose.Goal()
-        nav_goal.pose = current_work_cell_info.processing_pose
-        self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
-            nav_goal, self.sm.on_nav_feedback)
-        self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
+        # TODO: NAV
+        nav_goal = NavigateMapf.Goal()
+        nav_goal.goal_pose = current_work_cell_info.processing_pose
+        self.nav_response_future = self.sm.mapf_navigation_client.send_goal_async(
+            nav_goal, self.sm.on_nav_feedback
+        )
+        self.nav_response_future.add_done_callback(self.nav_goal_response_cb)
+        # nav_goal = NavigateToPose.Goal()
+        # nav_goal.pose = current_work_cell_info.processing_pose
+        # self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
+        #     nav_goal, self.sm.on_nav_feedback)
+        # self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
 
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
@@ -595,11 +644,18 @@ class ProcessExitWorkCellState(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.ERROR)
             return
         
-        nav_goal = NavigateToPose.Goal()
-        nav_goal.pose = self.sm.current_work_cell_info.exit_pose
-        self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
-            nav_goal, self.sm.on_nav_feedback)
-        self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
+        # TODO: NAV
+        nav_goal = NavigateMapf.Goal()
+        nav_goal.goal_pose = self.sm.current_work_cell_info.exit_pose
+        self.nav_response_future = self.sm.mapf_navigation_client.send_goal_async(
+            nav_goal, self.sm.on_nav_feedback
+        )
+        self.nav_response_future.add_done_callback(self.nav_goal_response_cb)
+        # nav_goal = NavigateToPose.Goal()
+        # nav_goal.pose = self.sm.current_work_cell_info.exit_pose
+        # self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
+        #     nav_goal, self.sm.on_nav_feedback)
+        # self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
 
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()

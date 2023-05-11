@@ -71,7 +71,7 @@ class MAPFNavigator(Node):
         self.publish_current_pos()
 
     def navigate_mapf_goal_cb(self, goal_request):
-        self.get_logger().info('Received goal request')
+        self.get_logger().info(f'Received goal request: {goal_request.goal_pose}')
         if not self.make_ready() or self.current_nav_goal is not None:
             return GoalResponse.REJECT
         else:
@@ -140,6 +140,8 @@ class MAPFNavigator(Node):
                         goal_handle.publish_feedback(feedback)
 
         goal_handle.succeed()
+        self.current_nav_goal = None
+        self.current_nav_step_goal = None
         self.get_logger().info(f'Reached navigation goal successfully')
         return spice_mapf_actions.NavigateMapf.Result(success=True)
         
@@ -231,6 +233,8 @@ class MAPFNavigator(Node):
             return False
         
     def navigate_to_goal(self):
+        if self.current_nav_step_goal is None:
+            return
         nav_goal = NavigateToPose.Goal()
         nav_goal.pose.pose.position.x = self.current_nav_step_goal.position.x
         nav_goal.pose.pose.position.y = self.current_nav_step_goal.position.y

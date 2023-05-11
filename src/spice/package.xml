@@ -16,6 +16,8 @@
   <depend>tf2_ros</depend>
   <depend>tf2_msgs</depend>
   <depend>visualization_msgs</depend>
+  <depend>spice_mapf</depend>
+  <depend>spice_mapf_msgs</depend>
 
 
   <exec_depend>rclpy</exec_depend>

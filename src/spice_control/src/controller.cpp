@@ -155,9 +155,9 @@ namespace nav2_pure_pursuit_controller
     // double robot_rot = yaw;
     // double error = robot_rot - gamma;
     // RCLCPP_INFO(node->get_logger(), "goal_in_map x,y: %f,%f", last_plan_pose_in_map.pose.position.x, last_plan_pose_in_map.pose.position.y);
-    RCLCPP_INFO(node->get_logger(), "goal_in_base_link x,y: %f,%f", goal_in_base_link.pose.position.x, goal_in_base_link.pose.position.y);
-    RCLCPP_INFO(node->get_logger(), "goal_in_odom x,y: %f,%f", goal_in_odom.pose.position.x, goal_in_odom.pose.position.y);
-    RCLCPP_INFO(node->get_logger(), "pose x,y: %f,%f, frame: %s", pose.pose.position.x, pose.pose.position.y, pose.header.frame_id.c_str());
+    // RCLCPP_INFO(node->get_logger(), "goal_in_base_link x,y: %f,%f", goal_in_base_link.pose.position.x, goal_in_base_link.pose.position.y);
+    // RCLCPP_INFO(node->get_logger(), "goal_in_odom x,y: %f,%f", goal_in_odom.pose.position.x, goal_in_odom.pose.position.y);
+    // RCLCPP_INFO(node->get_logger(), "pose x,y: %f,%f, frame: %s", pose.pose.position.x, pose.pose.position.y, pose.header.frame_id.c_str());
     // RCLCPP_INFO(node->get_logger(), "gamma: %f, robot_rot: %f, error: %f", gamma, robot_rot, error);
 
     geometry_msgs::msg::TwistStamped output;
@@ -182,7 +182,7 @@ namespace nav2_pure_pursuit_controller
       m = tf2::Matrix3x3(tf_quat);
       double robot_yaw;
       m.getRPY(_, __, robot_yaw);
-      RCLCPP_INFO(node->get_logger(), "robot_yaw: %f, goal_yaw: %f", robot_yaw, goal_yaw);
+      // RCLCPP_INFO(node->get_logger(), "robot_yaw: %f, goal_yaw: %f", robot_yaw, goal_yaw);
       double omega;
       // δ=(T−C+540°)mod360°−180°
       double PI = 3.1415;
@@ -240,7 +240,7 @@ namespace nav2_pure_pursuit_controller
         // proportional control
         double omega = kp_omega_ * error;
         double v = std::clamp(goal_dist * kp_linear_vel_, min_linear_vel_, desired_linear_vel_);
-        RCLCPP_INFO(node->get_logger(), "PROPORTIONAL CONTROL, e: %f, v: %f, w: %f", error, v, omega);
+        // RCLCPP_INFO(node->get_logger(), "PROPORTIONAL CONTROL, e: %f, v: %f, w: %f", error, v, omega);
 
         output.twist.linear.x = v;
         output.twist.angular.z = omega;
@@ -268,7 +268,7 @@ namespace nav2_pure_pursuit_controller
 
         output.twist.linear.x = 0.0;
         output.twist.angular.z = omega;
-        RCLCPP_INFO(node->get_logger(), "ROTATION CONTROL, e: %f, v: %f, w: %f", error, 0.0, omega);
+        // RCLCPP_INFO(node->get_logger(), "ROTATION CONTROL, e: %f, v: %f, w: %f", error, 0.0, omega);
         return output;
       }
     }

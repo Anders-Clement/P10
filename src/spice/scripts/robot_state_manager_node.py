@@ -14,6 +14,7 @@ from nav2_msgs.action import NavigateToPose
 
 from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType
 from spice_msgs.srv import Heartbeat, RobotTask, SetPlannerType
+from spice_mapf_msgs.action import NavigateMapf
 from work_tree import WorkTree
 import robot_state
 
@@ -98,7 +99,8 @@ class RobotStateManager(Node):
         self.heartbeat = HeartBeatHandler('/heartbeat', 2.5, self.id, lambda arg : arg.change_state(ROBOT_STATE.STARTUP), self)
         self.work_cell_heartbeat: Heartbeat = None
 
-        self.navigation_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        self.nav2_navigation_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        self.mapf_navigation_client = ActionClient(self, NavigateMapf, 'navigate_mapf')
         self.change_planner_type_client = self.create_client(SetPlannerType, "set_planner_type")
 
         self.allocate_task_server = self.create_service(
