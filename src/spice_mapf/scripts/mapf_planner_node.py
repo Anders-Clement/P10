@@ -97,7 +97,9 @@ class MapfPlanner(Node):
             if agent.id.id == request.robot_pose.id.id:
                 if goal == agent.current_loc: # robot is already at requested goal
                     response.success = True
-                    response.goal_position = goal
+                    goal_in_world = self.map_to_world(goal)
+                    response.goal_position.x = goal_in_world[0]
+                    response.goal_position.y = goal_in_world[1]
                     return response
 
         if not self.is_goal_free(goal):

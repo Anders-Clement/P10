@@ -6,7 +6,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
 
-DEFAULT_MAP_NAME = "low_res/C4.yaml" # change to the name.yaml of the default map here
+DEFAULT_MAP_NAME = "low_res/A42.yaml" # change to the name.yaml of the default map here
 
 def generate_launch_description():
 
