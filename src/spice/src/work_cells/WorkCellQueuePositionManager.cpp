@@ -312,7 +312,7 @@ void WorkCellQueuePositionManager::timer_update_q_locations()
     m_workCellStateMachine.publish_transform();
     m_workCellStateMachine.m_queue_manager->publish_queue_points();
 
-    publish_costmap(carrier_costmap);
+    //publish_costmap(carrier_costmap);
     return;
 }
 
