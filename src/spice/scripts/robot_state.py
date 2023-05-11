@@ -196,7 +196,7 @@ class FindWorkCell(RobotStateTemplate):
         alloc_workcell_request.robot_types = self.sm.current_work
 
         if not self.work_cell_allocator_client.wait_for_service(timeout_sec=5.0):
-            self.sm.get_logger().warn("workcell allocator not available")
+            self.sm.get_logger().warn("workcell allocator not available, going to ERROR")
             self.sm.change_state(ROBOT_STATE.ERROR)
             return
 
@@ -212,7 +212,7 @@ class FindWorkCell(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.REGISTER_WORK)
             
         else:
-            self.sm.get_logger().info('Failed to allocate workcell to robot, are they available?')
+            self.sm.get_logger().warn('Failed to allocate workcell to robot, are they available? Going to ERROR')
             self.sm.change_state(ROBOT_STATE.ERROR)
 
     def deinit(self):
@@ -225,7 +225,7 @@ class ProcessRegisterWorkState(RobotStateTemplate):
 
     def init(self):
         if self.sm.current_task is None:
-            self.sm.get_logger().warn('Entered ProcessingState with no task available!')
+            self.sm.get_logger().warn('Entered ProcessingState with no task available! Going to ERROR')
             self.sm.change_state(ROBOT_STATE.ERROR)
         self.register_work_client = self.sm.create_client(
                     RegisterWork, '/'+self.sm.current_task.workcell_id.id+'/register_work')
@@ -260,7 +260,7 @@ class ProcessRegisterWorkState(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.ENQUEUED)
             
         else:
-            self.sm.get_logger().info(f"Could not register work at work cell: {self.sm.current_task.workcell_id.id}, going to ERROR!")
+            self.sm.get_logger().warn(f"Could not register work at work cell: {self.sm.current_task.workcell_id.id}, going to ERROR!")
             self.sm.change_state(ROBOT_STATE.ERROR)       
 
     def deinit(self):
@@ -355,7 +355,7 @@ class EnqueuedState(RobotStateTemplate):
     def set_planner_cb(self, future: Future):
         result: SetPlannerType.Response = future.result()
         if not result.success:
-            self.sm.get_logger().warn('Failed to change planner type')
+            self.sm.get_logger().warn('Failed to change planner type, going to ERROR')
             self.sm.change_state(ROBOT_STATE.ERROR)
             return
         self.navigate_to_queue_point()
@@ -380,7 +380,7 @@ class EnqueuedState(RobotStateTemplate):
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
         if not goal_handle.accepted:
-            self.sm.get_logger().error('Nav 2 goal was rejected, aborting task')
+            self.sm.get_logger().error('Nav 2 goal was rejected, aborting task. Going to ERROR')
             self.sm.change_state(ROBOT_STATE.ERROR)
         
         self.nav_goal_done_future: Future = goal_handle.get_result_async()
@@ -419,7 +419,7 @@ class EnqueuedState(RobotStateTemplate):
             self.num_navigation_erorrs += 1
             #self.sm.get_logger().info(f'Failed navigation, number of tries: {self.num_navigation_erorrs}/{self.MAX_NAVIGATION_RETRIES}')
             if self.num_navigation_erorrs > self.MAX_NAVIGATION_RETRIES:
-                self.sm.get_logger().info(f'Too many navigation failures {self.num_navigation_erorrs}/{self.MAX_NAVIGATION_RETRIES}, going to ERROR')
+                self.sm.get_logger().warn(f'Too many navigation failures {self.num_navigation_erorrs}/{self.MAX_NAVIGATION_RETRIES}, going to ERROR')
                 self.sm.change_state(ROBOT_STATE.ERROR)
                 return
             # self.navigate_to_queue_point()
@@ -469,6 +469,9 @@ class EnterWorkCellState(RobotStateTemplate):
         change_planner_type_request.planner_type.type = PlannerType.PLANNER_PRIORITIZED
         change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
         change_planner_type_future.add_done_callback(self.navigate_to_cell_entry)
+        self.robot_exited_client = self.sm.create_client(Trigger, '/'+self.sm.current_task.workcell_id.id + "/robot_exited")
+
+
         self.num_navigation_errors_entry = 0
         self.num_navigation_errors_center = 0
         self.MAX_NAVIGATION_RETRIES_ENTRY = 5
@@ -510,26 +513,53 @@ class EnterWorkCellState(RobotStateTemplate):
     def on_cell_entry_nav_done(self, future: Future):
         nav_result = future.result()
         nav_goal_result: GoalStatus = nav_result.status
-        #self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
+        self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             change_planner_type_request = SetPlannerType.Request()
             change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
             change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
             change_planner_type_future.add_done_callback(self.navigate_into_cell)
         else:
-            self.sm.get_logger().warn(f'Goal status not succeeded to go to entry of work cell, number of tries: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}')
+            self.sm.get_logger().warn(f'Goal status not succeeded to go to entry of work cell')#, number of tries: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}')
           
-            self.sm.get_logger().error(f'Too many failures to go to entry of work cell: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}, going to ERROR')
-            self.sm.change_state(ROBOT_STATE.ERROR)
+            #self.sm.get_logger().error(f'Too many failures to go to entry of work cell: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}, going to ERROR')
+            self.call_robot_exited_cell()
+            # self.sm.change_state(ROBOT_STATE.ERROR)
             return
 
             # self.sm.get_logger().warn('Goal status not succeeded')
             # self.sm.change_state(ROBOT_STATE.ERROR)
 
+    def call_robot_exited_cell(self):
+        robot_exited_request = Trigger.Request()
+        robot_exited_future = self.robot_exited_client.call_async(robot_exited_request)
+        robot_exited_future.add_done_callback(self.robot_exited_cb)
+
+    def robot_exited_cb(self, future: Future):
+        result: Trigger.Response = future.result()
+        
+        if result.success:
+            self.sm.get_logger().error('failed to go to entry of work cell:')
+            if self.sm.work_cell_heartbeat is not None:
+                self.sm.work_cell_heartbeat.deactivate()
+            self.sm.change_state(ROBOT_STATE.ERROR)
+
+        elif self.num_navigation_errors_entry > self.MAX_NAVIGATION_RETRIES_ENTRY:
+            self.sm.get_logger().error(f'failed to go to entry of work cell: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}, going to ERROR')
+            if self.sm.work_cell_heartbeat is not None:
+                self.sm.work_cell_heartbeat.deactivate()
+            self.sm.change_state(ROBOT_STATE.ERROR)
+
+        else:
+            self.call_robot_exited_cell()
+            self.num_navigation_errors_entry +=1
+
+
+
     def navigate_into_cell(self, future: Future):
         result: SetPlannerType.Response = future.result()
         if not result.success:
-            self.sm.get_logger().warn('Failed to change planner type')
+            self.sm.get_logger().warn('Failed to change planner type, going to ERROR')
             self.sm.change_state(ROBOT_STATE.ERROR)
             return
 
@@ -655,8 +685,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
     
     def init(self):
         self.sm.get_logger().info(self.sm.id.id+  ' is done processing at ' + self.sm.current_task.workcell_id.id + ' exiting work cell')
-        self.robot_exited_client = self.sm.create_client(
-            Trigger, '/'+self.sm.current_task.workcell_id.id + "/robot_exited")
+        self.robot_exited_client = self.sm.create_client(Trigger, '/'+self.sm.current_task.workcell_id.id + "/robot_exited")
         
         change_planner_type_request = SetPlannerType.Request()
         change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
@@ -666,7 +695,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
     def navigate_exit_cell(self, future: Future):
         result: SetPlannerType.Response = future.result()
         if not result.success:
-            self.sm.get_logger().warn('Failed to change planner type')
+            self.sm.get_logger().warn('Failed to change planner type going to error')
             self.sm.change_state(ROBOT_STATE.ERROR)
             return
         
@@ -679,7 +708,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
         if not goal_handle.accepted:
-            self.sm.get_logger().error('Nav 2 goal was rejected, aborting exit work cell')
+            self.sm.get_logger().warn('Nav 2 goal was rejected, aborting exit work cell, going to error')
             self.sm.change_state(ROBOT_STATE.ERROR)
         
         self.nav_goal_done_future: Future = goal_handle.get_result_async()
