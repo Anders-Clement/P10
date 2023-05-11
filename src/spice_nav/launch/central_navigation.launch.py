@@ -21,7 +21,7 @@ from launch.conditions import IfCondition
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 
-DEFAULT_MAP_NAME = 'low_res/A42.yaml' # change to the name.yaml of the default map here
+DEFAULT_MAP_NAME = 'low_res/A4_nav.yaml' # change to the name.yaml of the default map here
 
 def generate_launch_description():
 
@@ -90,19 +90,19 @@ def generate_launch_description():
                         ("/tf", "tf"),
                         ("/tf_static", "tf_static")],
             namespace=namespace
-        ),
-        Node(
-            package='spice_mapf',
-            executable='mapf_navigator_node.py',
-            name='mapf_navigator_node',
-            namespace=namespace
         )
-        ,
-        Node
-        (
-            package='spice',
-            executable='robot_state_manager_node.py',
-            name='robot_state_manager_node',
-            namespace=namespace
-        )
+        # Node(
+        #     package='spice_mapf',
+        #     executable='mapf_navigator_node.py',
+        #     name='mapf_navigator_node',
+        #     namespace=namespace
+        # ),
+
+        # Node
+        # (
+        #     package='spice',
+        #     executable='robot_state_manager_node.py',
+        #     name='robot_state_manager_node',
+        #     namespace=namespace
+        # )
     ])

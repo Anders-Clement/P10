@@ -453,12 +453,12 @@ class EnqueuedState(RobotStateTemplate):
             self.call_robot_ready_in_queue()
         else:
             self.num_navigation_erorrs += 1
-            #self.sm.get_logger().info(f'Failed navigation, number of tries: {self.num_navigation_erorrs}/{self.MAX_NAVIGATION_RETRIES}')
+            self.sm.get_logger().warn(f'Failed navigation, number of tries: {self.num_navigation_erorrs}/{self.MAX_NAVIGATION_RETRIES}')
             if self.num_navigation_erorrs > self.MAX_NAVIGATION_RETRIES:
                 self.sm.get_logger().warn(f'Too many navigation failures {self.num_navigation_erorrs}/{self.MAX_NAVIGATION_RETRIES}, going to ERROR')
                 self.sm.change_state(ROBOT_STATE.ERROR)
                 return
-            # self.navigate_to_queue_point()
+            self.navigate_to_queue_point()
 
     def robot_ready_cb(self, future: Future):
         result: RobotReady.Response = future.result()
@@ -641,6 +641,8 @@ class EnterWorkCellState(RobotStateTemplate):
                 self.sm.get_logger().warn(f'Too many navigation failures to center of work cell: {self.num_navigation_errors_center}/{self.MAX_NAVIGATION_RETRIES_CENTER}, going to ERROR')
                 self.sm.change_state(ROBOT_STATE.ERROR)
                 return
+            
+            self.navigate_into_cell()
 
             # pass
             # self.sm.get_logger().error('Nav 2 goal failed, aborting enter work cell')
