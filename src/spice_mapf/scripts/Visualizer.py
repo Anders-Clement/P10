@@ -19,7 +19,7 @@ class Visualizer:
         if not self.map.has_map:
             return False
         
-        aspect = len(self.map.map) / len(self.map.map[0])
+        aspect = len(self.map.map[0]) / len(self.map.map)
         self.fig = plt.figure(frameon=False, figsize=(4 * aspect, 4))
         self.ax = self.fig.add_subplot(111, aspect='equal')
         self.fig.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=None, hspace=None)

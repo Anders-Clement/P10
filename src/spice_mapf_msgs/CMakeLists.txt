@@ -26,9 +26,14 @@ set(srv_files
   "srv/RequestGoal.srv"
 )
 
+set(action_files
+  "action/NavigateMapf.action"
+)
+
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}
   ${srv_files}  
+  ${action_files}
   DEPENDENCIES geometry_msgs nav_msgs spice_msgs
 )
 

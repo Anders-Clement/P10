@@ -1,62 +1,68 @@
 from __future__ import annotations
 import time
 import random
+from enum import IntEnum
+from rclpy.node import Node
 import PrioritizedPlanner
 from Map import Map
 from Agent import Agent
 
+class PlanningResult(IntEnum):
+    SUCCESS = 0
+    INVALID_GOAL = 1 # unable to get to goal using Dijkstra
+    WAITING = 2 # currently blocked by other goals, but possible using Dijkstra
 
 class Planner:
-    def __init__(self, map_: Map, agents: list[Agent]) -> None:
+    def __init__(self, map_: Map, agents: list[Agent], nodehandle: Node) -> None:
         self.map = map_
         self.agents = agents
+        self.logger = nodehandle.get_logger()
         # constraints as a list for timesteps, with a dict of constraints
         self.constraints: list[dict] = []
+        self.goal_constraints = []
         self.prio_planner = PrioritizedPlanner.PrioritizedPlanner()
         self.paths_planned = 0
         self.planning_time = 0
 
     def tick(self, timestep: int):
 
-        # clear now old constraints, done here, instead of after, to allow agent planning between ticks
+        # clear now old constraints, done here, instead of after planning, to allow agent planning between ticks
         if len(self.constraints) > 0:
             self.constraints.pop(0)
 
         self.goal_constraints = []
-        # add waiting agents as goal constraints
         for agent in self.agents:
-            if agent.waiting:
+            if agent.waiting: # add waiting agents as goal constraints
                 self.goal_constraints.append((agent.current_loc, 0, agent.id))
-            else:
+            else: # add pathing agents' goal as constraints
                 self.goal_constraints.append((agent.current_goal, len(agent.path)-1, agent.id))
 
         self.planning_time = 0
         for agent in self.agents:
-            if len(agent.path) == 0 and agent.current_loc == agent.current_goal:
-                # agent is either at goal, or at start without plan
-                self.replan_agent(agent)
-        # print(f'INFO: a* planning time for all agents: {self.planning_time:.3f}')
-        # print(f'constraints:')
-        # for constraint in self.constraints:
-        #     print(constraint)
-        
+            if agent.is_simulated:
+                if len(agent.path) == 0 and agent.current_loc == agent.current_goal:
+                    # agent is either at goal, or at startup without initial plan
+                    result = self.replan_agent(agent)
+                    self.logger.info(f'Planning result for agent {agent.id.id}: {result.name}')
 
-        # for agent in self.agents:
-        #     print(f'Path for agent {agent.id}: {agent.path}')
-
-    def replan_agent(self, agent: Agent) -> bool:
+    def replan_agent(self, agent: Agent) -> PlanningResult:
         if agent.target_goal is None:
-            # print(f'WARN: asked to replan agent {agent.id.id}, but it has no target_goal')
-            return False
+            self.logger.error(f'ERROR: asked to replan agent {agent.id.id}, but it has no target_goal')
+            raise Exception()
+        
         start_time = time.time()
+        h_values = PrioritizedPlanner.PrioritizedPlanner.compute_heuristics(self.map.map, agent.target_goal)
+        if h_values.get(agent.current_loc) is None:
+            self.logger.warn(f'WARN: start location: {agent.current_loc} is unreachable from goal location: {agent.target_goal}')
+            return PlanningResult(value=PlanningResult.INVALID_GOAL)
+        
         path = self.prio_planner.a_star(
             self.map.map,
-            agent.current_loc,
-            agent.target_goal,
-            agent.id,
+            agent,
             self.constraints,
             len(self.constraints),
             self.goal_constraints,
+            h_values
         )
         duration = time.time() - start_time
         # print(f'Planned path in {duration} seconds')
@@ -64,7 +70,7 @@ class Planner:
 
         if path is None:
             agent.waiting = True
-            return False
+            return PlanningResult(value=PlanningResult.WAITING)
         else:
             # print(f'Path for agent {agent.id}: {path}')
             agent.path = path
@@ -76,15 +82,19 @@ class Planner:
             agent.current_loc = path[0]
             self.goal_constraints.append((agent.path[-1], 0, agent.id)) # add goal constraints for other agents
             self.add_constraints(path, agent)
-            return True
+            return PlanningResult(value=PlanningResult.SUCCESS)
 
     def add_constraints(self, path: list[tuple[int,int]], agent: Agent) -> None:
         while len(path) > len(self.constraints) - 1:
             self.constraints.append({})
         for timestep, vertex in enumerate(path):
-            self.constraints[timestep][vertex] = agent.id
+            self.constraints[timestep][vertex] = agent.id # avoid vertex collision
+            if timestep > 0:
+                self.constraints[timestep][path[timestep-1]] = agent.id # to maintain 1 extra seperation behind
             if timestep < len(path)-1:
-                self.constraints[timestep][path[timestep+1]] = agent.id
+                self.constraints[timestep][path[timestep+1]] = agent.id # avoid edge collision
+            if timestep < len(path)-2:
+                self.constraints[timestep][path[timestep+2]] = agent.id # to maintain 1 extra seperation
 
     def make_random_goal(self):
         """Create a new goal, which is in free space in map, and unique to other agents"""

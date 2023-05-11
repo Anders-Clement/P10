@@ -9,7 +9,7 @@ from geometry_msgs.msg import Quaternion
 import spice_msgs.msg as spice_msgs
 import spice_mapf_msgs.msg as spice_mapf_msgs
 import spice_mapf_msgs.srv as spice_mapf_srvs
-from Planning import Planner
+from Planning import Planner, PlanningResult
 from Agent import Agent
 from Map import Map
 from Visualizer import Visualizer
@@ -21,14 +21,15 @@ class MapfPlanner(Node):
         super().__init__('MapfPlanner')
         self.map = Map(self)
         self.agents: list[Agent] = []
-        self.planner = Planner(self.map, self.agents)
+        self.planner = Planner(self.map, self.agents, self)
         self.visualizer = Visualizer(self.map, self.agents)
         self.visualizer.visualize()
         self.timer = self.create_timer(0.1, self.tick)
 
         self.timestep = 0
         self.time_interpolated = 0
-        self.time_interpolation_steps = 10
+        self.time_interpolation_steps = 3
+        self.target_simulated_agents = 0
 
         self.join_planner_service = self.create_service(spice_mapf_srvs.JoinPlanner, "/join_planner", self.join_planner_cb)
         self.request_goal_service = self.create_service(spice_mapf_srvs.RequestGoal, "/request_goal", self.request_goal_cb)
@@ -99,9 +100,14 @@ class MapfPlanner(Node):
                 goal_in_world = self.map_to_world(goal)
                 response.goal_position.x = goal_in_world[0]
                 response.goal_position.y = goal_in_world[1]
-                response.success = True
-                self.get_logger().info(f'Accepted goal from agent: {request.robot_pose.id.id}')
+                planning_result = self.planner.replan_agent(agent)
+                if planning_result.value == PlanningResult.SUCCESS or planning_result.value == PlanningResult.WAITING:
+                    response.success = True                
+                    self.get_logger().info(f'Accepted goal from agent: {request.robot_pose.id.id}')
+                else:
+                    self.get_logger().warn(f'Unreachable goal requested from agent: {request.robot_pose.id.id}')
                 return response
+            
         # agent is unknown:
         self.get_logger().warn(f'Got goal request from unknown agent: {request.robot_pose.id.id}')
         return response
@@ -135,12 +141,10 @@ class MapfPlanner(Node):
         self.get_logger().info('Got map', once=True)
         
         # add initial simulated agents
-        target_num_agents = 10
-        if len(self.agents) < target_num_agents:
+        if len(self.agents) < self.target_simulated_agents:
             if self.add_random_agent():
-                goal = self.planner.make_random_goal()
-                self.agents[-1].target_goal = goal
-                self.get_logger().info(f'Created goal at: {goal} for agent {self.agents[-1].id.id} from {self.agents[-1].current_loc}')
+                self.make_random_goal_for_agent(self.agents[-1])
+                self.planner.replan_agent(self.agents[-1])
                 
         self.visualizer.visualize()
 
@@ -155,6 +159,12 @@ class MapfPlanner(Node):
                 agent.next_loc = agent.path.pop(0)
             if len(agent.path) > 0: # still have more poses after current goal
                 agent.next_heading = self.calculate_heading(agent.next_loc, agent.path[0])
+
+        # add new random goal for simulated agents
+        for agent in self.agents:
+            if agent.is_simulated:
+                if agent.target_goal is None and len(agent.path) == 0:
+                    self.make_random_goal_for_agent(agent)
 
         self.planner.tick(self.timestep)
 
@@ -189,7 +199,7 @@ class MapfPlanner(Node):
         non_ready_agents: list[Agent] = []
         for agent in self.agents:
             diff = np.array(agent.current_pos)-np.array(agent.next_loc)
-            dist = np.sqrt(diff[0]**2 + diff[1]**2)
+            dist = np.linalg.norm(diff)
             if dist > 0.25:
                 non_ready_agents.append((agent, dist))
 
@@ -216,14 +226,14 @@ class MapfPlanner(Node):
         return True
     
     def add_agent(self, loc: tuple[int,int], robot_pose: spice_mapf_msgs.RobotPose, is_simulated=False):
-        self.get_logger().info(f"Adding agent at position: {loc}, world: {self.map_to_world(loc)}")
+        self.get_logger().info(f"Adding agent at position: {loc}, world: {self.map_to_world(loc)}, is_simulated: {is_simulated}")
         self.agents.append(Agent(loc, robot_pose.heading, robot_pose.id, is_simulated))
 
     def add_random_agent(self):
         num_tries = 0
         while num_tries < 1000:
             num_tries += 1
-            x_start = int(random.random()*len(self.map.map)-1)
+            x_start = int(random.random()*len(self.map.map[0])-1)
             y_start = int(random.random()*len(self.map.map)-1)
             if self.can_add_agent_at_loc([y_start, x_start]):
                 id = spice_msgs.Id(id=str(len(self.agents)))
@@ -231,7 +241,14 @@ class MapfPlanner(Node):
                 return True
         return False
     
+    def make_random_goal_for_agent(self, agent: Agent):
+        goal = self.planner.make_random_goal()
+        agent.target_goal = goal
+        self.get_logger().info(f'Created goal at: {goal} for agent {agent.id.id} from {agent.current_loc}')
+    
     def is_goal_free(self, goal: tuple[int,int]) -> bool:
+        if self.map.map[goal[0]][goal[1]]:
+            return False
         for agent in self.agents:
             if agent.target_goal == goal:
                 return False

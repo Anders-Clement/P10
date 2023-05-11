@@ -34,6 +34,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/mapf_planner_node.py
   scripts/test_agent_node.py
+  scripts/mapf_navigator_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -12,7 +12,7 @@ class Map:
         self.has_map = False
         if not load_map_from_topic:
             self.load_txt_map()
-            self.has_map = True
+            return
 
         qos = QoSProfile(
                 depth=1,
@@ -23,13 +23,14 @@ class Map:
         self.map_info: nav_msgs.MapMetaData = None
 
     def map_cb(self, msg: nav_msgs.OccupancyGrid):
-        self.map_info = msg.info
-        map = np.array(msg.data)
-        map = np.reshape(map, (self.map_info.height,self.map_info.width))
-        # flip upside down, as y-axis is positive in map, but we store it opposite
-        map = np.flip(map, 0)
-        self.map = map
-        self.has_map = True
+        if not self.has_map:
+            self.map_info = msg.info
+            map = np.array(msg.data)
+            map = np.reshape(map, (self.map_info.height,self.map_info.width))
+            # flip upside down, as y-axis is positive in map, but we store it opposite
+            map = np.flip(map, 0)
+            self.map = map
+            self.has_map = True
 
     def load_txt_map(self, test_file: str = 'test_scenarios/exp5_5.txt'):
         spice_mapf_dir = get_package_share_directory('spice_mapf')
@@ -53,7 +54,11 @@ class Map:
                         self.map[-1].append(False)
 
         self.map = np.array(self.map)
-        pass
+        self.map_info = nav_msgs.OccupancyGrid().info
+        self.map_info.resolution = 0.5
+        self.map_info.height = len(self.map)
+        self.map_info.width = len(self.map[0])
+        self.has_map = True
 
     def print_map(self) -> None:
         starts_map = [[-1 for _ in range(len(self.map[0]))] for _ in range(len(self.map))]
@@ -74,4 +79,4 @@ class Map:
             x = int(random.random()*len(self.map[0]))
             y = int(random.random()*len(self.map))
             if not self.map[y][x]:
-                return x,y
+                return y,x

@@ -89,23 +89,23 @@ class PrioritizedPlanner:
         return n1['g_val'] + n1['h_val'] < n2['g_val'] + n2['h_val']
 
     @staticmethod
-    def a_star(my_map, start_loc, goal_loc, agent, constraint_table, earliest_goal_timestep, goal_constraints):
+    def a_star(my_map, agent, constraint_table, earliest_goal_timestep, goal_constraints, h_values):
         """ my_map      - binary obstacle map
             start_loc   - start position
             goal_loc    - goal position
             agent       - the agent that is being re-planned
             constraints - constraints defining where robot should or cannot go at each timestep
         """
+        
+        start_loc = agent.current_loc
+        goal_loc = agent.target_goal
+        agent_id = agent.id
 
         map_width = len(my_map[0])
         map_height = len(my_map)
         max_iter = map_width*map_height*32
         open_list = []
         closed_list = {}
-        h_values = PrioritizedPlanner.compute_heuristics(my_map, goal_loc)
-        if h_values.get(start_loc) is None:
-            print(f'WARN: start location: {start_loc} is unreachable from goal location: {goal_loc}')
-            return None
         root = {'loc': start_loc, 'g_val': 0, 'h_val': h_values[start_loc], 'parent': None, 'time': 0}
         PrioritizedPlanner.push_node(open_list, root)
         closed_list[(root['loc'],0)] = root
@@ -116,7 +116,7 @@ class PrioritizedPlanner:
             num_nodes_visited += 1
 
             if num_nodes_visited >= max_iter:
-                print(f'Got to max iterations for agent {agent.id} from: {start_loc} to {goal_loc}')
+                # print(f'Got to max iterations for agent {agent_id.id} from: {start_loc} to {goal_loc}')
                 return None
             # #############################
             # # Task 1.4: Adjust the goal test condition to handle goal constraints
@@ -147,7 +147,7 @@ class PrioritizedPlanner:
                         'time': curr['time']+1}
                 
                 # do not add constrained nodes
-                if PrioritizedPlanner.is_constrained(curr['loc'], child_loc, child['time'], constraint_table, goal_constraints, agent, goal_loc):
+                if PrioritizedPlanner.is_constrained(curr['loc'], child_loc, child['time'], constraint_table, goal_constraints, agent_id, goal_loc):
                     continue
                 
                 if (child['loc'], curr['time']+1) in closed_list:
@@ -170,7 +170,7 @@ class PrioritizedPlanner:
             if child['loc'] == goal_loc:
                 child['g_val'] = curr['g_val'] + 0.01 # very low cost for waiting at goal
 
-            if PrioritizedPlanner.is_constrained(curr['loc'], child['loc'], curr['time']+1, constraint_table, goal_constraints, agent, goal_loc):
+            if PrioritizedPlanner.is_constrained(curr['loc'], child['loc'], curr['time']+1, constraint_table, goal_constraints, agent_id, goal_loc):
                     continue
             if (child['loc'], child['time']) in closed_list:
                 existing_node = closed_list[(child['loc'],child['time'])]
@@ -182,4 +182,4 @@ class PrioritizedPlanner:
                 PrioritizedPlanner.push_node(open_list, child)
 
             num_nodes_opened += 5
-        return None  # Failed to find solutions
+        raise Exception()  # Failed to find solutions, should never happen
