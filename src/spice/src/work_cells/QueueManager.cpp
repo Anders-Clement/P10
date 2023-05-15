@@ -18,8 +18,8 @@ void QueueManager::initialize_points(int num_points, double time)
     for (int i = 0; i < num_points; i++)
     {
         geometry_msgs::msg::Transform q_transform;
-        q_transform.translation.x = -STEP_DISTANCE + (STEP_DISTANCE*i);
-        q_transform.translation.y =  WORKCELL_RADIUS + ROBOT_RADIUS;
+        q_transform.translation.x = -(STEP_DISTANCE*0.75) + ((STEP_DISTANCE*1.2)*i);
+        q_transform.translation.y =  WORKCELL_RADIUS + (ROBOT_RADIUS*2);
         q_transform.rotation.z = 0.7071; // rotate 90 deg cc
         q_transform.rotation.w = 0.7071;
         m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
