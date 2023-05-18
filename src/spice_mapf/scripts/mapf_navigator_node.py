@@ -74,6 +74,7 @@ class MAPFNavigator(Node):
     def navigate_mapf_goal_cb(self, goal_request):
         self.get_logger().info(f'Received goal request: {goal_request.goal_pose}')
         if not self.make_ready() or self.current_nav_goal is not None:
+            self.get_logger().info(f'Rejecting goal because robot is already navigating.')
             return GoalResponse.REJECT
         else:
             return GoalResponse.ACCEPT
@@ -105,6 +106,7 @@ class MAPFNavigator(Node):
         self.current_nav_goal.position.y = goal.goal_pose.pose.position.y
         self.current_nav_goal.id = self.id
         request_goal = spice_mapf_srvs.RequestGoal.Request()
+        request_goal.workcell_id = goal.workcell_id
         request_goal.robot_pose = self.current_nav_goal
         
         can_go = False
@@ -115,13 +117,14 @@ class MAPFNavigator(Node):
             elif not result.success and result.currently_occupied:
                 self.get_logger().info(f'Requested goal is currently blocked by other robot. Waiting...')
                 time.sleep(1)
+                continue
             elif not result.success:
                 self.get_logger().info(f'Requested goal was denied')
                 goal_handle.abort()
                 self.current_nav_goal = None
                 return spice_mapf_actions.NavigateMapf.Result(success=False)
             elif result.success and not result.currently_occupied:
-                can_go = True
+                break
 
         self.get_logger().info(f'Requested goal: {self.current_nav_goal.position}, going to: {result.goal_position}, robot is starting at: {self.current_transform.transform.translation}')
         self.current_nav_goal.position = result.goal_position
@@ -283,6 +286,14 @@ class MAPFNavigator(Node):
         poses: list[spice_mapf_msgs.RobotPose] = msg.poses
         for robot_pose in poses:
             if robot_pose.id == self.id:
+                if robot_pose.rejoin:
+                    self.joined_planner = False
+                    self.join_planner_future = None
+                    self.planner_type_is_set = False
+                    self.planner_type_future = None
+                    self.current_nav_goal = None
+                    return
+
                 if self.current_nav_step_goal != robot_pose:
                     current_position = self.current_transform.transform.translation
                     x_diff = robot_pose.position.x - current_position.x

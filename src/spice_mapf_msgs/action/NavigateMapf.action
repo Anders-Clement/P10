@@ -1,4 +1,5 @@
 geometry_msgs/PoseStamped goal_pose
+spice_msgs/Id workcell_id
 ---
 bool success
 ---
