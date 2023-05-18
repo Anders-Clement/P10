@@ -47,6 +47,9 @@ public:
 
   virtual void get_robots_on_timer_cb();
 
+  virtual void inflateDynObs(int loopsLeft, int maxLoops, std::vector<std::vector<unsigned int>> costpositions, double* min_x, double* min_y,
+										double* max_x, double* max_y);
+
 private:
     double last_min_x_, last_min_y_, last_max_x_, last_max_y_;
     float obstacle_points_;
@@ -63,6 +66,9 @@ private:
     double ROBOT_RADIUS = 0.15;
     double ANGLE_INCREMENT;
     double TF_TOLERANCE = 10.0;
+    double inflation_radius;
+    unsigned char obstacle_cost;
+
     std::string global_frame_;
     
 };

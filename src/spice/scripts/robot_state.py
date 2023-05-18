@@ -8,11 +8,11 @@ from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action._navigate_to_pose import NavigateToPose_FeedbackMessage, NavigateToPose_Feedback
 
-from spice_msgs.msg import Id, RobotType, Layer, Node, Work
-from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell, RegisterWork
+from spice_msgs.msg import PlannerType, QueuePoints, QueuePoint
+from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell, RegisterWork, SetPlannerType, RobotReady
 
-from work_tree import WorkTree, Vertex
-from robot_state_manager_node import RobotStateManager, ROBOT_STATE
+from work_tree import WorkTree
+from robot_state_manager_node import RobotStateManager, ROBOT_STATE, HeartBeatHandler
 
 class RobotStateTemplate():
     def __init__(self) -> None:
@@ -38,6 +38,7 @@ class StartUpState(RobotStateTemplate):
         self.sm.get_logger().info('init StartUpState')
         self.nav_stack_is_active = False
         self.registered_robot = False
+        self.set_planner_type_ready = False
         self.timer = self.sm.create_timer(1, self.try_initialize)
 
         self.register_robot_client = self.sm.create_client(RegisterRobot, '/register_robot')
@@ -47,19 +48,21 @@ class StartUpState(RobotStateTemplate):
         self.nav_stack_is_active_future = None
 
         # ensure no heartbeat in this state
-        self.sm.heartbeat_timer.cancel()
+        self.sm.heartbeat.deactivate()
 
     def try_initialize(self):
         if not self.nav_stack_is_active:
             self.check_nav2_stack_status()
         elif not self.registered_robot:
             self.register_robot()
+        elif not self.set_planner_type_ready:
+            self.wait_for_planner_type_service()
         else: # nav_stack is good, and we are registered
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
 
     def check_nav2_stack_status(self):
         self.sm.get_logger().info('wait for service: lifecycle_manager_navigation/is_active')
-        while not self.navigation_is_active_client.wait_for_service(1):
+        while not self.navigation_is_active_client.wait_for_service(10):
             self.sm.get_logger().info('timeout on wait for service: lifecycle_manager_navigation/is_active')
         
         self.nav_stack_is_active_future = self.navigation_is_active_client.call_async(Trigger.Request())
@@ -69,6 +72,11 @@ class StartUpState(RobotStateTemplate):
         result: Trigger.Response = future.result()
         if result.success:
             self.nav_stack_is_active = True
+
+    def wait_for_planner_type_service(self):
+        self.set_planner_type_ready = self.sm.change_planner_type_client.wait_for_service(10.0)
+        if not self.set_planner_type_ready:
+            self.sm.get_logger().info('timeout on wait for service: set_planner_type')
 
     def register_robot(self):
         register_robot_request = RegisterRobot.Request()
@@ -106,8 +114,7 @@ class ReadyForJobState(RobotStateTemplate):
         self.sm = sm
         
     def init(self):
-        self.sm.heartbeat_timer.reset()
-        self.sm.heartbeat_future = None
+        self.sm.heartbeat.activate()
         if self.sm.task_tree is not None:
             self.sm.get_logger().warn('Entering ready_for_job state, but task tree was not None')
         self.sm.task_tree = None
@@ -137,16 +144,6 @@ class ReadyForJobState(RobotStateTemplate):
         response.job_accepted = True
         self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)
         return response
-    
-    def nav_goal_response_cb(self, future: Future): ## Remove?
-        goal_handle: ClientGoalHandle = future.result()
-        if not goal_handle.accepted:
-            self.sm.get_logger().error('Nav 2 goal was rejected, aborting task')
-            self.sm.change_state(ROBOT_STATE.ERROR)
-        
-        self.nav_goal_done_future: Future = goal_handle.get_result_async()
-        self.nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
-        self.sm.change_state(ROBOT_STATE.MOVING)
 
 
 class FindWorkCell(RobotStateTemplate):
@@ -158,6 +155,7 @@ class FindWorkCell(RobotStateTemplate):
 
         if len(self.sm.current_work) == 0: # no more work
             self.sm.task_tree = None
+            self.sm.get_logger().info("Job done, getting ready for a new job")
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
             return
 
@@ -183,52 +181,17 @@ class FindWorkCell(RobotStateTemplate):
         
         if response.found_job:
             self.sm.task_tree.select_next_work_type(response.workcell_id.robot_type)
-            ## call nav go
-            nav_goal = NavigateToPose.Goal()
-            nav_goal.pose = response.goal_pose
             self.sm.current_task = response
-            self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
-                nav_goal, self.sm.on_nav_feedback)
-            self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
+            self.sm.change_state(ROBOT_STATE.REGISTER_WORK)
             
         else:
             self.sm.get_logger().info('Failed to allocate workcell to robot, are they available?')
             self.sm.change_state(ROBOT_STATE.ERROR)
-            
 
-    def nav_goal_response_cb(self, future: Future):
-        goal_handle: ClientGoalHandle = future.result()
-        if not goal_handle.accepted:
-            self.sm.get_logger().error('Nav 2 goal was rejected, aborting task')
-            self.sm.change_state(ROBOT_STATE.ERROR)
-        
-        self.nav_goal_done_future: Future = goal_handle.get_result_async()
-        self.nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
-        self.sm.change_state(ROBOT_STATE.MOVING)
 
     def deinit(self):
         self.work_cell_allocator_client.destroy()
 
-
-class MovingState(RobotStateTemplate):
-    def __init__(self, sm: RobotStateManager) -> None:
-        self.sm = sm
-    def init(self):
-        pass
-    def deinit(self):
-        pass
-    def on_nav_done(self, future: Future):
-        nav_goal_result: GoalStatus = future.result().status
-        self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
-        if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
-            self.sm.change_state(ROBOT_STATE.REGISTER_WORK)
-        else:
-            self.sm.get_logger().info('Failed navigation, going to ERROR!')
-            self.sm.change_state(ROBOT_STATE.ERROR)
-    def on_nav_feedback(self, msg: NavigateToPose_FeedbackMessage):
-        # feedback: NavigateToPose_Feedback = msg.feedback
-        # self.sm.get_logger().info(str(feedback))
-        pass
 
 
 class ProcessRegisterWorkState(RobotStateTemplate):
@@ -261,15 +224,22 @@ class ProcessRegisterWorkState(RobotStateTemplate):
 
 
     def register_work_cb(self, future:Future):
-        self.sm.get_logger().info(self.sm.id.id+  ' regisiter_work_cb')
+        self.sm.get_logger().info(self.sm.id.id+  ' register_work_cb')
         response : RegisterWork.Response = future.result()
         if response.work_is_enqueued:
             self.sm.current_work_cell_info = response
-            self.sm.change_state(ROBOT_STATE.WAIT_IN_QUEUE)
+            self.sm.work_cell_heartbeat = HeartBeatHandler(
+                "/" + self.sm.current_task.workcell_id.id + "/heartbeat",
+                2.5,
+                self.sm.id,
+                lambda arg : arg.change_state(ROBOT_STATE.ERROR),
+                self.sm)
+            self.sm.work_cell_heartbeat.activate()
+            self.sm.change_state(ROBOT_STATE.ENQUEUED)
+            
         else:
-            self.sm.get_logger().info("Could not register work at work cell, going to ERROR!")
-            self.sm.change_state(ROBOT_STATE.ERROR)
-        
+            self.sm.get_logger().info(f"Could not register work at work cell: {self.sm.current_task.workcell_id.id}, going to ERROR!")
+            self.sm.change_state(ROBOT_STATE.ERROR)       
 
     def deinit(self):
 
@@ -280,23 +250,146 @@ class ProcessRegisterWorkState(RobotStateTemplate):
         self.register_work_client.destroy()
 
 
-class ProcessWaitQueueState(RobotStateTemplate):
+class MovingState(RobotStateTemplate):
+    def __init__(self, sm: RobotStateManager) -> None:
+        self.sm = sm
+    def init(self):
+        pass
+    def deinit(self):
+        pass
+    
+
+
+class EnqueuedState(RobotStateTemplate):
     
     def __init__(self, sm: RobotStateManager) -> None:
         self.sm = sm
     
     def init(self):
+        self.num_navigation_erorrs = 0
+        self.MAX_NAVIGATION_RETRIES = 5
+        self.ROBOT_READY_AT_CELL_DIST = 1.0 # m
+
+        self.robot_is_ready = False
         self.robot_is_called = False
+        self.robot_is_at_queue_point = False
         self.srv_call_robot = self.sm.create_service(
                     Trigger, 'call_robot', self.call_robot_cb)
+        
+        set_planner_type_request = SetPlannerType.Request()
+        set_planner_type_request.planner_type = PlannerType(type=PlannerType.PLANNER_PRIORITIZED)
+        change_planner_type_future = self.sm.change_planner_type_client.call_async(set_planner_type_request)
+        change_planner_type_future.add_done_callback(self.set_planner_cb)
+
+        current_task: AllocWorkCell.Response = self.sm.current_task
+        queue_points_topic_name = "/" + current_task.workcell_id.id + "/queue_points"
+        self.queue_points_sub = self.sm.create_subscription(
+            QueuePoints, 
+            queue_points_topic_name,
+            self.queue_points_cb,
+            10
+            )
+        
         self.timer = self.sm.create_timer(0.1, self.check_service_cb)
+        self.timer.cancel()
+        
+    def queue_points_cb(self, msg: QueuePoints) -> None:
+        print('queue points cb')
+        for queue_point in msg.queue_points:
+            queue_point : QueuePoint = queue_point
+            current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
+            if queue_point.queue_id == current_work_cell_info.queue_id:
+                current_work_cell_info.queue_pose.pose.position.x = queue_point.queue_transform.translation.x
+                current_work_cell_info.queue_pose.pose.position.y = queue_point.queue_transform.translation.y
+                current_work_cell_info.queue_pose.pose.position.z = queue_point.queue_transform.translation.z
+                current_work_cell_info.queue_pose.pose.orientation.x = queue_point.queue_transform.rotation.x
+                current_work_cell_info.queue_pose.pose.orientation.y = queue_point.queue_transform.rotation.y
+                current_work_cell_info.queue_pose.pose.orientation.z = queue_point.queue_transform.rotation.z
+                current_work_cell_info.queue_pose.pose.orientation.w = queue_point.queue_transform.rotation.w
+                return
+            
+        self.robot_is_at_queue_point = False
+        self.navigate_to_queue_point()
+
+    def set_planner_cb(self, future: Future):
+        result: SetPlannerType.Response = future.result()
+        if not result.success:
+            self.sm.get_logger().warn('Failed to change planner type')
+            self.sm.change_state(ROBOT_STATE.ERROR)
+            return
+        self.navigate_to_queue_point()
+
+    def navigate_to_queue_point(self):
+        if not self.robot_is_at_queue_point:
+            nav_goal = NavigateToPose.Goal()
+            nav_goal.pose = self.sm.current_work_cell_info.queue_pose
+            self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
+                nav_goal,
+                self.sm.on_nav_feedback)
+            self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
+
+    def nav_goal_response_cb(self, future: Future):
+        goal_handle: ClientGoalHandle = future.result()
+        if not goal_handle.accepted:
+            self.sm.get_logger().error('Nav 2 goal was rejected, aborting task')
+            self.sm.change_state(ROBOT_STATE.ERROR)
+        
+        self.nav_goal_done_future: Future = goal_handle.get_result_async()
+        self.nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
+
+    def on_nav_feedback(self, msg: NavigateToPose_FeedbackMessage):
+        # can be 0 at very start of a navigation task
+        if msg.feedback.distance_remaining == 0.0:
+            return
+        if msg.feedback.distance_remaining < self.ROBOT_READY_AT_CELL_DIST:
+            self.call_robot_ready_in_queue()
+
+    def call_robot_ready_in_queue(self):
+        if self.robot_is_ready:
+            return
+        
+        self.robot_is_ready = True
+        robot_ready_request = RobotReady.Request()
+        robot_ready_request.robot_id = self.sm.id
+        current_task: AllocWorkCell.Response = self.sm.current_task
+        robot_ready_service_name = '/' + current_task.workcell_id.id + "/robot_ready_in_queue"
+        self.robot_ready_client = self.sm.create_client(RobotReady, robot_ready_service_name)
+        if not self.robot_ready_client.wait_for_service(5.0):
+            self.sm.get_logger().error('Timeout on wait for service: ' + robot_ready_service_name)
+            self.sm.change_state(ROBOT_STATE.ERROR)
+        robot_ready_future = self.robot_ready_client.call_async(robot_ready_request)
+        robot_ready_future.add_done_callback(self.robot_ready_cb)
+
+    def on_nav_done(self, future: Future):
+        nav_goal_result: GoalStatus = future.result().status
+        #self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
+        if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
+            self.robot_is_at_queue_point = True
+            self.call_robot_ready_in_queue()
+        else:
+            self.num_navigation_erorrs += 1
+            self.sm.get_logger().info(f'Failed navigation, number of tries: {self.num_navigation_erorrs}')
+            if self.num_navigation_erorrs > self.MAX_NAVIGATION_RETRIES:
+                self.sm.get_logger().info(f'Too many navigation failures {self.MAX_NAVIGATION_RETRIES}, going to ERROR')
+                self.sm.change_state(ROBOT_STATE.ERROR)
+                return
+            self.navigate_to_queue_point()
+
+    def robot_ready_cb(self, future: Future):
+        result: RobotReady.Response = future.result()
+        if not result.success:
+            self.sm.get_logger().warn("Failed to call robot ready at work cell queue")
+            self.sm.change_state(ROBOT_STATE.ERROR)
+        else:
+            self.timer.reset()        
     
     def check_service_cb(self):
         if self.robot_is_called:
+            self.timer.cancel()
             self.sm.change_state(ROBOT_STATE.ENTER_WORKCELL)
     
     def call_robot_cb(self, request:Trigger.Request, response:Trigger.Response) -> Trigger.Response:
-        if self.sm.current_state != ROBOT_STATE.WAIT_IN_QUEUE:
+        if self.sm.current_state != ROBOT_STATE.ENQUEUED:
             response.success = False
             self.sm.get_logger().warn('call_robot_cb, but ROBOT_STATE is not ROBOT_STATE.WAIT_IN_QUEUE')
             return response
@@ -312,9 +405,9 @@ class ProcessWaitQueueState(RobotStateTemplate):
         return response
     
     def deinit(self):
-        
-        self.timer.cancel()
+        self.timer.destroy()
         self.srv_call_robot.destroy()
+        self.sm.destroy_subscription(self.queue_points_sub)
 
 
 class EnterWorkCellState(RobotStateTemplate):
@@ -322,6 +415,54 @@ class EnterWorkCellState(RobotStateTemplate):
         self.sm = sm
 
     def init(self):
+        change_planner_type_request = SetPlannerType.Request()
+        change_planner_type_request.planner_type.type = PlannerType.PLANNER_PRIORITIZED
+        change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
+        change_planner_type_future.add_done_callback(self.navigate_to_cell_entry)
+
+    def navigate_to_cell_entry(self, future: Future):
+        result: SetPlannerType.Response = future.result()
+        if not result.success:
+            self.sm.get_logger().warn('Failed to change planner type')
+            self.sm.change_state(ROBOT_STATE.ERROR)
+            return
+
+        current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
+
+        nav_goal = NavigateToPose.Goal()
+        nav_goal.pose = current_work_cell_info.entry_pose
+        self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
+            nav_goal, self.sm.on_nav_feedback)
+        self.nav_reponse_future.add_done_callback(self.cell_entry_nav_goal_response_cb)
+
+    def cell_entry_nav_goal_response_cb(self, future: Future):
+        goal_handle: ClientGoalHandle = future.result()
+        if not goal_handle.accepted:
+            self.sm.get_logger().error('Nav 2 goal was rejected, aborting enter work cell')
+            self.sm.change_state(ROBOT_STATE.ERROR)
+        
+        self.nav_goal_done_future: Future = goal_handle.get_result_async()
+        self.nav_goal_done_future.add_done_callback(self.on_cell_entry_nav_done)
+
+    def on_cell_entry_nav_done(self, future: Future):
+        nav_result = future.result()
+        nav_goal_result: GoalStatus = nav_result.status
+        self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
+        if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
+            change_planner_type_request = SetPlannerType.Request()
+            change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
+            change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
+            change_planner_type_future.add_done_callback(self.navigate_into_cell)
+        else:
+            self.sm.change_state(ROBOT_STATE.ERROR)
+
+    def navigate_into_cell(self, future: Future):
+        result: SetPlannerType.Response = future.result()
+        if not result.success:
+            self.sm.get_logger().warn('Failed to change planner type')
+            self.sm.change_state(ROBOT_STATE.ERROR)
+            return
+
         current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
 
         nav_goal = NavigateToPose.Goal()
@@ -345,7 +486,8 @@ class EnterWorkCellState(RobotStateTemplate):
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.sm.change_state(ROBOT_STATE.READY_FOR_PROCESS)
         else:
-            self.sm.change_state(ROBOT_STATE.ERROR)
+            pass
+            #self.sm.change_state(ROBOT_STATE.ERROR)
 
     def deinit(self):
         pass
@@ -359,6 +501,7 @@ class ProcessReadyForProcessingState(RobotStateTemplate):
         self.robot_ready_process_client = self.sm.create_client(
                     Trigger, '/'+self.sm.current_task.workcell_id.id + "/robot_ready_for_processing")
         self.timer = self.sm.create_timer(5.0, self.robot_ready_process)
+        self.robot_ready_process_future = None
 
     def robot_ready_process(self):
         if not self.robot_ready_process_client.wait_for_service(timeout_sec=1.0):
@@ -437,6 +580,21 @@ class ProcessExitWorkCellState(RobotStateTemplate):
     
     def init(self):
         self.sm.get_logger().info(self.sm.id.id+  ' is done processing at ' + self.sm.current_task.workcell_id.id + ' exiting work cell')
+        self.robot_exited_client = self.sm.create_client(
+            Trigger, '/'+self.sm.current_task.workcell_id.id + "/robot_exited")
+        
+        change_planner_type_request = SetPlannerType.Request()
+        change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
+        change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
+        change_planner_type_future.add_done_callback(self.navigate_exit_cell)
+
+    def navigate_exit_cell(self, future: Future):
+        result: SetPlannerType.Response = future.result()
+        if not result.success:
+            self.sm.get_logger().warn('Failed to change planner type')
+            self.sm.change_state(ROBOT_STATE.ERROR)
+            return
+        
         nav_goal = NavigateToPose.Goal()
         nav_goal.pose = self.sm.current_work_cell_info.exit_pose
         self.nav_reponse_future = self.sm.navigation_client.send_goal_async(
@@ -456,13 +614,28 @@ class ProcessExitWorkCellState(RobotStateTemplate):
         nav_goal_result: GoalStatus = future.result().status
         self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
-            self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)
+            self.call_robot_exited_cell()
         else:
             self.sm.current_task = None
             self.sm.change_state(ROBOT_STATE.ERROR)
 
+    def call_robot_exited_cell(self):
+        robot_exited_request = Trigger.Request()
+        robot_exited_future = self.robot_exited_client.call_async(robot_exited_request)
+        robot_exited_future.add_done_callback(self.robot_exited_cb)
+
+    def robot_exited_cb(self, future: Future):
+        result: Trigger.Response = future.result()
+        if result.success:
+            self.sm.work_cell_heartbeat.deactivate()
+            self.sm.change_state(ROBOT_STATE.FIND_WORKCELL)
+        else:
+            self.sm.get_logger().warn(
+                f"Call to {'/'+self.sm.current_task.workcell_id.id + '/robot_exited'} failed, workcell may be in invalid state, retrying")
+            self.call_robot_exited_cell()
+
     def deinit(self):
-        pass
+        self.robot_exited_client.destroy()
 
 class ErrorState(RobotStateTemplate):
     def __init__(self, sm: RobotStateManager) -> None:
@@ -475,6 +648,7 @@ class ErrorState(RobotStateTemplate):
         # clear job and task tree
         self.sm.current_task = None
         self.sm.task_tree = None
+        self.sm.work_cell_heartbeat.deactivate()
         
     def deinit(self):
         self.recovery_timer.cancel()

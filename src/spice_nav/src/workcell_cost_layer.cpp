@@ -25,9 +25,17 @@ namespace nav2_costmap_2d
         declareParameter("enabled", rclcpp::ParameterValue(true));
         declareParameter("shape", rclcpp::ParameterValue(0));
         declareParameter("cost", rclcpp::ParameterValue(254));
+        declareParameter("OFFSET_ENTRY", rclcpp::ParameterValue(0.25));
+        declareParameter("OFFSET_EXIT", rclcpp::ParameterValue(0.25));
+        declareParameter("robot_radius", rclcpp::ParameterValue(0.25));
+        declareParameter("workcell_radius", rclcpp::ParameterValue(ROBOT_RADIUS));
         nh_->get_parameter(name_ + "." + "enabled", enabled_);
         nh_->get_parameter(name_ + "." + "shape", shape_);
         nh_->get_parameter(name_ + "." + "cost", cost_);
+        nh_->get_parameter(name_ + "." + "OFFSET_ENTRY", OFFSET_ENTRY);
+        nh_->get_parameter(name_ + "." + "OFFSET_EXIT", OFFSET_EXIT);
+        nh_->get_parameter(name_ + "." + "robot_radius", ROBOT_RADIUS);
+        nh_->get_parameter(name_ + "." + "workcell_radius", WORKCELL_RADIUS);
 
         transform_tolerance_ = tf2::durationFromSec(TF_TOLERANCE);
 
@@ -94,13 +102,12 @@ namespace nav2_costmap_2d
             }
             catch (const tf2::TransformException &ex)
             {
-                RCLCPP_INFO(
-                    nh_->get_logger(), "[WorkcellCostLayer]failed transform");
+                RCLCPP_INFO(nh_->get_logger(), "[WorkcellCostLayer]failed transform");
                 continue;
             }
 
             double entry_wx, entry_wy, exit_wx, exit_wy;
-            unsigned int entry_mx, entry_my, exit_mx, exit_my;
+            
 
             tf2::Quaternion q(workcell_entry.transform.rotation.x, workcell_entry.transform.rotation.y, workcell_entry.transform.rotation.z, workcell_entry.transform.rotation.w);
             tf2::Matrix3x3 rot_m(q);
@@ -109,11 +116,14 @@ namespace nav2_costmap_2d
             auto inv_m = rot_m.inverse();
             auto zero_rot_entry = inv_m * entry_pos;
             auto zero_rot_exit = inv_m * exit_pos;
-            entry_wx = zero_rot_entry.getX();
+            entry_wx = zero_rot_entry.getX() + OFFSET_ENTRY;
             entry_wy = zero_rot_entry.getY();
-            exit_wx = zero_rot_exit.getX(); // same as entry_wx when rotated(?)
+            exit_wx = zero_rot_exit.getX() - OFFSET_EXIT;
             exit_wy = zero_rot_exit.getY();
-        
+
+
+            
+
             unsigned int mx, my;
             std::vector<std::vector<double>> obstacle_points;
             if (shape_ == 0)
@@ -122,8 +132,8 @@ namespace nav2_costmap_2d
 
                 while (it_wx < exit_wx)
                 {
-                    obstacle_points.push_back({it_wx, entry_wy+ ROBOT_RADIUS});
-                    obstacle_points.push_back({it_wx, entry_wy - ROBOT_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy + WORKCELL_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy - WORKCELL_RADIUS});
                     it_wx += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
                                         
                 }
@@ -131,14 +141,15 @@ namespace nav2_costmap_2d
             else if (shape_ == 1)
             { // square:
                 double it_wx = entry_wx;
-                double it_wy = entry_wy - ROBOT_RADIUS;
+                double it_wy = entry_wy - WORKCELL_RADIUS;
+                
                 while (it_wx < exit_wx)
                 {
-                    obstacle_points.push_back({it_wx, entry_wy + ROBOT_RADIUS});
-                    obstacle_points.push_back({it_wx, entry_wy - ROBOT_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy + WORKCELL_RADIUS});
+                    obstacle_points.push_back({it_wx, entry_wy - WORKCELL_RADIUS});
                     it_wx += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
                 }
-                while (it_wy < entry_wy + ROBOT_RADIUS)
+                while (it_wy < entry_wy + WORKCELL_RADIUS)
                 {
 
                     obstacle_points.push_back({entry_wx, it_wy});
@@ -146,7 +157,6 @@ namespace nav2_costmap_2d
                     it_wy += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
                 }
             }
-
             else if (shape_ == 2)
             { // circle
                 double c_wx = (exit_wx + entry_wx) / 2;
@@ -156,6 +166,22 @@ namespace nav2_costmap_2d
                 for (double it = 0; it < 2 * M_PI; it += M_PI / 100)
                 {
                     obstacle_points.push_back({c_wx + r_w * cos(it), c_wy + r_w * sin(it)});
+                }
+            }
+            else if (shape_ == 3)
+            { // filled square
+                double it_wx = entry_wx;
+                double it_wy = entry_wy - WORKCELL_RADIUS;
+            
+                while (it_wy < entry_wy + WORKCELL_RADIUS)
+                {
+                    while (it_wx < exit_wx)
+                    {
+                        obstacle_points.push_back({it_wx, it_wy});
+                        it_wx += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
+                    }
+                    it_wy += 0.02; // obstacle resolution less than costmap resolution to prevent gaps
+                    it_wx = entry_wx;
                 }
             }
             else
@@ -184,11 +210,44 @@ namespace nav2_costmap_2d
                     nh_->get_logger(), "[WorkcellCostLayer]could not transform tunnel point to costmap domain");
                 }
             }
+            
+            // Add cost to exit area
+            double work_cell_length = zero_rot_exit.getX() - zero_rot_entry.getX();
+            
+            std::vector<std::vector<double>> inflate_exit_w_points;
+			for (double y = -WORKCELL_RADIUS; y < WORKCELL_RADIUS; y+=getResolution()) // width of a work cell
+			{
+				for (double x = -(work_cell_length+ROBOT_RADIUS); x < (ROBOT_RADIUS*1.5); x+=getResolution()) // goes from 1.5 robot radius before entry to 1.5 robot radius after exit
+				{
+                    inflate_exit_w_points.push_back({zero_rot_exit.getX() + x, zero_rot_exit.getY() + y});
+				}
+			}
+
+            unsigned char exit_cost = 200;
+            unsigned char current_cost;
+            unsigned int exit_mx, exit_my;
+            for(auto point : inflate_exit_w_points)
+            {
+                tf2::Vector3 un_rotated_point(point[0], point[1], 0.0); // is actually still rotated here
+                un_rotated_point = rot_m * un_rotated_point;
+                if(worldToMap(un_rotated_point.getX(), un_rotated_point.getY(), exit_mx, exit_my))
+                {    
+                    current_cost = getCost(exit_mx, exit_my);
+                    if( current_cost < exit_cost || current_cost == nav2_costmap_2d::NO_INFORMATION)
+                    {
+                        setCost(exit_mx, exit_my, exit_cost);
+
+                        *min_x = std::min(un_rotated_point.getX(), *min_x);
+                        *min_y = std::min(un_rotated_point.getY(), *min_y);
+                        *max_x = std::max(un_rotated_point.getX(), *max_x);
+                        *max_y = std::max(un_rotated_point.getY(), *max_y);
+                    }
+                }
+            }
         }
     }
 
-    void WorkcellCostLayer::updateCosts(nav2_costmap_2d::Costmap2D &master_grid, int min_i, int min_j, int max_i,
-                                        int max_j)
+    void WorkcellCostLayer::updateCosts(nav2_costmap_2d::Costmap2D &master_grid, int min_i, int min_j, int max_i, int max_j)
     {
         if (!enabled_)
         {
@@ -200,7 +259,7 @@ namespace nav2_costmap_2d
             for (int i = min_i; i < max_i; i++)
             {
                 int index = getIndex(i, j);
-                if (costmap_[index] == NO_INFORMATION)
+                if (costmap_[index] == getDefaultValue())
                 {
                     continue;
                 }
@@ -214,6 +273,7 @@ namespace nav2_costmap_2d
         RCLCPP_DEBUG(rclcpp::get_logger("nav2_costmap_2d"), "onFootprintChanged(): num footprint points: %lu",
                      layered_costmap_->getFootprint().size());
     }
+
 
 } // namespace nav2_costmap_2d
 

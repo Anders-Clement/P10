@@ -22,6 +22,12 @@ set(msg_files
   "msg/Node.msg"
   "msg/Work.msg"
   "msg/RobotType.msg"
+  "msg/PlannerType.msg"
+  "msg/Performance.msg"
+  "msg/RobotPlan.msg"
+  "msg/QueuePoint.msg"
+  "msg/QueuePoints.msg"
+  "msg/Param.msg"
 )
 
 set(srv_files
@@ -35,6 +41,8 @@ set(srv_files
   "srv/GetRobotsByState.srv"
   "srv/GetRobotsByType.srv"
   "srv/GetPlan.srv"
+  "srv/SetPlannerType.srv"
+  "srv/RobotReady.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

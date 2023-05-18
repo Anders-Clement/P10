@@ -13,8 +13,8 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoS
 from nav2_msgs.action import NavigateToPose
 
 from spice_msgs.msg import RobotState, RobotStateTransition, Id, RobotType
-from spice_msgs.srv import Heartbeat, RobotTask
-from work_tree import WorkTree, Vertex
+from spice_msgs.srv import Heartbeat, RobotTask, SetPlannerType
+from work_tree import WorkTree
 import robot_state
 
 
@@ -24,12 +24,51 @@ class ROBOT_STATE(enum.IntEnum):
     FIND_WORKCELL = 2
     MOVING = 3
     REGISTER_WORK = 4
-    WAIT_IN_QUEUE = 5
+    ENQUEUED = 5
     ENTER_WORKCELL = 6
     READY_FOR_PROCESS = 7
     PROCESS_DONE = 8
     EXIT_WORKCELL = 9
     ERROR = 10
+
+
+class HeartBeatHandler:
+    def __init__(self, service_topic: str, period: float, robot_id: Id, heartbeat_failed_func, nodehandle: Node) -> None:
+        self.robot_id = robot_id
+        self.heartbeat_client = nodehandle.create_client(Heartbeat, service_topic)
+        self.heartbeat_timer = nodehandle.create_timer(period, self.heartbeat_timer_cb)
+        self.heartbeat_timer.cancel()
+        self.heartbeat_failed_func = heartbeat_failed_func
+        self.nodehandle = nodehandle
+        self.heartbeat_topic = service_topic
+        self.heartbeat_future = None
+
+    def heartbeat_timer_cb(self):
+        if self.heartbeat_future is not None:
+            self.nodehandle.get_logger().warn(f'heartbeat failed to topic: {self.heartbeat_topic}')
+            self.deactivate()
+            self.heartbeat_failed_func(self.nodehandle)
+        else:
+            request = Heartbeat.Request()
+            request.id = self.robot_id
+            self.heartbeat_future = self.heartbeat_client.call_async(request)
+            self.heartbeat_future.add_done_callback(self.heartbeat_cb)
+
+    def heartbeat_cb(self, future: Future):
+        result: Heartbeat.Response = future.result()
+        self.heartbeat_future = None
+        if result.restart_robot:
+            self.deactivate()
+            self.heartbeat_failed_func(self.nodehandle)
+
+    def activate(self):
+        self.heartbeat_timer.reset()
+
+    def deactivate(self):
+        self.heartbeat_timer.cancel()
+        self.heartbeat_future = None
+        # self.nodehandle.destroy_timer(self.heartbeat_timer)
+        # self.nodehandle.destroy_client(self.heartbeat_client)
    
 
 class RobotStateManager(Node):
@@ -56,12 +95,11 @@ class RobotStateManager(Node):
         
         self.state_transition_event_pub = self.create_publisher(RobotStateTransition, 'robot_state_transition_event', qos)
 
-        self.heartbeat_client = self.create_client(Heartbeat, '/heartbeat')
-        self.heartbeat_timer = self.create_timer(5, self.heartbeat_timer_cb)
-        self.heartbeat_timer.cancel()
-        self.heartbeat_future = None
+        self.heartbeat = HeartBeatHandler('/heartbeat', 2.5, self.id, lambda arg : arg.change_state(ROBOT_STATE.STARTUP), self)
+        self.work_cell_heartbeat: Heartbeat = None
 
         self.navigation_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        self.change_planner_type_client = self.create_client(SetPlannerType, "set_planner_type")
 
         self.allocate_task_server = self.create_service(
             RobotTask, 'allocate_task', self.allocate_task_cb)
@@ -73,7 +111,7 @@ class RobotStateManager(Node):
             robot_state.FindWorkCell(self),
             robot_state.MovingState(self),
             robot_state.ProcessRegisterWorkState(self),
-            robot_state.ProcessWaitQueueState(self),
+            robot_state.EnqueuedState(self),
             robot_state.EnterWorkCellState(self),
             robot_state.ProcessReadyForProcessingState(self),
             robot_state.ProcessProcessingDoneState(self),
@@ -118,30 +156,6 @@ class RobotStateManager(Node):
             self.current_state = new_state
             self.states[self.current_state].init()
         
-    def heartbeat_timer_cb(self):
-        if self.current_state == ROBOT_STATE.READY_FOR_JOB \
-            or self.current_state == ROBOT_STATE.MOVING \
-            or self.current_state == ROBOT_STATE.FIND_WORKCELL\
-            or self.current_state == ROBOT_STATE.REGISTER_WORK \
-            or self.current_state == ROBOT_STATE.WAIT_IN_QUEUE \
-            or self.current_state == ROBOT_STATE.READY_FOR_PROCESS\
-            or self.current_state == ROBOT_STATE.PROCESS_DONE\
-            or self.current_state == ROBOT_STATE.EXIT_WORKCELL\
-            or self.current_state == ROBOT_STATE.ERROR:
-
-            if self.heartbeat_future is None:
-                heartbeat = Heartbeat.Request(id=self.id)
-                self.heartbeat_future = self.heartbeat_client.call_async(heartbeat)
-                self.heartbeat_future.add_done_callback(self.heartbeat_cb)
-            else:
-                self.get_logger().error('Did not receive answer to heartbeat in time, resetting!')
-                self.change_state(ROBOT_STATE.STARTUP)
-
-    def heartbeat_cb(self, future: Future):
-        result: Heartbeat.Response = future.result()
-        if result.restart_robot:
-            self.change_state(ROBOT_STATE.STARTUP)
-        self.heartbeat_future = None
 
     def on_nav_feedback(self, msg):
         self.states[self.current_state].on_nav_feedback(msg)

@@ -40,11 +40,11 @@ amcl:
     scan_topic: scan
     set_initial_pose: true
     #A4
-    initial_pose: {x: 0.334819, y: 1.26002, z: 0.0, yaw: -1.53545}
-    # CANTEEN:
+    initial_pose: {x: 2.42377, y: 1.36671, z: 0.0, yaw: -1.59121}
+    #CANTEEN:
     # initial_pose: {x: 0.7, y: 0.6, z: 0.0, yaw: -0.3}
-    # C4:
-    #initial_pose: {x: 18.0804, y: 7.08578, z: 0.0, yaw: 1.63992}
+    #C4:
+    # initial_pose: {x: 18.0804, y: 7.08578, z: 0.0, yaw: 1.63992}
 
 amcl_map_client:
   ros__parameters:
@@ -72,7 +72,7 @@ bt_navigator:
     enable_groot_monitoring: True
     groot_zmq_publisher_port: 1666
     groot_zmq_server_port: 1667
-    default_nav_to_pose_bt_xml: "/home/ubuntu/P10/src/spice_nav/config/behavior_trees/custom_bt_of_navigate_to_pose_w_replanning_and_recovery_with_waitcondition.xml"
+    default_nav_to_pose_bt_xml: "" # to change this, look in nav_stack.launch.py
     plugin_lib_names:
     - NavWaitHandlerConditionNode
     - nav2_compute_path_to_pose_action_bt_node
@@ -133,8 +133,8 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.25
-      yaw_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.10
+      yaw_goal_tolerance: 0.10
     # DWB parameters
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
@@ -162,7 +162,7 @@ controller_server:
       linear_granularity: 0.05
       angular_granularity: 0.025
       transform_tolerance: 0.2
-      xy_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.10
       trans_stopped_velocity: 0.25
       short_circuit_trajectory_evaluation: True
       stateful: True
@@ -172,7 +172,7 @@ controller_server:
       PathAlign.forward_point_distance: 0.1
       GoalAlign.scale: 24.0
       GoalAlign.forward_point_distance: 0.1
-      PathDist.scale: 32.0
+      PathDist.scale: 256.0
       GoalDist.scale: 24.0
       RotateToGoal.scale: 32.0
       RotateToGoal.slowing_factor: 5.0
@@ -226,6 +226,8 @@ local_costmap:
         plugin: "nav2_costmap_2d::DynamicObstacleLayer"
         enabled: True
         obstacle_points: 32.0
+        inflation_radius: 0.5
+        obstacle_cost: 254 #LETHAL_COST = 254
         topic: /global_tf
       static_layer:
         map_subscribe_transient_local: True
@@ -286,7 +288,7 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: spice_nav/CentralPlanner #"nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.5
+      tolerance: 0.10
       use_astar: false
       allow_unknown: true
 

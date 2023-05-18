@@ -35,11 +35,12 @@ nav_msgs::msg::Path AStarPlanner::get_plan(
     geometry_msgs::msg::PoseStamped start, 
     geometry_msgs::msg::PoseStamped goal,
     double goal_tolerance,
+    std::shared_ptr<nav2_costmap_2d::Costmap2D> costmap,
     spice_msgs::msg::Id id)
 {
       // RCLCPP_INFO(
       //       m_central_path_planner.get_logger(), "Got planning request from robot: %s", id.id.c_str());
-    m_costmap = m_central_path_planner.get_costmap(id);
+    m_costmap = costmap;
     if(!m_navfn_planner)
     {
         m_navfn_planner = std::make_unique<NavFn>(

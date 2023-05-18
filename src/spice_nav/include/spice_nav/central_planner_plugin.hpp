@@ -47,13 +47,15 @@
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-
+#include "std_msgs/msg/bool.hpp"
 #include "nav2_core/global_planner.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "nav2_util/robot_utils.hpp"
 #include "nav2_util/lifecycle_node.hpp"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
 #include "spice_msgs/srv/get_plan.hpp"
+#include "spice_msgs/msg/planner_type.hpp"
+#include "spice_msgs/srv/set_planner_type.hpp"
 
 namespace spice_nav
 {
@@ -84,15 +86,21 @@ public:
     const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal) override;
 
+  void set_planner_type_cb(spice_msgs::srv::SetPlannerType::Request::SharedPtr req, 
+      spice_msgs::srv::SetPlannerType::Response::SharedPtr res);
+
 private:
   std::shared_ptr<tf2_ros::Buffer> tf_;
   nav2_util::LifecycleNode::SharedPtr node_;
   nav2_costmap_2d::Costmap2D * costmap_;
   std::string global_frame_, name_, robot_namespace_;
   rclcpp::Client<spice_msgs::srv::GetPlan>::SharedPtr central_planner_client;
+  rclcpp::Service<spice_msgs::srv::SetPlannerType>::SharedPtr set_planner_type_server;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr wait_publisher;
 
   double interpolation_resolution_;
   double goal_tolerance_;
+  spice_msgs::msg::PlannerType planner_type;
 };
 
 }  // namespace spice_nav

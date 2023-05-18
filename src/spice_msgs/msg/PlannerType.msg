@@ -1,0 +1,5 @@
+uint8 PLANNER_PRIORITIZED = 0
+uint8 PLANNER_STRAIGHT_LINE = 1
+uint8 PLANNER_A_STAR = 2
+uint8 param
+uint8 type

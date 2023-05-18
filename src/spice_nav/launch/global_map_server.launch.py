@@ -9,11 +9,12 @@ from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
 
-MAP_NAME = 'A4.yaml' # Change name of map here
+DEFAULT_MAP_NAME = 'C4.yaml' 
 
 def generate_launch_description():
 
-
+    map_name = LaunchConfiguration('map')
+    map_path = LaunchConfiguration('map_path')
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -28,17 +29,19 @@ def generate_launch_description():
 
     map_path = PathJoinSubstitution(
         [FindPackageShare('spice_nav'),
-         'maps', MAP_NAME]
+         'maps', map_name]
     )
 
     ## Create our own temporary YAML files that include substitutions
     param_substitutions = {
-        'yaml_filename': map_path}
+        'yaml_filename': map_path
+    }
 
     configured_params = RewrittenYaml(
-            source_file=config_path,
-            param_rewrites=param_substitutions,
-            convert_types=True)
+        source_file=config_path,
+        param_rewrites=param_substitutions,
+        convert_types=True
+    )
     
     ## Launch Arguements
     declare_use_respawn_cmd = DeclareLaunchArgument(
@@ -64,6 +67,18 @@ def generate_launch_description():
         description='Automatically startup the nav2 stack'
     )
 
+    declare_map_cmd = DeclareLaunchArgument(
+        name='map',
+        default_value = DEFAULT_MAP_NAME,
+        description='Map name.yaml'
+    )
+
+    declare_map_path_cmd = DeclareLaunchArgument(
+        name='map_path',
+        default_value = map_path,
+        description='Map path'
+    )
+
 
 
     return LaunchDescription([
@@ -71,6 +86,8 @@ def generate_launch_description():
         declare_log_level_cmd,
         declare_use_sim_time_cmd,
         declare_autostart_cmd,
+        declare_map_cmd,
+        declare_map_path_cmd,
 
         Node(
             package='nav2_map_server',
