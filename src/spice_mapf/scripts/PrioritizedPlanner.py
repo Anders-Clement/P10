@@ -80,8 +80,9 @@ class PrioritizedPlanner:
                     return True
             else:
                 # only allow touching the target workcell, if it is at goal loc
-                if next_loc != goal_loc:
-                    return True
+                if workcell_loc == next_loc:
+                    if next_loc != goal_loc:
+                        return True
         
         return False
 

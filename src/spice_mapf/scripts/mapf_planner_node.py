@@ -27,8 +27,8 @@ class MapfPlanner(Node):
         self.map = Map(self, load_map_from_topic=True)
         self.agents: list[Agent] = []
         self.planner = Planner(self.map, self.agents, self)
-        self.visualizer = Visualizer(self.map, self.agents)
         self.workcell_obstacle = WorkcellObstacle(self)
+        self.visualizer = Visualizer(self.map, self.agents, self.workcell_obstacle)
         self.visualizer.visualize()
         self.timer = self.create_timer(0.1, self.tick)
         self.visualizer_timer = self.create_timer(1.0, self.visualizer.visualize)
@@ -50,6 +50,10 @@ class MapfPlanner(Node):
                 return
 
         self.get_logger().warn(f'Got robot_loc from agent: {msg.id.id}, but it has not joined the planner yet')
+        msg.rejoin = True
+        reset_msg = spice_mapf_msgs.RobotPoses()
+        reset_msg.poses.append(msg)
+        self.paths_publisher.publish(reset_msg)
 
     def join_planner_cb(self, request: spice_mapf_srvs.JoinPlanner.Request, response: spice_mapf_srvs.JoinPlanner.Response):
         if not self.map.has_map:
@@ -280,17 +284,17 @@ class MapfPlanner(Node):
 class WorkcellObstacle():
     def __init__(self, mapf_planner: MapfPlanner):
         self.mapf_planner = mapf_planner
-        self.get_robots_timer = self.mapf_planner.create_timer(5.0, self.get_robots_timer_cb)
+        self.get_robots_timer = self.mapf_planner.create_timer(1.0, self.get_robots_timer_cb)
         self.get_workcells_client = self.mapf_planner.create_client(spice_srvs.GetRobotsByType, "/get_robots_by_type")
         self.workcell_ids: list[spice_msgs.Id] = []
         self.workcell_locations: list[tuple[spice_msgs.Id, tuple[int,int]]] = []
         self.tf_buffer = tf2_ros.buffer.Buffer()
-        self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self)
+        self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self.mapf_planner)
 
     def get_robots_timer_cb(self):
         request = spice_srvs.GetRobotsByType.Request()
-        request.type = spice_msgs.RobotType.WORK_CELL_ANY
-        self.get_workcells_client.call_async(request).add_done_callback()
+        request.type = spice_msgs.RobotType(type=spice_msgs.RobotType.WORK_CELL_ANY)
+        self.get_workcells_client.call_async(request).add_done_callback(self.get_robots_cb)
 
     def get_robots_cb(self, future: Future):
         result: spice_srvs.GetRobotsByType.Response = future.result()
@@ -318,14 +322,14 @@ class WorkcellObstacle():
         try:
             workcell_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, Time())
         except TransformException as e:
-            self.get_logger().info(
+            self.mapf_planner.get_logger().info(
                         f'Could not transform {to_frame_rel} to {from_frame_rel}: {e}', once=True)
             return None
         
         pos = spice_mapf_msgs.Position()
         pos.x = workcell_transform.transform.translation.x
         pos.y = workcell_transform.transform.translation.y
-        return (workcell_id, self.mapf_planner.world_to_map(pos))
+        return (workcell_id, self.mapf_planner.map.world_to_map(pos))
 
         
 
