@@ -19,4 +19,4 @@ class Agent:
         self.workcell_id = spice_msgs.Id()
 
     def debug_str(self, mapf_planner) -> str:
-        return f'Id: {self.id.id}, next_loc world: {mapf_planner.map_to_world(self.next_loc)}, cur_pos world: {mapf_planner.map_to_world(self.current_pos)}'
+        return f'Id: {self.id.id}, next_loc world: {mapf_planner.map.map_to_world(self.next_loc)}, cur_pos world: {mapf_planner.map.map_to_world(self.current_pos)}'

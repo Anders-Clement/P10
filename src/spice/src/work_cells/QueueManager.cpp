@@ -1,10 +1,14 @@
 #include "spice/work_cells/queue_manager.hpp"
 #include "spice/work_cells/work_cell_state_machine.hpp"
+#include "tf2/LinearMath/Matrix3x3.h"
 
-QueueManager::QueueManager(rclcpp::Node& nodehandle, std::string work_cell_name) : m_nodehandle(nodehandle)
+
+QueueManager::QueueManager(rclcpp::Node& nodehandle, std::string work_cell_name, WorkCellStateMachine* work_cell_state_machine) : m_nodehandle(nodehandle)
 {
     m_queue_points_publisher = m_nodehandle.create_publisher<spice_msgs::msg::QueuePoints>(
         work_cell_name + "/queue_points", 10);
+    m_work_cell_state_machine = work_cell_state_machine;
+    
 }
 
 void QueueManager::initialize_points(int num_points, double time)
@@ -51,6 +55,7 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
 std::vector<geometry_msgs::msg::Transform> QueueManager::get_queue_point_transforms()
 {
     std::vector<geometry_msgs::msg::Transform> transforms;
+
     for(auto& queue_point : m_queue_points)
         transforms.push_back(queue_point.transform);
     return transforms;
@@ -62,7 +67,16 @@ void QueueManager::publish_queue_points()
     for(auto& queue_point : m_queue_points)
     {
         spice_msgs::msg::QueuePoint queue_point_msg;
-        queue_point_msg.queue_transform = queue_point.transform; 
+        
+        geometry_msgs::msg::Pose queue_pose_stamped = m_work_cell_state_machine->transform_to_map(queue_point.transform, m_work_cell_state_machine->m_transform);
+        queue_point_msg.queue_transform.translation.x = queue_pose_stamped.position.x;
+        queue_point_msg.queue_transform.translation.y = queue_pose_stamped.position.y; 
+        queue_point_msg.queue_transform.translation.z = queue_pose_stamped.position.z;
+        queue_point_msg.queue_transform.rotation.x =  queue_pose_stamped.orientation.x;
+        queue_point_msg.queue_transform.rotation.y =  queue_pose_stamped.orientation.y;
+        queue_point_msg.queue_transform.rotation.z =  queue_pose_stamped.orientation.z;
+        queue_point_msg.queue_transform.rotation.w =  queue_pose_stamped.orientation.w;
+
         queue_point_msg.queue_id = queue_point.id;
         msg.queue_points.push_back(queue_point_msg);
     }

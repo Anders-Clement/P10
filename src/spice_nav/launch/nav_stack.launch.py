@@ -65,7 +65,7 @@ def generate_launch_description():
     default_nav_bt_path = PathJoinSubstitution(
         [FindPackageShare('spice_nav'), 
         'config', 'behavior_trees', 
-        'custom_bt_of_navigate_to_pose_w_replanning_and_recovery_with_waitcondition.xml']
+        'custom_bt_of_navigate_to_pose_w_replanning_and_recovery_with_waitcondition_and_goalupdate.xml']
     )
 
     # Create our own temporary YAML files that include substitutions

@@ -53,7 +53,7 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, rclcpp::N
     m_entry_transform.translation.x = -STEP_DISTANCE;
     m_exit_transform.translation.x = STEP_DISTANCE;
     double time = m_nodehandle.get_clock()->now().seconds();
-    m_queue_manager = std::make_unique<QueueManager>(m_nodehandle, m_work_cell_name);
+    m_queue_manager = std::make_unique<QueueManager>(m_nodehandle, m_work_cell_name, this);
     m_queue_manager->initialize_points(3, time);
 
     m_current_state = WORK_CELL_STATE::STARTUP;
@@ -98,7 +98,7 @@ tf2::Matrix3x3 q_to_mat(geometry_msgs::msg::Quaternion q)
     return tf2::Matrix3x3(q_tf2);
 }
 
-geometry_msgs::msg::Pose transform_to_map(geometry_msgs::msg::Transform& target_transform, geometry_msgs::msg::Transform& cell_transform)
+geometry_msgs::msg::Pose WorkCellStateMachine::transform_to_map(geometry_msgs::msg::Transform& target_transform, geometry_msgs::msg::Transform& cell_transform)
 {
     auto from_rot = q_to_mat(target_transform.rotation);
     auto to_rot = q_to_mat(cell_transform.rotation);

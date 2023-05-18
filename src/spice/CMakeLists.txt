@@ -156,6 +156,7 @@ install(PROGRAMS
   scripts/robot_state_manager_node.py
   scripts/work_tree.py
   scripts/gui.py
+  scripts/performance_monitor_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

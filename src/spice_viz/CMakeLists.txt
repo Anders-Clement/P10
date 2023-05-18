@@ -7,12 +7,31 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(spice_msgs REQUIRED)
+
+add_executable(robot_mesh_publisher src/robot_mesh_publisher.cpp)
+ament_target_dependencies(
+  robot_mesh_publisher
+  geometry_msgs
+  rclcpp
+  tf2
+  tf2_ros
+  tf2_msgs
+  visualization_msgs
+  spice_msgs
+)
+install(TARGETS
+    robot_mesh_publisher 
+    DESTINATION lib/${PROJECT_NAME})
 
 install(
-  DIRECTORY launch rviz
+  DIRECTORY launch rviz meshes
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)

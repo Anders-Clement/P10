@@ -22,7 +22,7 @@ public:
     geometry_msgs::msg::Transform work_cell_locations(){
 
         geometry_msgs::msg::Transform poses[4];
-        if(m_map_name == "A4.yaml") //A4
+        if(m_map_name == "A4.yaml" || m_map_name == "A4_legless.yaml") //A4
         {  
             poses[0].rotation.w = 0.709132;
             poses[0].rotation.x = 0.0;
@@ -56,7 +56,40 @@ public:
             poses[3].translation.y = 0.486885;
             poses[3].translation.z = 0;
         }
-        
+        else if(m_map_name == "low_res/A4.yaml")
+        {
+            poses[0].rotation.w = 1.0; //0.709132;
+            poses[0].rotation.x = 0.0;
+            poses[0].rotation.y = 0.0;
+            poses[0].rotation.z = 0.0; //0.7050776;
+            poses[0].translation.x = 5.0 +2.0;
+            poses[0].translation.y = 0.0 +4.0;
+            poses[0].translation.z = 0.0;
+            
+            poses[1].rotation.w = 1.0; //0.723702;
+            poses[1].rotation.x = 0;
+            poses[1].rotation.y = 0;
+            poses[1].rotation.z = 0.0; //0.690113;
+            poses[1].translation.x = 3.0 +2.0;
+            poses[1].translation.y = 0.0 +4.0;
+            poses[1].translation.z = 0;
+
+            poses[2].rotation.w = 1;
+            poses[2].rotation.x = 0;
+            poses[2].rotation.y = 0;
+            poses[2].rotation.z = 0.000737653;
+            poses[2].translation.x = 0.5 +2.0;
+            poses[2].translation.y = -1.5 +4.0;
+            poses[2].translation.z = 0;
+
+            poses[3].rotation.w = 0.999716;
+            poses[3].rotation.x = 0;
+            poses[3].rotation.y = 0;
+            poses[3].rotation.z = 0.0238133;
+            poses[3].translation.x = 0.5 +2.0;
+            poses[3].translation.y = 0.0 +4.0;
+            poses[3].translation.z = 0;
+        }
         // // C4 POSES
         else if(m_map_name == "C4.yaml")
         {
@@ -108,7 +141,40 @@ public:
             poses[5].translation.y = 19.8698;
             poses[5].translation.z = 0;*/
         }
+        else if(m_map_name == "low_res/C4.yaml")
+        {
+            poses[0].rotation.w = 1.0;
+            poses[0].rotation.x =0.0 ;
+            poses[0].rotation.y = 0.0;
+            poses[0].rotation.z = 0.0;
+            poses[0].translation.x = 2.0;
+            poses[0].translation.y = 12.5;
+            poses[0].translation.z = 0.0;
+            
+            poses[1].rotation.w = 1.0;
+            poses[1].rotation.x =0.0 ;
+            poses[1].rotation.y = 0.0;
+            poses[1].rotation.z = 0.0;
+            poses[1].translation.x = 2.0;
+            poses[1].translation.y = 10.0;
+            poses[1].translation.z = 0.0;
 
+            poses[2].rotation.w = 1.0;
+            poses[2].rotation.x =0.0 ;
+            poses[2].rotation.y = 0.0;
+            poses[2].rotation.z = 0.0;
+            poses[2].translation.x = 2.0;
+            poses[2].translation.y = 5.0;
+            poses[2].translation.z = 0.0;
+
+            poses[3].rotation.w = 1.0;
+            poses[3].rotation.x =0.0 ;
+            poses[3].rotation.y = 0.0;
+            poses[3].rotation.z = 0.0;
+            poses[3].translation.x = 2.0;
+            poses[3].translation.y = 7.5;
+            poses[3].translation.z = 0.0;
+        }
         // CANTEEN POSES
         else if(m_map_name == "CANTEEN.yaml")
         {
@@ -160,40 +226,7 @@ public:
             poses[5].translation.y = -2;
             poses[5].translation.z = 0.0; */
         }
-        else if(m_map_name == "low_res/C4.yaml")
-        {
-            poses[0].rotation.w = 1.0;
-            poses[0].rotation.x =0.0 ;
-            poses[0].rotation.y = 0.0;
-            poses[0].rotation.z = 0.0;
-            poses[0].translation.x = 2.0;
-            poses[0].translation.y = 12.5;
-            poses[0].translation.z = 0.0;
-            
-            poses[1].rotation.w = 1.0;
-            poses[1].rotation.x =0.0 ;
-            poses[1].rotation.y = 0.0;
-            poses[1].rotation.z = 0.0;
-            poses[1].translation.x = 2.0;
-            poses[1].translation.y = 10.0;
-            poses[1].translation.z = 0.0;
-
-            poses[2].rotation.w = 1.0;
-            poses[2].rotation.x =0.0 ;
-            poses[2].rotation.y = 0.0;
-            poses[2].rotation.z = 0.0;
-            poses[2].translation.x = 2.0;
-            poses[2].translation.y = 5.0;
-            poses[2].translation.z = 0.0;
-
-            poses[3].rotation.w = 1.0;
-            poses[3].rotation.x =0.0 ;
-            poses[3].rotation.y = 0.0;
-            poses[3].rotation.z = 0.0;
-            poses[3].translation.x = 2.0;
-            poses[3].translation.y = 7.5;
-            poses[3].translation.z = 0.0;
-        }
+        
 
         return poses[m_num_c4_positions++];      
   }
@@ -240,10 +273,10 @@ public:
         PositionGenerator generator(3, 3, 2, MAP_NAME);
         work_cell_state_machines = {
             std::make_shared<WorkCellStateMachine>(
-                "back_cover_cell", 
+                "fuses_cell", 
                 *this,
-                generator.work_cell_locations(),
-                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER),
+                generator.work_cell_locations(), 
+                spice_msgs::msg::RobotType::WORK_CELL_FUSES),
             std::make_shared<WorkCellStateMachine>(
                 "drill_cell", 
                 *this,
@@ -255,10 +288,10 @@ public:
                 generator.work_cell_locations(), 
                 spice_msgs::msg::RobotType::WORK_CELL_TOP),
             std::make_shared<WorkCellStateMachine>(
-                "fuses_cell", 
+                "back_cover_cell", 
                 *this,
-                generator.work_cell_locations(), 
-                spice_msgs::msg::RobotType::WORK_CELL_FUSES)
+                generator.work_cell_locations(),
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)
         };
     }
     std::string MAP_NAME;

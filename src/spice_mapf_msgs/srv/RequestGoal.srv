@@ -2,4 +2,5 @@ RobotPose robot_pose
 spice_msgs/Id workcell_id # workcell which the robot is allowed to enter
 ---
 Position goal_position # exact goal position from map in world coordinates
+bool currently_occupied # whether another agent is currently occupying the goal
 bool success # whether the goal was allocated

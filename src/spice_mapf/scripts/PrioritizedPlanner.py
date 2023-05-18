@@ -104,7 +104,7 @@ class PrioritizedPlanner:
             constraints - constraints defining where robot should or cannot go at each timestep
         """
         
-        start_loc = agent.current_loc
+        start_loc = agent.start_loc
         goal_loc = agent.target_goal
 
         map_width = len(my_map[0])
