@@ -83,15 +83,6 @@ def generate_launch_description():
             }.items()
         ),
         Node(
-            package='spice',
-            executable='robot_tf_pose',
-            name='robot_pose_relayer',
-            remappings=[("to_tf_global", "/tf"),
-                        ("/tf", "tf"),
-                        ("/tf_static", "tf_static")],
-            namespace=namespace
-        ),
-        Node(
             package='spice_mapf',
             executable='mapf_navigator_node.py',
             name='mapf_navigator_node',

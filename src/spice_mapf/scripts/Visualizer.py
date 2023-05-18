@@ -5,14 +5,17 @@ import os
 import cv2
 from natsort import realsorted
 
+import spice_msgs.msg as spice_msgs
+
 from Agent import Agent
 from Map import Map
 
 
 class Visualizer:
-    def __init__(self, map: Map, agents: list[Agent]) -> None:
+    def __init__(self, map: Map, agents: list[Agent], workcell) -> None:
         self.map = map
         self.agents = agents
+        self.workcell = workcell
         self.fig = None
     
     def init_plot(self):
@@ -47,7 +50,17 @@ class Visualizer:
             for j in range(len(my_map[0])):
                 if my_map[i][j]:
                     self.ax.add_patch(Rectangle((i - 0.5, j - 0.5), 1, 1, facecolor='gray', edgecolor='gray'))
-        
+        for workcell in self.workcell.workcell_locations:
+            id, pos = workcell
+            self.ax.add_patch(
+                Rectangle(
+                    (pos[1] - 0.25, y_max - 0.5 - pos[0]-0.25),
+                    0.5,
+                    0.5,
+                    facecolor='green',
+                    edgecolor='black', alpha=0.5
+                    )
+                )
         # draw agents:            
         for i, agent in enumerate(self.agents):
             self.ax.add_patch(Rectangle((agent.current_goal[1] - 0.25, y_max - 0.5 - agent.current_goal[0]-0.25), 0.5, 0.5, facecolor=Colors[i % len(Colors)],
