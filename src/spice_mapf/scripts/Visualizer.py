@@ -67,7 +67,7 @@ class Visualizer:
             self.ax.add_patch(status_circle)
             self.ax.text(agent_draw_x, agent_draw_y, agent.id.id)
 
-        plt.pause(0.3)
+        plt.pause(0.1)
 
     def save_fig(self):
         folder = 'plots'

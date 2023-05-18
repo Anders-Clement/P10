@@ -18,4 +18,4 @@ class Agent:
         self.is_simulated = is_simulated
 
     def debug_str(self, mapf_planner) -> str:
-        return f'Id: {self.id.id}, next_loc world: {mapf_planner.map_to_world(self.next_loc)}, cur_pos world: {mapf_planner.map_to_world(self.current_pos)}'
+        return f'Id: {self.id.id}, next_loc world: {mapf_planner.map.map_to_world(self.next_loc)}, cur_pos world: {mapf_planner.map.map_to_world(self.current_pos)}'

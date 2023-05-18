@@ -1,4 +1,5 @@
 RobotPose robot_pose
 ---
 Position goal_position # exact goal position from map in world coordinates
+bool currently_occupied # whether another agent is currently occupying the goal
 bool success # whether the goal was allocated

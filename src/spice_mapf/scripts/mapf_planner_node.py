@@ -25,6 +25,7 @@ class MapfPlanner(Node):
         self.visualizer = Visualizer(self.map, self.agents)
         self.visualizer.visualize()
         self.timer = self.create_timer(0.1, self.tick)
+        self.visualizer_timer = self.create_timer(1.0, self.visualizer.visualize)
 
         self.timestep = 0
         self.time_interpolated = 0
@@ -36,36 +37,20 @@ class MapfPlanner(Node):
         self.paths_publisher = self.create_publisher(spice_mapf_msgs.RobotPoses, "/mapf_paths", 10)
         self.robot_pos_subscriber = self.create_subscription(spice_mapf_msgs.RobotPose, "/robot_pos", self.robot_pos_cb, 10)
 
-    def world_to_map(self, position: spice_mapf_msgs.Position) -> tuple[int,int]:
-        y_map = len(self.map.map)-1 - (position.y/self.map.map_info.resolution)
-        x_map = position.x/self.map.map_info.resolution
-        
-        position = (int(round(y_map,0)), int(round(x_map,0)))
-        return position
-    
-    def world_to_map_float(self, position: spice_mapf_msgs.Position) -> tuple[float, float]:
-        y_map = len(self.map.map)-1 - (position.y/self.map.map_info.resolution)
-        x_map = position.x/self.map.map_info.resolution
-        
-        position = (y_map, x_map)
-        return position
-    
-    def map_to_world(self, location: tuple[int,int]) -> tuple[float,float]:
-        """Take location in planner map (y,x) and convert to world (x,y)"""
-        y_world = (len(self.map.map)-1 - location[0])*self.map.map_info.resolution
-        x_world = location[1]*self.map.map_info.resolution
-        return (x_world, y_world)
-
     def robot_pos_cb(self, msg: spice_mapf_msgs.RobotPose) -> None:
         for agent in self.agents:
             if agent.id == msg.id:
-                agent.current_pos = self.world_to_map_float(msg.position)
+                agent.current_pos = self.map.world_to_map_float(msg.position)
                 return
 
         self.get_logger().warn(f'Got robot_loc from agent: {msg.id.id}, but it has not joined the planner yet')
 
     def join_planner_cb(self, request: spice_mapf_srvs.JoinPlanner.Request, response: spice_mapf_srvs.JoinPlanner.Response):
-        join_location = self.world_to_map(request.robot_pose.position)
+        if not self.map.has_map:
+            self.get_logger().info('Robot tried to join planner, but planner is awaiting map', once=True)
+            return response
+        
+        join_location = self.map.world_to_map(request.robot_pose.position)
         self.get_logger().info(
             f'Trying to add agent {request.robot_pose.id.id} at world x,y: {request.robot_pose.position.x:.2f},{request.robot_pose.position.y:.2f}'
             )
@@ -87,34 +72,51 @@ class MapfPlanner(Node):
         return response
     
     def request_goal_cb(self, request: spice_mapf_srvs.RequestGoal.Request, response: spice_mapf_srvs.RequestGoal.Response):
-        # subtract map height from request.y to flip y-axis
-        # convert from world to map
-        goal = self.world_to_map(request.robot_pose.position)
+        goal = self.map.world_to_map(request.robot_pose.position)
 
         self.get_logger().info(f'Got goal world x,y: {request.robot_pose.position.x},{request.robot_pose.position.y}, map y,x: {goal} from agent: {request.robot_pose.id.id}')
 
         for agent in self.agents:
             if agent.id.id == request.robot_pose.id.id:
-                if goal == agent.current_loc: # robot is already at requested goal
+                if goal == agent.current_goal and goal == agent.current_loc: # robot is already at requested goal
                     response.success = True
-                    goal_in_world = self.map_to_world(goal)
+                    goal_in_world = self.map.map_to_world(goal)
                     response.goal_position.x = goal_in_world[0]
                     response.goal_position.y = goal_in_world[1]
+                    self.get_logger().info(f'Agent: {agent.id.id} tried to navigate to its current position')
                     return response
-
-        if not self.is_goal_free(goal):
-            self.get_logger().warn(f'Agent: {request.robot_pose.id.id} requested a goal which was not free')
+        
+    # def is_goal_free(self, goal: tuple[int,int]) -> bool:
+    #     if self.map.map[goal[0]][goal[1]]:
+    #         return False
+    #     for agent in self.agents:
+    #         if agent.target_goal == goal:
+    #             return False
+    #         if agent.current_goal == goal:
+    #             return False
+    #     return True
+    
+        if self.map.map[goal[0]][goal[1]]:
+            self.get_logger().warn(f'Agent: {request.robot_pose.id.id} requested a goal which was not free in map')
             return response
+
+        for agent in self.agents:
+            if agent.target_goal == goal or agent.current_goal == goal:
+                response.currently_occupied = True
+                return response
         
         # assign goal
         for agent in self.agents:
             if agent.id == request.robot_pose.id:
-                if agent.target_goal is not None or len(agent.path) > 0:
+                if agent.target_goal is not None or len(agent.path) > 0 or agent.current_loc != agent.next_loc:
                     self.get_logger().warn(f'Agent: {request.robot_pose.id.id} tried to preempt goal, but it is not supported')
+                    response.currently_occupied = True
                     return response
                 
                 agent.target_goal = goal
-                goal_in_world = self.map_to_world(goal)
+                agent.current_loc = agent.next_loc # ensure update of current location
+                agent.start_loc = agent.current_loc
+                goal_in_world = self.map.map_to_world(goal)
                 response.goal_position.x = goal_in_world[0]
                 response.goal_position.y = goal_in_world[1]
                 planning_result = self.planner.replan_agent(agent)
@@ -142,7 +144,7 @@ class MapfPlanner(Node):
         for agent in self.agents:
             path_msg = spice_mapf_msgs.RobotPose()
             path_msg.id = agent.id
-            x,y = self.map_to_world(agent.next_loc)
+            x,y = self.map.map_to_world(agent.next_loc)
             path_msg.position.x = x
             path_msg.position.y = y
             path_msg.heading = agent.next_heading
@@ -162,20 +164,22 @@ class MapfPlanner(Node):
             if self.add_random_agent():
                 self.make_random_goal_for_agent(self.agents[-1])
                 self.planner.replan_agent(self.agents[-1])
-                
-        self.visualizer.visualize()
 
         # only proceed if all agents are at their next locations
         if not self.ready_to_tick():
             return
-                
+        
+        self.visualizer.visualize()
+
         # update agents' next locations
         for agent in self.agents:
             agent.current_loc = agent.next_loc
             if len(agent.path) > 0:
                 agent.next_loc = agent.path.pop(0)
-            if len(agent.path) > 0: # still have more poses after current goal
-                agent.next_heading = self.calculate_heading(agent.next_loc, agent.path[0])
+                if len(agent.path) > 0: # still have more poses after current goal
+                    agent.next_heading = self.calculate_heading(agent.next_loc, agent.path[0])
+                else: # otherwise maintain heading used to go to cell
+                    agent.next_heading = self.calculate_heading(agent.current_loc, agent.next_loc)
 
         # add new random goal for simulated agents
         for agent in self.agents:
@@ -214,17 +218,18 @@ class MapfPlanner(Node):
 
     def ready_to_tick(self):
         non_ready_agents: list[Agent] = []
+        ready_agents: list[Agent] = []
         for agent in self.agents:
             diff = np.array(agent.current_pos)-np.array(agent.next_loc)
-            dist = np.linalg.norm(diff)
+            dist = np.linalg.norm(diff)/2.0 # have to divide by two here to make it a vector norm, I do not know why?
             if dist > 0.25:
                 non_ready_agents.append((agent, dist))
-
-        if len(non_ready_agents) > 0:
-            self.get_logger().info(f'Non ready agents: {[a.debug_str(self) + str(dist) for a,dist in non_ready_agents]}')                
-            return False
+            else:
+                ready_agents.append((agent,dist))
+        # self.get_logger().info(f'Non ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in non_ready_agents]}')                
+        # self.get_logger().info(f'Ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in ready_agents]}')                
         
-        return True    
+        return len(non_ready_agents) == 0    
     
     def can_add_agent_at_loc(self, loc):
         y_start = loc[0]
@@ -243,7 +248,7 @@ class MapfPlanner(Node):
         return True
     
     def add_agent(self, loc: tuple[int,int], robot_pose: spice_mapf_msgs.RobotPose, is_simulated=False):
-        self.get_logger().info(f"Adding agent at position: {loc}, world: {self.map_to_world(loc)}, is_simulated: {is_simulated}")
+        self.get_logger().info(f"Adding agent at position: {loc}, world: {self.map.map_to_world(loc)}, is_simulated: {is_simulated}")
         self.agents.append(Agent(loc, robot_pose.heading, robot_pose.id, is_simulated))
 
     def add_random_agent(self):
@@ -263,15 +268,6 @@ class MapfPlanner(Node):
         agent.target_goal = goal
         self.get_logger().info(f'Created goal at: {goal} for agent {agent.id.id} from {agent.current_loc}')
     
-    def is_goal_free(self, goal: tuple[int,int]) -> bool:
-        if self.map.map[goal[0]][goal[1]]:
-            return False
-        for agent in self.agents:
-            if agent.target_goal == goal:
-                return False
-            if agent.current_goal == goal:
-                return False
-        return True
 
 
 

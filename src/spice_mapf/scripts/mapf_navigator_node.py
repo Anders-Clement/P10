@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import numpy as np
+import time
 
 import rclpy
 from rclpy.node import Node
@@ -23,7 +24,7 @@ import spice_mapf_msgs.action as spice_mapf_actions
 import spice_msgs.msg as spice_msgs
 import spice_msgs.srv as spice_srvs
 
-AT_GOAL_THRESHOLD = 0.1
+AT_GOAL_THRESHOLD = 0.15
 
 class MAPFNavigator(Node):
     
@@ -76,6 +77,24 @@ class MAPFNavigator(Node):
             return GoalResponse.REJECT
         else:
             return GoalResponse.ACCEPT
+        
+    def req_goal(self, request_goal, goal_handle):
+            request_goal_future = self.request_goal_client.call_async(request_goal)
+            rate = self.create_rate(10, self.get_clock())
+            TIMEOUT = 5.0
+            self.get_logger().info(f'Requesting goal')
+            start_time = self.get_clock().now()
+            while not request_goal_future.done():
+                rate.sleep()
+                wait_time = self.get_clock().now() - start_time
+                if wait_time.to_msg().sec > TIMEOUT:
+                    self.get_logger().warn(f'Timeout on request_goal')
+                    self.current_nav_goal = None
+                    goal_handle.abort()
+                    return None            
+                
+            result: spice_mapf_srvs.RequestGoal.Response = request_goal_future.result()
+            return result
     
     def navigate_mapf_cb(self, goal_handle: ServerGoalHandle):
         self.get_logger().info(f'Executing reqest')
@@ -87,27 +106,24 @@ class MAPFNavigator(Node):
         self.current_nav_goal.id = self.id
         request_goal = spice_mapf_srvs.RequestGoal.Request()
         request_goal.robot_pose = self.current_nav_goal
-        request_goal_future = self.request_goal_client.call_async(request_goal)
-        rate = self.create_rate(10, self.get_clock())
-        TIMEOUT = 5.0
-        self.get_logger().info(f'Requesting goal')
-        start_time = self.get_clock().now()
-        while not request_goal_future.done():
-            rate.sleep()
-            wait_time = self.get_clock().now() - start_time
-            if wait_time.to_msg().sec > TIMEOUT:
-                self.get_logger().warn(f'Timeout on request_goal')
-                self.current_nav_goal = None
+        
+        can_go = False
+        while not can_go:
+            result = self.req_goal(request_goal, goal_handle)
+            if result is None:
+                return spice_mapf_actions.NavigateMapf.Result(success=False)
+            elif not result.success and result.currently_occupied:
+                self.get_logger().info(f'Requested goal is currently blocked by other robot. Waiting...')
+                time.sleep(1)
+            elif not result.success:
+                self.get_logger().info(f'Requested goal was denied')
                 goal_handle.abort()
-                return spice_mapf_actions.NavigateMapf.Result(success=False)            
-        
-        result: spice_mapf_srvs.RequestGoal.Response = request_goal_future.result()
-        if not result.success:
-            self.get_logger().info(f'Requested goal was denied')
-            goal_handle.abort()
-            self.current_nav_goal = None
-            return spice_mapf_actions.NavigateMapf.Result(success=False)
-        
+                self.current_nav_goal = None
+                return spice_mapf_actions.NavigateMapf.Result(success=False)
+            elif result.success and not result.currently_occupied:
+                can_go = True
+
+        self.get_logger().info(f'Requested goal: {self.current_nav_goal.position}, going to: {result.goal_position}, robot is starting at: {self.current_transform.transform.translation}')
         self.current_nav_goal.position = result.goal_position
         self.get_logger().info(f'Accepted goal, starting navigation')
         self.navigate_to_goal()
@@ -122,22 +138,18 @@ class MAPFNavigator(Node):
                     self.nav_client_handle = None
 
                     if self.current_nav_step_goal is not None: # ensure we are at goal
-                        x_diff = self.current_nav_step_goal.position.x - self.current_transform.transform.translation.x
-                        y_diff = self.current_nav_step_goal.position.y - self.current_transform.transform.translation.y
-                        dist = np.linalg.norm([x_diff, y_diff])
-                    
-                        if dist > AT_GOAL_THRESHOLD:
+                        if not self.at_step_goal():
                             self.get_logger().info(f'Navigating to step_goal again')
                             self.navigate_to_goal()
-                        else:
-                            # done navigating to intermediate goal
-                            self.current_nav_step_goal = None
 
                         x_diff_goal = self.current_nav_goal.position.x - self.current_transform.transform.translation.x
                         y_diff_goal = self.current_nav_goal.position.y - self.current_transform.transform.translation.y
                         feedback = spice_mapf_actions.NavigateMapf.Feedback()
                         feedback.distance_to_goal = abs(x_diff_goal) + abs(y_diff_goal)
                         goal_handle.publish_feedback(feedback)
+            else:
+                if not self.at_step_goal():
+                    self.navigate_to_goal()
 
         goal_handle.succeed()
         self.current_nav_goal = None
@@ -167,6 +179,14 @@ class MAPFNavigator(Node):
         current_position = self.current_transform.transform.translation
         x_diff = goal_position.x - current_position.x
         y_diff = goal_position.y - current_position.y
+        dist = np.linalg.norm([x_diff, y_diff])
+        return dist < AT_GOAL_THRESHOLD
+    
+    def at_step_goal(self) -> bool:
+        if self.current_nav_step_goal is None:
+            return True # assume we are there, if no goal is present
+        x_diff = self.current_nav_step_goal.position.x - self.current_transform.transform.translation.x
+        y_diff = self.current_nav_step_goal.position.y - self.current_transform.transform.translation.y
         dist = np.linalg.norm([x_diff, y_diff])
         return dist < AT_GOAL_THRESHOLD
     
@@ -207,7 +227,8 @@ class MAPFNavigator(Node):
             self.joined_planner = True
             self.get_logger().info(f'Agent {self.id.id} joined mapf planner')
         else:
-            self.get_logger().warn(f'Failed to join planner, retrying')
+            self.get_logger().warn(f'Failed to join planner, waiting 1s and retrying')
+            time.sleep(1)
             self.try_join_planner()
     
     def publish_current_pos(self):
@@ -259,10 +280,16 @@ class MAPFNavigator(Node):
         self.nav_client_handle = goal_handle
         
     def paths_cb(self, msg: spice_mapf_msgs.RobotPoses):
-        for robot_pose in msg.poses:
+        poses: list[spice_mapf_msgs.RobotPose] = msg.poses
+        for robot_pose in poses:
             if robot_pose.id == self.id:
                 if self.current_nav_step_goal != robot_pose:
-                    self.get_logger().info(f'Got new pose from path: {robot_pose}')
+                    current_position = self.current_transform.transform.translation
+                    x_diff = robot_pose.position.x - current_position.x
+                    y_diff = robot_pose.position.y - current_position.y
+                    dist = np.linalg.norm([x_diff, y_diff])
+                    # if dist > AT_GOAL_THRESHOLD:
+                    self.get_logger().info(f'Got new pose from path: {robot_pose.position}')
                     self.current_nav_step_goal = robot_pose
                     self.navigate_to_goal()
                 return

@@ -560,7 +560,7 @@ class EnterWorkCellState(RobotStateTemplate):
             change_planner_type_request = SetPlannerType.Request()
             change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
             change_planner_type_future = self.sm.change_planner_type_client.call_async(change_planner_type_request)
-            change_planner_type_future.add_done_callback(self.navigate_into_cell)
+            change_planner_type_future.add_done_callback(self.change_planner_cb)
         else:
             self.sm.get_logger().warn(f'Goal status not succeeded to go to entry of work cell')#, number of tries: {self.num_navigation_errors_entry}/{self.MAX_NAVIGATION_RETRIES_ENTRY}')
           
@@ -596,15 +596,15 @@ class EnterWorkCellState(RobotStateTemplate):
             self.call_robot_exited_cell()
             self.num_navigation_errors_entry +=1
 
-
-
-    def navigate_into_cell(self, future: Future):
+    def change_planner_cb(self, future: Future):
         result: SetPlannerType.Response = future.result()
         if not result.success:
             self.sm.get_logger().warn('Failed to change planner type, going to ERROR')
             self.sm.change_state(ROBOT_STATE.ERROR)
             return
+        self.navigate_into_cell()
 
+    def navigate_into_cell(self):
         current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
 
         # TODO: NAV

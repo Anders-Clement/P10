@@ -13,8 +13,8 @@ class PlanningResult(IntEnum):
     WAITING = 2 # currently blocked by other goals, but possible using Dijkstra
 
 class Planner:
-    def __init__(self, map_: Map, agents: list[Agent], nodehandle: Node) -> None:
-        self.map = map_
+    def __init__(self, map: Map, agents: list[Agent], nodehandle: Node) -> None:
+        self.map = map
         self.agents = agents
         self.logger = nodehandle.get_logger()
         # constraints as a list for timesteps, with a dict of constraints
@@ -22,7 +22,6 @@ class Planner:
         self.goal_constraints = []
         self.prio_planner = PrioritizedPlanner.PrioritizedPlanner()
         self.paths_planned = 0
-        self.planning_time = 0
 
     def tick(self, timestep: int):
 
@@ -37,20 +36,21 @@ class Planner:
             else: # add pathing agents' goal as constraints
                 self.goal_constraints.append((agent.current_goal, len(agent.path)-1, agent.id))
 
-        self.planning_time = 0
         for agent in self.agents:
             if agent.is_simulated:
                 if len(agent.path) == 0 and agent.current_loc == agent.current_goal:
                     # agent is either at goal, or at startup without initial plan
                     result = self.replan_agent(agent)
                     self.logger.info(f'Planning result for simulated agent {agent.id.id}: {result.name}')
+            else:
+                if agent.waiting:
+                    self.replan_agent(agent)
 
     def replan_agent(self, agent: Agent) -> PlanningResult:
         if agent.target_goal is None:
             self.logger.error(f'ERROR: asked to replan agent {agent.id.id}, but it has no target_goal')
             raise Exception()
         
-        start_time = time.time()
         h_values = PrioritizedPlanner.PrioritizedPlanner.compute_heuristics(self.map.map, agent.target_goal)
         if h_values.get(agent.current_loc) is None:
             self.logger.warn(f'WARN: start location: {agent.current_loc} is unreachable from goal location: {agent.target_goal}')
@@ -64,9 +64,6 @@ class Planner:
             self.goal_constraints,
             h_values
         )
-        duration = time.time() - start_time
-        # print(f'Planned path in {duration} seconds')
-        self.planning_time += duration
 
         if path is None:
             agent.waiting = True

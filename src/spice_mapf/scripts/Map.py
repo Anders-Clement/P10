@@ -6,10 +6,12 @@ import rclpy
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 from rclpy.node import Node
 import nav_msgs.msg as nav_msgs
+import spice_mapf_msgs.msg as spice_mapf_msgs
 
 class Map:
-    def __init__(self, nodehandle: Node, load_map_from_topic: bool = True):
+    def __init__(self, nodehandle: Node, load_map_from_topic: bool = True, inflate_map: bool = True):
         self.has_map = False
+        self.inflate_map_upon_load = inflate_map
         if not load_map_from_topic:
             self.load_txt_map()
             return
@@ -30,7 +32,26 @@ class Map:
             # flip upside down, as y-axis is positive in map, but we store it opposite
             map = np.flip(map, 0)
             self.map = map
+            if self.inflate_map_upon_load:
+                self.inflate_map()
             self.has_map = True
+
+    def inflate_map(self):
+        for y in range(self.map.shape[0]):
+            for x in range(self.map.shape[1]):
+                if self.map[y][x] == 100: # map obstacle
+                    for expand_y in range(-1+y,2+y,1):
+                        if expand_y < 0: continue
+                        if expand_y >= self.map.shape[0]: continue
+
+                        for expand_x in range(-1+x,2+x,1):
+                            if expand_x < 0: continue
+                            if expand_x >= self.map.shape[1]: continue
+                            
+                            if self.map[expand_y][expand_x] == 0:
+                                self.map[expand_y][expand_x] = 50
+
+
 
     def load_txt_map(self, test_file: str = 'test_scenarios/exp5_5.txt'):
         spice_mapf_dir = get_package_share_directory('spice_mapf')
@@ -80,3 +101,23 @@ class Map:
             y = int(random.random()*len(self.map))
             if not self.map[y][x]:
                 return y,x
+            
+    def world_to_map(self, position: spice_mapf_msgs.Position) -> tuple[int,int]:
+        y_map = len(self.map)-1 - (position.y/self.map_info.resolution)
+        x_map = position.x/self.map_info.resolution
+        
+        position = (int(round(y_map,0)), int(round(x_map,0)))
+        return position
+    
+    def world_to_map_float(self, position: spice_mapf_msgs.Position) -> tuple[float, float]:
+        y_map = len(self.map)-1 - (position.y/self.map_info.resolution)
+        x_map = position.x/self.map_info.resolution
+        
+        position = (y_map, x_map)
+        return position
+    
+    def map_to_world(self, location: tuple[int,int]) -> tuple[float,float]:
+        """Take location in planner map (y,x) and convert to world (x,y)"""
+        y_world = (len(self.map)-1 - location[0])*self.map_info.resolution
+        x_world = location[1]*self.map_info.resolution
+        return (x_world, y_world)
