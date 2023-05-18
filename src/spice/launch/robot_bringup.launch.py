@@ -15,6 +15,7 @@ import os
 from ament_index_python import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
+from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
@@ -22,40 +23,25 @@ from launch_ros.substitutions import FindPackageShare
 DEFAULT_MAP_NAME = 'A4.yaml' # change to the name.yaml of the default map here
 
 def generate_launch_description():
-    map_name = LaunchConfiguration('map')
-    map_path = LaunchConfiguration('map_path')
-
-    default_map_path = PathJoinSubstitution(
-        [FindPackageShare('spice_nav'), 'maps', map_name]
-    )
-
+    namespace = os.environ.get('ROBOT_NAMESPACE')
+    if namespace is None:
+        print('Failed to find ROBOT_NAMESPACE in environment, please add it!')
+        return
+    
     return LaunchDescription([
-        DeclareLaunchArgument(
-            name='map',
-            default_value = DEFAULT_MAP_NAME,
-            description='Map name.yaml'
-        ),
-
-        DeclareLaunchArgument(
-            name='map_path',
-            default_value = default_map_path,
-            description='Map path'
-        ),
-
-
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('linorobot2_bringup'),
                              'launch/namespace_bringup.launch.py')
             )
         ),
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory('spice_nav'),
-                             'launch/navigation.launch.py')
-            ),
-            launch_arguments={
-                'map_path': map_path
-            }.items()
+        Node(
+            package='spice',
+            executable='robot_tf_pose',
+            name='robot_pose_relayer',
+            remappings=[("to_tf_global", "/tf"),
+                        ("/tf", "tf"),
+                        ("/tf_static", "tf_static")],
+            namespace=namespace
         ),
     ])
