@@ -88,7 +88,7 @@ void CentralPathPlanner::get_plan_cb(
     }
     else if (request->planner_type.type == spice_msgs::msg::PlannerType::PLANNER_STRAIGHT_LINE)
     {
-        response->plan = m_straight_line_planner->get_plan(request->start, request->goal, m_tolerance, nullptr, request->id);
+        response->plan = m_straight_line_planner->get_plan(request->start, request->goal, 0.05, nullptr, request->id);
         response->wait = false;
         planner_type = "Straight line planner";
     }
