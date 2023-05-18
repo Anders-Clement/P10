@@ -15,8 +15,9 @@ export ROS_PYTHON_VERSION=3
 export ROS_LOCALHOST_ONLY=0
 export ROS_DISTRO=humble
 
-printenv | grep RO
+printenv | grep ROS
+printenv | grep rmw
 
 sleep 5s # otherwise there is an internet race condition
 
-ros2 launch linorobot2_bringup namespace_bringup.launch.py
+ros2 launch spice robot_bringup.launch.py
