@@ -28,7 +28,7 @@ class MapfPlanner(Node):
         self.agents: list[Agent] = []
         self.planner = Planner(self.map, self.agents, self)
         self.visualizer = Visualizer(self.map, self.agents)
-        self.workcell_obstacles = WorkcellObstacle(self)
+        self.workcell_obstacle = WorkcellObstacle(self)
         self.visualizer.visualize()
         self.timer = self.create_timer(0.1, self.tick)
         self.visualizer_timer = self.create_timer(1.0, self.visualizer.visualize)
@@ -194,7 +194,7 @@ class MapfPlanner(Node):
                 if agent.target_goal is None and len(agent.path) == 0:
                     self.make_random_goal_for_agent(agent)
 
-        self.planner.tick(self.timestep, self.workcell_obstacles.workcell_locations)
+        self.planner.tick(self.timestep, self.workcell_obstacle.workcell_locations)
 
         self.publish_robot_paths()
 

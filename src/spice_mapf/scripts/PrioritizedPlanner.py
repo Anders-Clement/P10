@@ -75,7 +75,12 @@ class PrioritizedPlanner:
             
         for workcell_id, workcell_loc in workcell_constraints:
             if agent.workcell_id != workcell_id:
+                # never allow touching other work cells
                 if workcell_loc == next_loc:
+                    return True
+            else:
+                # only allow touching the target workcell, if it is at goal loc
+                if next_loc != goal_loc:
                     return True
         
         return False
@@ -153,7 +158,7 @@ class PrioritizedPlanner:
                         'time': curr['time']+1}
                 
                 # do not add constrained nodes
-                if PrioritizedPlanner.is_constrained(curr['loc'], child_loc, child['time'], constraint_table, goal_constraints, agent, goal_loc):
+                if PrioritizedPlanner.is_constrained(curr['loc'], child_loc, child['time'], constraint_table, goal_constraints, agent, goal_loc, workcell_constraints):
                     continue
                 
                 if (child['loc'], curr['time']+1) in closed_list:
@@ -176,7 +181,7 @@ class PrioritizedPlanner:
             if child['loc'] == goal_loc:
                 child['g_val'] = curr['g_val'] + 0.01 # very low cost for waiting at goal
 
-            if PrioritizedPlanner.is_constrained(curr['loc'], child['loc'], curr['time']+1, constraint_table, goal_constraints, agent, goal_loc):
+            if PrioritizedPlanner.is_constrained(curr['loc'], child['loc'], curr['time']+1, constraint_table, goal_constraints, agent, goal_loc, workcell_constraints):
                     continue
             if (child['loc'], child['time']) in closed_list:
                 existing_node = closed_list[(child['loc'],child['time'])]
