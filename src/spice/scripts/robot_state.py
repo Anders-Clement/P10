@@ -607,6 +607,9 @@ class EnterWorkCellState(RobotStateTemplate):
         self.navigate_into_cell()
 
     def navigate_into_cell(self):
+        if self.sm.current_work_cell_info is None or self.sm.current_task is None:
+            self.sm.get_logger().error(f'Task or workcell info is None, but should be present')
+            self.sm.change_state(ROBOT_STATE.ERROR)
         current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
 
         # TODO: NAV
