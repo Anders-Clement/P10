@@ -7,6 +7,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
 from rclpy.time import Time
+from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import Quaternion
 import spice_msgs.msg as spice_msgs
 import spice_msgs.srv as spice_srvs
@@ -180,7 +181,7 @@ class MapfPlanner(Node):
         if not self.ready_to_tick():
             return
         
-        self.visualizer.visualize()
+        # self.visualizer.visualize()
 
         # update agents' next locations
         for agent in self.agents:
@@ -337,3 +338,9 @@ if __name__ == '__main__':
     rclpy.init()
     planner = MapfPlanner()
     rclpy.spin(planner)
+    executor = MultiThreadedExecutor(num_threads=4)
+    executor.add_node(planner)
+    try:
+        executor.spin()
+    except KeyboardInterrupt:
+        pass
