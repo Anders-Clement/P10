@@ -7,7 +7,7 @@ import matplotlib as mpl
 import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
-from rclpy.time import Time
+from rclpy.time import Time, Duration
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import Quaternion, Point
 from visualization_msgs.msg import Marker, MarkerArray
@@ -289,13 +289,13 @@ class MapfPlanner(Node):
         marker_array_msg = MarkerArray()
         
         for agent in self.agents:
-            if len(agent.path) > 0:
+            if not agent.waiting:
                 marker = Marker()
                 marker.action = 0
                 marker.type = 4
                 marker.scale.x = 0.05
-                marker.lifetime = Time(seconds=10.0)
-                marker.header.stamp = self.get_clock().now()
+                marker.lifetime = Duration(seconds=30).to_msg()
+                marker.header.stamp = self.get_clock().now().to_msg()
                 marker.ns = agent.id.id
                 marker.id = 0
                 marker.header.frame_id = "map"
@@ -304,6 +304,16 @@ class MapfPlanner(Node):
                 marker.color.r = r
                 marker.color.g = g
                 marker.color.b = b
+                x,y = self.map.map_to_world(agent.current_loc)
+                point = Point()
+                point.x = x
+                point.y = y
+                marker.points.append(point)
+                x,y = self.map.map_to_world(agent.next_loc)
+                point = Point()
+                point.x = x
+                point.y = y
+                marker.points.append(point)
 
                 for location in agent.path:
                     x,y = self.map.map_to_world(location)

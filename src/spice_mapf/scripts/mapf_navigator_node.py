@@ -68,6 +68,7 @@ class MAPFNavigator(Node):
         self.join_planner_future = None
 
         self.join_planner_timer = self.create_timer(1.0, self.try_join_planner)
+        self.publish_pos_timer = self.create_timer(1.0, self.publish_current_pos)
 
     # def make_ready_timer_cb(self):
     #     self.make_ready()
@@ -102,7 +103,8 @@ class MAPFNavigator(Node):
             return result
     
     def navigate_mapf_cb(self, goal_handle: ServerGoalHandle):
-        self.get_logger().info(f'Executing reqest')
+        self.get_logger().info(f'Executing request')
+        self.publish_pos_timer.cancel()
             
         goal: spice_mapf_actions.NavigateMapf.Goal = goal_handle.request
         self.current_nav_goal = spice_mapf_msgs.RobotPose()
@@ -181,6 +183,7 @@ class MAPFNavigator(Node):
         goal_handle.succeed()
         self.current_nav_goal = None
         self.current_nav_step_goal = None
+        self.publish_pos_timer.reset()
         self.get_logger().info(f'Reached navigation goal successfully')
         return spice_mapf_actions.NavigateMapf.Result(success=True)
         
@@ -275,7 +278,7 @@ class MAPFNavigator(Node):
     def publish_current_pos(self):
         if not self.joined_planner:
             return
-        if self.current_transform is not None:
+        if self.get_robot_transform():
             pose_msg = spice_mapf_msgs.RobotPose()
             pose_msg.position.x = self.current_transform.transform.translation.x
             pose_msg.position.y = self.current_transform.transform.translation.y
@@ -294,31 +297,36 @@ class MAPFNavigator(Node):
                         f'Could not transform {to_frame_rel} to {from_frame_rel}: {e}', once=False)
             return False
         
-    def navigate_to_goal(self):
-        if self.current_nav_step_goal is None:
-            return
-        nav_goal = NavigateToPose.Goal()
-        nav_goal.pose.pose.position.x = self.current_nav_step_goal.position.x
-        nav_goal.pose.pose.position.y = self.current_nav_step_goal.position.y
-        nav_goal.pose.pose.orientation = self.current_nav_step_goal.heading
-        nav_goal.pose.header.frame_id = 'map'
-        nav_goal.pose.header.stamp = self.get_clock().now().to_msg()
+    # def navigate_to_goal(self):
+    #     if self.current_nav_step_goal is None:
+    #         return
+    #     nav_goal = NavigateToPose.Goal()
+    #     nav_goal.pose.pose.position.x = self.current_nav_step_goal.position.x
+    #     nav_goal.pose.pose.position.y = self.current_nav_step_goal.position.y
+    #     nav_goal.pose.pose.orientation = self.current_nav_step_goal.heading
+    #     nav_goal.pose.header.frame_id = 'map'
+    #     nav_goal.pose.header.stamp = self.get_clock().now().to_msg()
 
-        self.nav_reponse_future = self.navigation_client.send_goal_async(
-            nav_goal)
-        self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
-        self.get_logger().info(f'Agent {self.id.id} trying to navigate to {nav_goal.pose.pose.position}')
+    #     self.nav_reponse_future = self.navigation_client.send_goal_async(
+    #         nav_goal)
+    #     self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
+    #     self.get_logger().info(f'Agent {self.id.id} trying to navigate to {nav_goal.pose.pose.position}')
 
-    def nav_goal_response_cb(self, future: Future):
-        goal_handle: ClientGoalHandle = future.result()
+    # def nav_goal_response_cb(self, future: Future):
+    #     goal_handle: ClientGoalHandle = future.result()
 
-        if not goal_handle.accepted:
-            self.get_logger().error('Nav 2 goal was rejected!')
+    #     if not goal_handle.accepted:
+    #         self.get_logger().error('Nav 2 goal was rejected!')
 
-        self.nav_goal_done_future: Future = goal_handle.get_result_async()
-        self.nav_goal_done_future.add_done_callback(self.on_nav_done)
+    #     self.nav_goal_done_future: Future = goal_handle.get_result_async()
+    #     self.nav_goal_done_future.add_done_callback(self.on_nav_done)
 
-        self.nav_client_handle = goal_handle
+    #     self.nav_client_handle = goal_handle
+
+    # def on_nav_done(self, future: Future):
+    #     nav_result = future.result()
+    #     nav_goal_result: GoalStatus = nav_result.status
+    #     self.get_logger().info('Navigation result: ' + str(nav_goal_result))
         
     def paths_cb(self, msg: spice_mapf_msgs.RobotPoses):
         poses: list[spice_mapf_msgs.RobotPose] = msg.poses
@@ -339,10 +347,6 @@ class MAPFNavigator(Node):
                     self.has_published_feedback = False
                 return
     
-    def on_nav_done(self, future: Future):
-        nav_result = future.result()
-        nav_goal_result: GoalStatus = nav_result.status
-        self.get_logger().info('Navigation result: ' + str(nav_goal_result))
 
 
 if __name__ == '__main__':
