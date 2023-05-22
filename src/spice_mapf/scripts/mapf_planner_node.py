@@ -3,12 +3,14 @@
 import os
 import random
 import numpy as np
+import matplotlib as mpl
 import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
 from rclpy.time import Time
 from rclpy.executors import MultiThreadedExecutor
-from geometry_msgs.msg import Quaternion
+from geometry_msgs.msg import Quaternion, Point
+from visualization_msgs.msg import Marker, MarkerArray
 import spice_msgs.msg as spice_msgs
 import spice_msgs.srv as spice_srvs
 import spice_mapf_msgs.msg as spice_mapf_msgs
@@ -42,6 +44,7 @@ class MapfPlanner(Node):
         self.join_planner_service = self.create_service(spice_mapf_srvs.JoinPlanner, "/join_planner", self.join_planner_cb)
         self.request_goal_service = self.create_service(spice_mapf_srvs.RequestGoal, "/request_goal", self.request_goal_cb)
         self.paths_publisher = self.create_publisher(spice_mapf_msgs.RobotPoses, "/mapf_paths", 10)
+        self.debug_paths_publisher = self.create_publisher(MarkerArray, "/planned_paths", 10)
         self.robot_pos_subscriber = self.create_subscription(spice_mapf_msgs.RobotPose, "/robot_pos", self.robot_pos_cb, 10)
 
     def robot_pos_cb(self, msg: spice_mapf_msgs.RobotPose) -> None:
@@ -203,6 +206,8 @@ class MapfPlanner(Node):
 
         self.publish_robot_paths()
 
+        self.debug_publish_planned_paths()
+
         # simulate positions in steps for simulated robots
         for i in range(1, self.time_interpolation_steps+1): #shift by one so last draw is at next_loc
             self.time_interpolated = self.timestep + i*(1/self.time_interpolation_steps)
@@ -279,7 +284,37 @@ class MapfPlanner(Node):
         goal = self.planner.make_random_goal()
         agent.target_goal = goal
         self.get_logger().info(f'Created goal at: {goal} for agent {agent.id.id} from {agent.current_loc}')
-    
+
+    def debug_publish_planned_paths(self):
+        marker_array_msg = MarkerArray()
+        
+        for agent in self.agents:
+            if len(agent.path) > 0:
+                marker = Marker()
+                marker.action = 0
+                marker.type = 4
+                marker.scale.x = 0.05
+                marker.lifetime = Time(seconds=10.0)
+                marker.header.stamp = self.get_clock().now()
+                marker.ns = agent.id.id
+                marker.id = 0
+                marker.header.frame_id = "map"
+                r,g,b = mpl.colors.to_rgb(agent.color)
+                marker.color.a = 1.0
+                marker.color.r = r
+                marker.color.g = g
+                marker.color.b = b
+
+                for location in agent.path:
+                    x,y = self.map.map_to_world(location)
+                    point = Point()
+                    point.x = x
+                    point.y = y
+                    marker.points.append(point)
+                
+                marker_array_msg.markers.append(marker)
+
+        self.debug_paths_publisher.publish(marker_array_msg)
 
 
 class WorkcellObstacle():

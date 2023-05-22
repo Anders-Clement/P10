@@ -63,16 +63,17 @@ class Visualizer:
                 )
         # draw agents:            
         for i, agent in enumerate(self.agents):
-            self.ax.add_patch(Rectangle((agent.current_goal[1] - 0.25, y_max - 0.5 - agent.current_goal[0]-0.25), 0.5, 0.5, facecolor=Colors[i % len(Colors)],
+            agent.color = Colors[i % len(Colors)]
+            self.ax.add_patch(Rectangle((agent.current_goal[1] - 0.25, y_max - 0.5 - agent.current_goal[0]-0.25), 0.5, 0.5, facecolor=agent.color,
                                           edgecolor='black', alpha=0.5))
             if agent.target_goal is not None:
-                self.ax.add_patch(Rectangle((agent.target_goal[1] - 0.25, y_max - 0.5 - agent.target_goal[0]-0.25), 0.5, 0.5, facecolor=Colors[i % len(Colors)],
+                self.ax.add_patch(Rectangle((agent.target_goal[1] - 0.25, y_max - 0.5 - agent.target_goal[0]-0.25), 0.5, 0.5, facecolor=agent.color,
                                           edgecolor='black', alpha=0.5))
             agent_draw_x = agent.current_pos[1]
             agent_draw_y = y_max - agent.current_pos[0] - 0.5
-            circle = Circle((agent_draw_x, agent_draw_y), 0.3, facecolor=Colors[i % len(Colors)],
+            circle = Circle((agent_draw_x, agent_draw_y), 0.3, facecolor=agent.color,
                                     edgecolor='black')
-            circle.original_face_color = Colors[i % len(Colors)]
+            circle.original_face_color = agent.color
             self.ax.add_patch(circle)
             status_color = 'red' if len(agent.path) == 0 else 'green'
             status_circle = Circle((agent_draw_x+0.1, agent_draw_y + 0.1), 0.15, facecolor=status_color,

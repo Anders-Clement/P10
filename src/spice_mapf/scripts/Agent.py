@@ -1,5 +1,6 @@
 import spice_msgs.msg as spice_msgs
 from geometry_msgs.msg import Quaternion
+from std_msgs.msg import ColorRGBA
 
 class Agent:
     """Container for an agent, encapsulating pose and current plan"""
@@ -17,6 +18,7 @@ class Agent:
         self.path = []
         self.is_simulated = is_simulated
         self.workcell_id = spice_msgs.Id()
+        self.color = "yellow"
 
     def debug_str(self, mapf_planner) -> str:
         return f'Id: {self.id.id}, next_loc world: {mapf_planner.map.map_to_world(self.next_loc)}, cur_pos world: {mapf_planner.map.map_to_world(self.current_pos)}'
