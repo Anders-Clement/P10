@@ -613,6 +613,10 @@ class EnterWorkCellState(RobotStateTemplate):
         if self.sm.current_work_cell_info is None or self.sm.current_task is None:
             self.sm.get_logger().error(f'Task or workcell info is None, but should be present')
             self.sm.change_state(ROBOT_STATE.ERROR)
+        elif self.sm.current_task.workcell_id is None:
+            self.sm.get_logger().error(f'current_task.workcell_id is None, but should be present')
+            self.sm.change_state(ROBOT_STATE.ERROR)
+
         current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
 
         # TODO: NAV

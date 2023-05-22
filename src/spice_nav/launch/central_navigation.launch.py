@@ -83,13 +83,13 @@ def generate_launch_description():
                 'run_nav_stack' : 'False'
             }.items()
         ),
-        # Node(
-        #     package='spice_mapf',
-        #     executable='mapf_navigator_node.py',
-        #     name='mapf_navigator_node',
-        #     namespace=namespace,
-        #     remappings=[("/tf", "tf"), ("/tf_static", "tf_static")]
-        # ),
+        Node(
+            package='spice_mapf',
+            executable='mapf_navigator_node.py',
+            name='mapf_navigator_node',
+            namespace=namespace,
+            remappings=[("/tf", "tf"), ("/tf_static", "tf_static")]
+        ),
         Node
         (
             package='spice',

@@ -194,4 +194,5 @@ class PrioritizedPlanner:
                 PrioritizedPlanner.push_node(open_list, child)
 
             num_nodes_opened += 5
+        return None
         raise Exception()  # Failed to find solutions, should never happen

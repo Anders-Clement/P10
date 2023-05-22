@@ -11,6 +11,8 @@ find_package(ament_cmake_python REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(spice_msgs)
 find_package(spice_mapf_msgs)
+find_package(tf2)
+find_package(tf2_geometry_msgs)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)

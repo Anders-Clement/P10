@@ -16,6 +16,8 @@
   <depend>rclcpp</depend>
   <depend>rclpy</depend>
   <depend>spice_mapf_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

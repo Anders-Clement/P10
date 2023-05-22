@@ -12,10 +12,10 @@ from rclpy.action.client import ClientGoalHandle
 from rclpy.action.server import ServerGoalHandle
 from rclpy.executors import MultiThreadedExecutor
 from action_msgs.msg import GoalStatus
-import geometry_msgs.msg as geometry_msg
-
+from geometry_msgs.msg import Twist, PoseStamped
 import tf2_ros
 from tf2_ros import TransformException
+import tf_transformations
 
 from nav2_msgs.action import NavigateToPose
 
@@ -40,14 +40,12 @@ class MAPFNavigator(Node):
         
         self.id = spice_msgs.Id(id=robot_ns, robot_type=spice_msgs.RobotType(type=spice_msgs.RobotType.CARRIER_ROBOT))
         
-        self.navigation_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
-        self.change_planner_type_client = self.create_client(spice_srvs.SetPlannerType, "set_planner_type")
         self.join_planner_client = self.create_client(spice_mapf_srvs.JoinPlanner, "/join_planner")
         self.request_goal_client = self.create_client(spice_mapf_srvs.RequestGoal, "/request_goal")
 
         self.robot_pos_publisher = self.create_publisher(spice_mapf_msgs.RobotPose, "/robot_pos", 10)
         self.paths_subscriber = self.create_subscription(spice_mapf_msgs.RobotPoses, "/mapf_paths", self.paths_cb, 10)
-        self.cmd_vel_publisher = self.create_publisher(geometry_msg.Twist, "cmd_vel", 10)
+        self.cmd_vel_publisher = self.create_publisher(Twist, "cmd_vel", 10)
 
         self.navigate_mapf_server = ActionServer(self, 
                                                  spice_mapf_actions.NavigateMapf,
@@ -65,23 +63,22 @@ class MAPFNavigator(Node):
         self.current_nav_goal: spice_mapf_msgs.RobotPose = None
         self.current_nav_step_goal: spice_mapf_msgs.RobotPose = None
         self.has_published_feedback = False
-        self.nav_client_handle = None
 
         self.joined_planner = False
         self.join_planner_future = None
-        self.planner_type_is_set = True
-        self.planner_type_future = None
 
-        self.make_ready_timer = self.create_timer(0.2, self.make_ready_timer_cb)
+        self.join_planner_timer = self.create_timer(1.0, self.try_join_planner)
 
-    def make_ready_timer_cb(self):
-        self.make_ready()
-        self.publish_current_pos()
+    # def make_ready_timer_cb(self):
+    #     self.make_ready()
+        # self.publish_current_pos()
 
     def navigate_mapf_goal_cb(self, goal_request):
         self.get_logger().info(f'Received goal request: {goal_request.goal_pose}')
-        if not self.make_ready() or self.current_nav_goal is not None:
-            self.get_logger().info(f'Rejecting goal because robot is already navigating.')
+        ready = self.make_ready()
+        got_transform = self.get_robot_transform()
+        if not (ready or got_transform) or self.current_nav_goal is not None:
+            self.get_logger().info(f'Rejecting goal, ready: {ready}, self.current_nav_goal: {self.current_nav_goal}')
             return GoalResponse.REJECT
         else:
             return GoalResponse.ACCEPT
@@ -115,6 +112,8 @@ class MAPFNavigator(Node):
         request_goal = spice_mapf_srvs.RequestGoal.Request()
         request_goal.workcell_id = goal.workcell_id
         request_goal.robot_pose = self.current_nav_goal
+
+        self.get_robot_transform()
         
         can_go = False
         while not can_go:
@@ -131,6 +130,10 @@ class MAPFNavigator(Node):
                 self.current_nav_goal = None
                 return spice_mapf_actions.NavigateMapf.Result(success=False)
             elif result.success and not result.currently_occupied:
+                self.current_nav_step_goal = spice_mapf_msgs.RobotPose()
+                self.current_nav_step_goal.heading = self.current_transform.transform.rotation
+                self.current_nav_step_goal.position.x = self.current_transform.transform.translation.x
+                self.current_nav_step_goal.position.y = self.current_transform.transform.translation.y
                 break
 
         self.get_logger().info(f'Requested goal: {self.current_nav_goal.position}, going to: {result.goal_position}, robot is starting at: {self.current_transform.transform.translation}')
@@ -139,6 +142,8 @@ class MAPFNavigator(Node):
         rate = self.create_rate(10, self.get_clock())
         while not self.at_goal():
             rate.sleep()
+            self.get_robot_transform()
+            self.publish_current_pos()
             if self.at_step_goal():
                 if not self.has_published_feedback:
                     self.has_published_feedback = True
@@ -148,44 +153,29 @@ class MAPFNavigator(Node):
                     feedback.distance_to_goal = abs(x_diff_goal) + abs(y_diff_goal)
                     goal_handle.publish_feedback(feedback)
             
-            robot_pose = geometry_msg.PoseStamped()
+            robot_pose = PoseStamped()
             robot_pose.header = self.current_transform.header
             robot_pose.pose.position.x = self.current_transform.transform.translation.x
             robot_pose.pose.position.y = self.current_transform.transform.translation.y
             robot_pose.pose.position.z = self.current_transform.transform.translation.z
+            # robot_pose.pose.orientation.x = self.current_transform.transform.rotation.w
+            # robot_pose.pose.orientation.y = self.current_transform.transform.rotation.x
+            # robot_pose.pose.orientation.z = self.current_transform.transform.rotation.y
+            # robot_pose.pose.orientation.z = self.current_transform.transform.rotation.z
 
-            goal_pose = geometry_msg.PoseStamped()
+            goal_pose = PoseStamped()
             goal_pose.header.stamp = robot_pose.header.stamp
             goal_pose.header.frame_id = "map"
             goal_pose.pose.position.x = self.current_nav_step_goal.position.x
             goal_pose.pose.position.y = self.current_nav_step_goal.position.y
-            goal_pose.pose.position.z = 0
+            goal_pose.pose.position.z = 0.0
+            # goal_pose.pose.orientation = self.current_nav_step_goal.heading
             cmd_vel = self.controller.compute_cmd_vel(robot_pose, goal_pose)
             if cmd_vel is not None:
                 self.cmd_vel_publisher.publish(cmd_vel)
 
-            # if self.nav_client_handle is not None: # currently nagivating
-            #     if self.nav_client_handle.status == GoalStatus.STATUS_SUCCEEDED or \
-            #         self.nav_client_handle.status == GoalStatus.STATUS_ABORTED or \
-            #         self.nav_client_handle.status == GoalStatus.STATUS_CANCELED:
-
-            #         self.nav_client_handle = None
-
-            #         if self.current_nav_step_goal is not None: # ensure we are at goal
-            #             if not self.at_step_goal():
-            #                 self.get_logger().info(f'Navigating to step_goal again')
-            #                 self.navigate_to_goal()
-
-            #             x_diff_goal = self.current_nav_goal.position.x - self.current_transform.transform.translation.x
-            #             y_diff_goal = self.current_nav_goal.position.y - self.current_transform.transform.translation.y
-            #             feedback = spice_mapf_actions.NavigateMapf.Feedback()
-            #             feedback.distance_to_goal = abs(x_diff_goal) + abs(y_diff_goal)
-            #             goal_handle.publish_feedback(feedback)
-            # else:
-            #     if not self.at_step_goal():
-            #         self.navigate_to_goal()
         # ensure last cmd_vel is zero:
-        twist = geometry_msg.Twist()
+        twist = Twist()
         self.cmd_vel_publisher.publish(twist)
 
         goal_handle.succeed()
@@ -196,28 +186,39 @@ class MAPFNavigator(Node):
         
 
     def make_ready(self) -> bool:
-        if not self.get_robot_transform():
-            return False
-        
-        # if not self.planner_type_is_set:
-        #     self.set_planner_type()
+        # if not self.get_robot_transform():
         #     return False
         
-        if not self.joined_planner:
-            self.try_join_planner()
-            return False
+        # if not self.joined_planner:
+        #     self.try_join_planner()
+        #     return False
+
+        return self.joined_planner
         
-        return True
+        # return True
 
     def at_goal(self) -> bool:
         if self.current_nav_goal is None: # no goal, assume we are there
             return True
+        self.current_nav_goal.heading
+        self.current_transform.transform.rotation
         goal_position = self.current_nav_goal.position
         current_position = self.current_transform.transform.translation
         x_diff = goal_position.x - current_position.x
         y_diff = goal_position.y - current_position.y
         dist = np.linalg.norm([x_diff, y_diff])
-        return dist < AT_GOAL_THRESHOLD
+
+        q = self.current_nav_goal.heading
+        q = [q.w, q.x, q.y, q.z]
+        goal_rpy = tf_transformations.euler_from_quaternion(q)
+        q = self.current_transform.transform.rotation
+        q = [q.w, q.x, q.y, q.z]
+        robot_rpy = tf_transformations.euler_from_quaternion(q)
+        goal_yaw = goal_rpy[2]
+        robot_yaw = robot_rpy[2]
+
+
+        return dist < AT_GOAL_THRESHOLD and goal_yaw-robot_yaw < AT_GOAL_THRESHOLD
     
     def at_step_goal(self) -> bool:
         if self.current_nav_step_goal is None:
@@ -227,27 +228,30 @@ class MAPFNavigator(Node):
         dist = np.linalg.norm([x_diff, y_diff])
         return dist < AT_GOAL_THRESHOLD
     
-    def set_planner_type(self):
-        if self.planner_type_future is None:
-            msg = spice_srvs.SetPlannerType.Request()
-            msg.planner_type.type = spice_msgs.PlannerType.PLANNER_STRAIGHT_LINE
-            while not self.change_planner_type_client.wait_for_service(1.0):
-                self.get_logger().info(f'timeout on wait for service: "set_planner_type"')
-            self.planner_type_future = self.change_planner_type_client.call_async(msg)
-            self.planner_type_future.add_done_callback(self.planner_type_cb)
+    # def set_planner_type(self):
+    #     if self.planner_type_future is None:
+    #         msg = spice_srvs.SetPlannerType.Request()
+    #         msg.planner_type.type = spice_msgs.PlannerType.PLANNER_STRAIGHT_LINE
+    #         while not self.change_planner_type_client.wait_for_service(1.0):
+    #             self.get_logger().info(f'timeout on wait for service: "set_planner_type"')
+    #         self.planner_type_future = self.change_planner_type_client.call_async(msg)
+    #         self.planner_type_future.add_done_callback(self.planner_type_cb)
 
-    def planner_type_cb(self, future: Future):
-        self.planner_type_future = None
-        result: spice_srvs.SetPlannerType.Response = future.result()
-        if result.success:
-            self.planner_type_is_set = True
-            self.get_logger().info(f'Agent {self.id.id} set planner type')
-        else:
-            self.get_logger().error('Failed to set planner type!')
+    # def planner_type_cb(self, future: Future):
+    #     self.planner_type_future = None
+    #     result: spice_srvs.SetPlannerType.Response = future.result()
+    #     if result.success:
+    #         self.planner_type_is_set = True
+    #         self.get_logger().info(f'Agent {self.id.id} set planner type')
+    #     else:
+    #         self.get_logger().error('Failed to set planner type!')
 
     def try_join_planner(self):
         if self.join_planner_future is not None:
             return
+        if not self.get_robot_transform():
+            return
+        self.join_planner_timer.cancel()
         join_msg = spice_mapf_srvs.JoinPlanner.Request()
         join_msg.robot_pose.id = self.id
         join_msg.robot_pose.position.x = self.current_transform.transform.translation.x
@@ -258,6 +262,7 @@ class MAPFNavigator(Node):
         self.join_planner_future.add_done_callback(self.join_planner_cb)
 
     def join_planner_cb(self, future: Future):
+        
         self.join_planner_future = None
         result: spice_mapf_srvs.JoinPlanner.Response = future.result()
         if result.success:
@@ -265,8 +270,7 @@ class MAPFNavigator(Node):
             self.get_logger().info(f'Agent {self.id.id} joined mapf planner')
         else:
             self.get_logger().warn(f'Failed to join planner, waiting 1s and retrying')
-            time.sleep(1)
-            self.try_join_planner()
+            self.join_planner_timer.reset()
     
     def publish_current_pos(self):
         if not self.joined_planner:
@@ -281,13 +285,13 @@ class MAPFNavigator(Node):
 
     def get_robot_transform(self) -> bool:
         try:
-            from_frame_rel = self.id.id + "_base_link"
+            from_frame_rel = "base_link"
             to_frame_rel = "map"
             self.current_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, Time())
             return True
         except TransformException as e:
             self.get_logger().info(
-                        f'Could not transform {to_frame_rel} to {from_frame_rel}: {e}', once=True)
+                        f'Could not transform {to_frame_rel} to {from_frame_rel}: {e}', once=False)
             return False
         
     def navigate_to_goal(self):
@@ -321,7 +325,8 @@ class MAPFNavigator(Node):
         for robot_pose in poses:
             if robot_pose.id == self.id:
                 if robot_pose.rejoin:
-                    self.joined_planner = False
+                    self.join_planner_timer.reset()
+                    self.try_join_planner()
                     self.join_planner_future = None
                     self.planner_type_is_set = False
                     self.planner_type_future = None
