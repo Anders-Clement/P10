@@ -12,6 +12,7 @@ from rclpy.action.client import ClientGoalHandle
 from rclpy.action.server import ServerGoalHandle
 from rclpy.executors import MultiThreadedExecutor
 from action_msgs.msg import GoalStatus
+import geometry_msgs.msg as geometry_msg
 
 import tf2_ros
 from tf2_ros import TransformException
@@ -23,6 +24,7 @@ import spice_mapf_msgs.srv as spice_mapf_srvs
 import spice_mapf_msgs.action as spice_mapf_actions
 import spice_msgs.msg as spice_msgs
 import spice_msgs.srv as spice_srvs
+import mapf_controller
 
 AT_GOAL_THRESHOLD = 0.15
 
@@ -45,6 +47,7 @@ class MAPFNavigator(Node):
 
         self.robot_pos_publisher = self.create_publisher(spice_mapf_msgs.RobotPose, "/robot_pos", 10)
         self.paths_subscriber = self.create_subscription(spice_mapf_msgs.RobotPoses, "/mapf_paths", self.paths_cb, 10)
+        self.cmd_vel_publisher = self.create_publisher(geometry_msg.Twist, "cmd_vel", 10)
 
         self.navigate_mapf_server = ActionServer(self, 
                                                  spice_mapf_actions.NavigateMapf,
@@ -55,14 +58,18 @@ class MAPFNavigator(Node):
 
         self.tf_buffer = tf2_ros.buffer.Buffer()
         self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self)
+
+        self.controller = mapf_controller.MAPFController(self, self.tf_buffer)
+
         self.current_transform = None
         self.current_nav_goal: spice_mapf_msgs.RobotPose = None
         self.current_nav_step_goal: spice_mapf_msgs.RobotPose = None
+        self.has_published_feedback = False
         self.nav_client_handle = None
 
         self.joined_planner = False
         self.join_planner_future = None
-        self.planner_type_is_set = False
+        self.planner_type_is_set = True
         self.planner_type_future = None
 
         self.make_ready_timer = self.create_timer(0.2, self.make_ready_timer_cb)
@@ -129,30 +136,57 @@ class MAPFNavigator(Node):
         self.get_logger().info(f'Requested goal: {self.current_nav_goal.position}, going to: {result.goal_position}, robot is starting at: {self.current_transform.transform.translation}')
         self.current_nav_goal.position = result.goal_position
         self.get_logger().info(f'Accepted goal, starting navigation')
-        self.navigate_to_goal()
         rate = self.create_rate(10, self.get_clock())
         while not self.at_goal():
             rate.sleep()
-            if self.nav_client_handle is not None: # currently nagivating
-                if self.nav_client_handle.status == GoalStatus.STATUS_SUCCEEDED or \
-                    self.nav_client_handle.status == GoalStatus.STATUS_ABORTED or \
-                    self.nav_client_handle.status == GoalStatus.STATUS_CANCELED:
+            if self.at_step_goal():
+                if not self.has_published_feedback:
+                    self.has_published_feedback = True
+                    x_diff_goal = self.current_nav_goal.position.x - self.current_transform.transform.translation.x
+                    y_diff_goal = self.current_nav_goal.position.y - self.current_transform.transform.translation.y
+                    feedback = spice_mapf_actions.NavigateMapf.Feedback()
+                    feedback.distance_to_goal = abs(x_diff_goal) + abs(y_diff_goal)
+                    goal_handle.publish_feedback(feedback)
+            
+            robot_pose = geometry_msg.PoseStamped()
+            robot_pose.header = self.current_transform.header
+            robot_pose.pose.position.x = self.current_transform.transform.translation.x
+            robot_pose.pose.position.y = self.current_transform.transform.translation.y
+            robot_pose.pose.position.z = self.current_transform.transform.translation.z
 
-                    self.nav_client_handle = None
+            goal_pose = geometry_msg.PoseStamped()
+            goal_pose.header.stamp = robot_pose.header.stamp
+            goal_pose.header.frame_id = "map"
+            goal_pose.pose.position.x = self.current_nav_step_goal.position.x
+            goal_pose.pose.position.y = self.current_nav_step_goal.position.y
+            goal_pose.pose.position.z = 0
+            cmd_vel = self.controller.compute_cmd_vel(robot_pose, goal_pose)
+            if cmd_vel is not None:
+                self.cmd_vel_publisher.publish(cmd_vel)
 
-                    if self.current_nav_step_goal is not None: # ensure we are at goal
-                        if not self.at_step_goal():
-                            self.get_logger().info(f'Navigating to step_goal again')
-                            self.navigate_to_goal()
+            # if self.nav_client_handle is not None: # currently nagivating
+            #     if self.nav_client_handle.status == GoalStatus.STATUS_SUCCEEDED or \
+            #         self.nav_client_handle.status == GoalStatus.STATUS_ABORTED or \
+            #         self.nav_client_handle.status == GoalStatus.STATUS_CANCELED:
 
-                        x_diff_goal = self.current_nav_goal.position.x - self.current_transform.transform.translation.x
-                        y_diff_goal = self.current_nav_goal.position.y - self.current_transform.transform.translation.y
-                        feedback = spice_mapf_actions.NavigateMapf.Feedback()
-                        feedback.distance_to_goal = abs(x_diff_goal) + abs(y_diff_goal)
-                        goal_handle.publish_feedback(feedback)
-            else:
-                if not self.at_step_goal():
-                    self.navigate_to_goal()
+            #         self.nav_client_handle = None
+
+            #         if self.current_nav_step_goal is not None: # ensure we are at goal
+            #             if not self.at_step_goal():
+            #                 self.get_logger().info(f'Navigating to step_goal again')
+            #                 self.navigate_to_goal()
+
+            #             x_diff_goal = self.current_nav_goal.position.x - self.current_transform.transform.translation.x
+            #             y_diff_goal = self.current_nav_goal.position.y - self.current_transform.transform.translation.y
+            #             feedback = spice_mapf_actions.NavigateMapf.Feedback()
+            #             feedback.distance_to_goal = abs(x_diff_goal) + abs(y_diff_goal)
+            #             goal_handle.publish_feedback(feedback)
+            # else:
+            #     if not self.at_step_goal():
+            #         self.navigate_to_goal()
+        # ensure last cmd_vel is zero:
+        twist = geometry_msg.Twist()
+        self.cmd_vel_publisher.publish(twist)
 
         goal_handle.succeed()
         self.current_nav_goal = None
@@ -165,9 +199,9 @@ class MAPFNavigator(Node):
         if not self.get_robot_transform():
             return False
         
-        if not self.planner_type_is_set:
-            self.set_planner_type()
-            return False
+        # if not self.planner_type_is_set:
+        #     self.set_planner_type()
+        #     return False
         
         if not self.joined_planner:
             self.try_join_planner()
@@ -295,14 +329,9 @@ class MAPFNavigator(Node):
                     return
 
                 if self.current_nav_step_goal != robot_pose:
-                    current_position = self.current_transform.transform.translation
-                    x_diff = robot_pose.position.x - current_position.x
-                    y_diff = robot_pose.position.y - current_position.y
-                    dist = np.linalg.norm([x_diff, y_diff])
-                    # if dist > AT_GOAL_THRESHOLD:
                     self.get_logger().info(f'Got new pose from path: {robot_pose.position}')
                     self.current_nav_step_goal = robot_pose
-                    self.navigate_to_goal()
+                    self.has_published_feedback = False
                 return
     
     def on_nav_done(self, future: Future):

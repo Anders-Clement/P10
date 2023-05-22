@@ -36,6 +36,7 @@ def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
     use_namespace = LaunchConfiguration('use_namespace')
     slam = LaunchConfiguration('slam')
+    run_nav_stack = LaunchConfiguration("run_nav_stack")
     map_path = LaunchConfiguration('map_path')
     use_sim_time = LaunchConfiguration('use_sim_time')
     params_file = LaunchConfiguration('params_file')
@@ -83,6 +84,12 @@ def generate_launch_description():
         'slam',
         default_value='False',
         description='Whether run a SLAM')
+    
+    declare_run_nav_stack_cmd = DeclareLaunchArgument(
+        'run_nav_stack',
+        default_value='True',
+        description="Whether to run the navigation stack for pathing and control"
+    )
 
     declare_map_yaml_cmd = DeclareLaunchArgument(
         'map_path',
@@ -156,6 +163,7 @@ def generate_launch_description():
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(launch_dir, 'nav_stack.launch.py')),
+            condition=IfCondition(run_nav_stack),
             launch_arguments={'namespace': namespace,
                               'use_sim_time': use_sim_time,
                               'autostart': autostart,
@@ -176,6 +184,7 @@ def generate_launch_description():
     ld.add_action(declare_use_namespace_cmd)
     ld.add_action(declare_slam_cmd)
     ld.add_action(declare_map_yaml_cmd)
+    ld.add_action(declare_run_nav_stack_cmd)
     ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(declare_params_file_cmd)
     ld.add_action(declare_autostart_cmd)
