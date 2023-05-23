@@ -12,25 +12,31 @@ class MAPFController():
         self.nodehandle = nodehandle
         self.tf_buffer = tf_buffer
 
-        self.desired_linear_vel = 0.4
-        self.gamma_max = 0.25
-        self.max_angular_vel = 1.56
-        self.transform_tolreance = 0.1
-        self.kp_omega = 1.0
-        self.min_linear_vel = 0.1
-        self.min_angular_vel = 0.1
-        self.kp_linear_vel = 1.0
-        self.goal_tolerance = 0.1
+        self.nodehandle.declare_parameter('min_linear_vel', 0.1)
+        self.nodehandle.declare_parameter('max_linear_vel', 0.4)
+        self.nodehandle.declare_parameter('min_angular_vel', 0.1)
+        self.nodehandle.declare_parameter('max_angular_vel', 1.56)
+        self.nodehandle.declare_parameter('gamma_max', 0.25)
+        self.nodehandle.declare_parameter('kp_omega', 1.0)
+        self.nodehandle.declare_parameter('kp_linear_vel', 1.0)
+        self.nodehandle.declare_parameter('goal_tolerance', 0.1)
 
     def compute_cmd_vel(self, robot_pose: PoseStamped, goal_pose: PoseStamped) -> Twist | None:
+        self.min_linear_vel = self.nodehandle.get_parameter('min_linear_vel').get_parameter_value().double_value
+        self.max_linear_vel = self.nodehandle.get_parameter('max_linear_vel').get_parameter_value().double_value
+        self.min_angular_vel = self.nodehandle.get_parameter('min_angular_vel').get_parameter_value().double_value
+        self.max_angular_vel = self.nodehandle.get_parameter('max_angular_vel').get_parameter_value().double_value
+        self.gamma_max = self.nodehandle.get_parameter('gamma_max').get_parameter_value().double_value
+        self.kp_omega = self.nodehandle.get_parameter('kp_omega').get_parameter_value().double_value
+        self.kp_linear_vel = self.nodehandle.get_parameter('kp_linear_vel').get_parameter_value().double_value
+        self.goal_tolerance = self.nodehandle.get_parameter('goal_tolerance').get_parameter_value().double_value
+
         try:
             transform = self.tf_buffer.lookup_transform("base_link",
                                                         "map",
                                                         robot_pose.header.stamp)
 
             goal_in_base_link = tf2_geometry_msgs.do_transform_pose(goal_pose.pose, transform)
-            # goal_pose.header.stamp = self.nodehandle.get_clock().now().to_msg()
-            # goal_in_base_link = self.tf_buffer.transform(goal_pose, "base_link")
         except TransformException as e:
             self.nodehandle.get_logger().error(
                         f'Could not transform robot or goal pose to map in MAPFController: {e}', once=True)
@@ -83,7 +89,7 @@ class MAPFController():
             if goal_in_base_link.position.x > 0 and abs(angular_error) < self.gamma_max:
                 # proportional control
                 omega = self.kp_omega * angular_error
-                velocity = py_clip(goal_dist * self.kp_linear_vel, self.min_linear_vel, self.desired_linear_vel)
+                velocity = py_clip(goal_dist * self.kp_linear_vel, self.min_linear_vel, self.max_linear_vel)
 
                 twist_msg.linear.x = velocity
                 twist_msg.angular.z = omega

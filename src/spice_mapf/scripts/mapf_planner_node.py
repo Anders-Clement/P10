@@ -35,6 +35,8 @@ class MapfPlanner(Node):
         self.visualizer.visualize()
         self.timer = self.create_timer(0.1, self.tick)
         self.visualizer_timer = self.create_timer(1.0, self.visualizer.visualize)
+        self.GOAL_TOLERANCE = 0.25
+        self.declare_parameter('goal_tolerance', self.GOAL_TOLERANCE)
 
         self.timestep = 0
         self.time_interpolated = 0
@@ -184,8 +186,6 @@ class MapfPlanner(Node):
         if not self.ready_to_tick():
             return
         
-        # self.visualizer.visualize()
-
         # update agents' next locations
         for agent in self.agents:
             agent.current_loc = agent.next_loc
@@ -234,12 +234,13 @@ class MapfPlanner(Node):
                 self.visualizer.visualize()
 
     def ready_to_tick(self):
+        GOAL_TOLERANCE = self.get_parameter('goal_tolerance').get_parameter_value().double_value
         non_ready_agents: list[Agent] = []
         ready_agents: list[Agent] = []
         for agent in self.agents:
             diff = np.array(agent.current_pos)-np.array(agent.next_loc)
             dist = np.linalg.norm(diff)/2.0 # have to divide by two here to make it a vector norm, I do not know why?
-            if dist > 0.25:
+            if dist > GOAL_TOLERANCE:
                 non_ready_agents.append((agent, dist))
             else:
                 ready_agents.append((agent,dist))
