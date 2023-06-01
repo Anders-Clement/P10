@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle, Rectangle
+from matplotlib.patches import Circle, Rectangle, Arrow
 import numpy as np
 import os
 import cv2
@@ -69,6 +69,25 @@ class Visualizer:
             if agent.target_goal is not None:
                 self.ax.add_patch(Rectangle((agent.target_goal[1] - 0.25, y_max - 0.5 - agent.target_goal[0]-0.25), 0.5, 0.5, facecolor=agent.color,
                                           edgecolor='black', alpha=0.5))
+                
+            # arrow to next loc
+            if len(agent.path) > 0:
+                y,x = agent.next_loc
+                y_next, x_next = agent.path[0]
+                dx = x_next -x
+                dy = y_next -y
+                arrow = Arrow(x,y_max-y-0.5,dx,-dy,width=0.2, facecolor=agent.color)
+                self.ax.add_patch(arrow)
+            
+            # arrows for path
+            for j in range(len(agent.path)-1):
+                y,x = agent.path[j]
+                y_next, x_next = agent.path[j+1]
+                dx = x_next -x
+                dy = y_next -y
+                arrow = Arrow(x,y_max-y-0.5,dx,-dy,width=0.2, facecolor=agent.color)
+                self.ax.add_patch(arrow)
+
             agent_draw_x = agent.current_pos[1]
             agent_draw_y = y_max - agent.current_pos[0] - 0.5
             circle = Circle((agent_draw_x, agent_draw_y), 0.3, facecolor=agent.color,
@@ -80,6 +99,8 @@ class Visualizer:
                                     edgecolor=status_color)
             self.ax.add_patch(status_circle)
             self.ax.text(agent_draw_x, agent_draw_y, agent.id.id)
+
+
 
         plt.pause(0.1)
 
