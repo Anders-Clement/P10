@@ -208,12 +208,13 @@ class MAPFNavigator(Node):
         if not self.get_robot_transform():
             return
         self.join_planner_timer.cancel()
+        while not self.join_planner_client.wait_for_service(1.0):
+            self.get_logger().info(f'timeout on wait for service: "/join_planner"')
+            self.get_robot_transform() # to ensure it is up to date, as robot can move during this wait
         join_msg = spice_mapf_srvs.JoinPlanner.Request()
         join_msg.robot_pose.id = self.id
         join_msg.robot_pose.position.x = self.current_transform.transform.translation.x
         join_msg.robot_pose.position.y = self.current_transform.transform.translation.y
-        while not self.join_planner_client.wait_for_service(1.0):
-            self.get_logger().info(f'timeout on wait for service: "/join_planner"')
         self.join_planner_future = self.join_planner_client.call_async(join_msg)
         self.join_planner_future.add_done_callback(self.join_planner_cb)
 
