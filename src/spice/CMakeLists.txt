@@ -157,6 +157,7 @@ install(PROGRAMS
   scripts/work_tree.py
   scripts/gui.py
   scripts/performance_monitor_node.py
+  scripts/data_processing.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
