@@ -26,7 +26,7 @@ import spice_msgs.msg as spice_msgs
 import spice_msgs.srv as spice_srvs
 import mapf_controller
 
-AT_GOAL_THRESHOLD = 0.15
+AT_GOAL_THRESHOLD = 0.1
 
 class MAPFNavigator(Node):
     
@@ -62,6 +62,7 @@ class MAPFNavigator(Node):
         self.current_transform = None
         self.current_nav_goal: spice_mapf_msgs.RobotPose = None
         self.current_nav_step_goal: spice_mapf_msgs.RobotPose = None
+        self.next_nav_step_goal: spice_mapf_msgs.RobotPose = None
         self.has_published_feedback = False
 
         self.joined_planner = False
@@ -141,6 +142,9 @@ class MAPFNavigator(Node):
             self.get_robot_transform()
             self.publish_current_pos()
             if self.at_step_goal():
+                if self.next_nav_step_goal is not None:
+                    self.current_nav_step_goal = self.next_nav_step_goal
+                    self.next_nav_step_goal = None
                 if not self.has_published_feedback:
                     self.has_published_feedback = True
                     x_diff_goal = self.current_nav_goal.position.x - self.current_transform.transform.translation.x
@@ -266,7 +270,10 @@ class MAPFNavigator(Node):
 
                 if self.current_nav_step_goal != robot_pose:
                     self.get_logger().info(f'Got new pose from path: {robot_pose.position}')
-                    self.current_nav_step_goal = robot_pose
+                    if self.at_step_goal():
+                        self.current_nav_step_goal = robot_pose
+                    else:
+                        self.next_nav_step_goal = robot_pose
                     self.has_published_feedback = False
                 return
     
