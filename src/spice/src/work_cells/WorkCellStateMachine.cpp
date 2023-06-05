@@ -280,10 +280,18 @@ void WorkCellStateMachine::check_robot_heartbeat_cb()
 
 std::optional<carrier_robot> WorkCellStateMachine::get_enqueued_robot()
 {
-    for(auto enqueued_robot = m_enqueued_robots.begin(); enqueued_robot != m_enqueued_robots.end(); enqueued_robot++)
-    {
-        if(enqueued_robot->ready_in_queue)
-        {
+    // for(auto enqueued_robot = m_enqueued_robots.begin(); enqueued_robot != m_enqueued_robots.end(); enqueued_robot++)
+    // {
+    //     if(enqueued_robot->ready_in_queue)
+    //     {
+    //         std::optional<carrier_robot> next_robot(*enqueued_robot);
+    //         m_enqueued_robots.erase(enqueued_robot);
+    //         return next_robot;
+    //     }
+    // }
+
+    for(auto enqueued_robot = m_enqueued_robots.begin(); enqueued_robot != m_enqueued_robots.end(); enqueued_robot++){
+        if(enqueued_robot->ready_in_queue && enqueued_robot->queue_point->id == 0){
             std::optional<carrier_robot> next_robot(*enqueued_robot);
             m_enqueued_robots.erase(enqueued_robot);
             return next_robot;
@@ -421,4 +429,20 @@ void WorkCellStateMachine::on_robot_exited(
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
     m_states[static_cast<int>(m_current_state)]->on_robot_exited(request, response);
+}
+
+void WorkCellStateMachine::CycleQueue(){
+    for(auto enqueued_robot = m_enqueued_robots.begin(); enqueued_robot != m_enqueued_robots.end(); enqueued_robot++){
+        for(auto queue_point = m_queue_manager->m_queue_points.begin(); queue_point != m_queue_manager->m_queue_points.end(); queue_point++){
+            if(enqueued_robot->queue_point->id-1 == queue_point->id){
+                if(queue_point->occupied == false){
+                    enqueued_robot->queue_point->occupied = false;
+                    enqueued_robot->queue_point =  &*queue_point;
+                    enqueued_robot->ready_in_queue = false;
+                    queue_point->occupied = true;
+                    break;
+                }
+            }
+        }
+    }
 }

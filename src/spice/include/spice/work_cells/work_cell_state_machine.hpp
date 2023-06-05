@@ -83,6 +83,7 @@ public:
     float get_processing_time() {return 5.0;} // TODO: add and use processing time in Work msg
     spice_msgs::msg::Id get_work_cell_id();
     rclcpp::Logger get_logger() { return m_nodehandle.get_logger(); }
+    void CycleQueue();
 
 
     rclcpp::Node& m_nodehandle;

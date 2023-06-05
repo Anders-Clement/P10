@@ -1,3 +1,3 @@
 geometry_msgs/Transform queue_transform
-
 int32 queue_id
+Id queue_robot_id

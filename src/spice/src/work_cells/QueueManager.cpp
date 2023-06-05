@@ -14,14 +14,15 @@ QueueManager::QueueManager(rclcpp::Node& nodehandle, std::string work_cell_name,
 void QueueManager::initialize_points(int num_points, double time)
 {
     m_queue_points.clear();
+    geometry_msgs::msg::Transform q_transform = m_work_cell_state_machine->m_entry_transform;
+    m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
     // static queue positions, can be replaced with dynamic positions
-    for (int i = 0; i < num_points; i++)
+    for (int i = 0; i < num_points-1/*to make num queue points fit */; i++)
     {
-        geometry_msgs::msg::Transform q_transform;
         q_transform.translation.x = -STEP_DISTANCE + (STEP_DISTANCE*i);
         q_transform.translation.y =  WORKCELL_RADIUS + ROBOT_RADIUS;
-        q_transform.rotation.z = 0.7071; // rotate 90 deg cc
-        q_transform.rotation.w = 0.7071;
+        q_transform.rotation.z = 1; // rotate 180 deg cc
+        q_transform.rotation.w = 0;
         m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
     }
     publish_queue_points();
@@ -47,9 +48,11 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
         if(it->id == queuepoint->id)
         {   
             it->occupied = false;
+            it->queued_robot = spice_msgs::msg::Id{};
             return;
         }
-    }   
+    }
+    m_work_cell_state_machine->CycleQueue();
 }
 
 std::vector<geometry_msgs::msg::Transform> QueueManager::get_queue_point_transforms()
@@ -78,6 +81,7 @@ void QueueManager::publish_queue_points()
         queue_point_msg.queue_transform.rotation.w =  queue_pose_stamped.orientation.w;
 
         queue_point_msg.queue_id = queue_point.id;
+        queue_point_msg.queue_robot_id = queue_point.queued_robot;
         msg.queue_points.push_back(queue_point_msg);
     }
     m_queue_points_publisher->publish(msg);

@@ -359,7 +359,7 @@ class EnqueuedState(RobotStateTemplate):
         for queue_point in msg.queue_points:
             queue_point : QueuePoint = queue_point
             current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
-            if queue_point.queue_id == current_work_cell_info.queue_id:
+            if queue_point.queue_robot_id == self.sm.id:
                 # self.sm.get_logger().info(f'new queue point: {queue_point.queue_transform.translation}')
                 current_work_cell_info.queue_pose.pose.position.x = queue_point.queue_transform.translation.x
                 current_work_cell_info.queue_pose.pose.position.y = queue_point.queue_transform.translation.y
