@@ -83,7 +83,6 @@ public:
     float get_processing_time() {return 5.0;} // TODO: add and use processing time in Work msg
     spice_msgs::msg::Id get_work_cell_id();
     rclcpp::Logger get_logger() { return m_nodehandle.get_logger(); }
-    void CycleQueue();
 
 
     rclcpp::Node& m_nodehandle;
@@ -95,6 +94,7 @@ public:
     geometry_msgs::msg::Transform m_transform;
     geometry_msgs::msg::Transform m_entry_transform;
     geometry_msgs::msg::Transform m_exit_transform;
+    std::list<carrier_robot> m_enqueued_robots;
 
 
 private:
@@ -141,7 +141,6 @@ private:
     std::shared_ptr<rclcpp::Service<std_srvs::srv::Trigger>> m_robot_exited_service;
     std::shared_ptr<rclcpp::Service<spice_msgs::srv::Heartbeat>> m_heartbeat_service;
     std::shared_ptr<rclcpp::Publisher<spice_msgs::msg::RobotStateTransition>> m_state_transition_event_pub;
-    std::list<carrier_robot> m_enqueued_robots;
     rclcpp::TimerBase::SharedPtr m_timer{nullptr};
     rclcpp::TimerBase::SharedPtr m_robot_heartbeat_timer;
     std::shared_ptr<nav2_costmap_2d::Costmap2D> m_global_costmap;
