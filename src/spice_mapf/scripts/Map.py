@@ -9,7 +9,7 @@ import nav_msgs.msg as nav_msgs
 import spice_mapf_msgs.msg as spice_mapf_msgs
 
 class Map:
-    def __init__(self, nodehandle: Node, load_map_from_topic: bool = True, inflate_map: bool = True):
+    def __init__(self, nodehandle: Node, load_map_from_topic: bool = True, inflate_map: bool = False):
         self.has_map = False
         self.inflate_map_upon_load = inflate_map
         if not load_map_from_topic:
@@ -118,6 +118,6 @@ class Map:
     
     def map_to_world(self, location: tuple[int,int]) -> tuple[float,float]:
         """Take location in planner map (y,x) and convert to world (x,y)"""
-        y_world = (len(self.map)-1 - location[0])*self.map_info.resolution
-        x_world = location[1]*self.map_info.resolution
+        y_world = (len(self.map)-1 - location[0])*self.map_info.resolution + self.map_info.resolution/2
+        x_world = location[1]*self.map_info.resolution + self.map_info.resolution/2
         return (x_world, y_world)
