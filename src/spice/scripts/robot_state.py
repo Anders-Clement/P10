@@ -210,17 +210,20 @@ class FindWorkCell(RobotStateTemplate):
             return
 
         self.work_cell_allocator_client = self.sm.create_client(AllocWorkCell, "/allocate_work_cell")
+        self.alloc_workcell_timer = self.sm.create_timer(1.0, self.alloc_workcell)
+        self.alloc_workcell_timer.cancel() # only used for retries
         self.alloc_workcell()
     
     def alloc_workcell(self):
+        self.alloc_workcell_timer.cancel()
         alloc_workcell_request = AllocWorkCell.Request()
         alloc_workcell_request.robot_id = self.sm.id
         
         alloc_workcell_request.robot_types = self.sm.current_work
 
         if not self.work_cell_allocator_client.wait_for_service(timeout_sec=5.0):
-            self.sm.get_logger().warn("workcell allocator not available, going to ERROR")
-            self.sm.change_state(ROBOT_STATE.ERROR)
+            self.sm.get_logger().warn("workcell allocator not available, retrying...")
+            self.alloc_workcell_timer.reset()
             return
 
         self.register_future = self.work_cell_allocator_client.call_async(alloc_workcell_request)
@@ -235,8 +238,8 @@ class FindWorkCell(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.REGISTER_WORK)
             
         else:
-            self.sm.get_logger().warn('Failed to allocate workcell to robot, are they available? Going to ERROR')
-            self.sm.change_state(ROBOT_STATE.ERROR)
+            self.sm.get_logger().warn('Failed to allocate workcell to robot, are they available? Retrying...')
+            self.alloc_workcell_timer.reset()
 
     def deinit(self):
         self.work_cell_allocator_client.destroy()
