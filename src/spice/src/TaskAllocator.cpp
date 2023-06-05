@@ -60,17 +60,17 @@ public:
         if (type == 1) // type h & s
         {
             Node node0(0, spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER, {});
-            Node node2(2, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node0});
-            Node node3(3, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node0});
-            Node node4(4, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node2});
-            Node node5(5, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node3});
-            Node node6(6, spice_msgs::msg::RobotType::WORK_CELL_TOP, {&node4, &node5});
-            this->root_node = &node6;
-            this->nodes.push_back(node6);
+            Node node1(1, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node0});
+            Node node2(2, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node0});
+            Node node3(3, spice_msgs::msg::RobotType::WORK_CELL_DRILL, {&node1});
+            Node node4(4, spice_msgs::msg::RobotType::WORK_CELL_FUSES, {&node2});
+            Node node5(5, spice_msgs::msg::RobotType::WORK_CELL_TOP, {&node3, &node4});
+            this->root_node = &node5;
             this->nodes.push_back(node5);
             this->nodes.push_back(node4);
             this->nodes.push_back(node3);
             this->nodes.push_back(node2);
+            this->nodes.push_back(node1);
             this->nodes.push_back(node0);
         }
         else if (type == 2) // type h
@@ -119,22 +119,15 @@ public:
             for (size_t k = 0; k < this->nodes[j].children.size(); k++)
             {
                 node_msg.children_id.push_back(this->nodes[j].children[k]->id);
-                RCLCPP_INFO(nh->get_logger(), "node_id: %d, child_id: %d", this->nodes[j].id, this->nodes[j].children[k]->id); //debug
+                // RCLCPP_INFO(nh->get_logger(), "node_id: %d, child_id: %d", this->nodes[j].id, this->nodes[j].children[k]->id); //debug
                 std::cout << this->nodes[j].children[k]->id;
             }
             layer_msg.nodes.push_back(node_msg);
 
-            if (this->typeOfTree == 0)
+
+            if (this->typeOfTree == 1)
             {
-                if (j == 0 || j == 3 || j == 7 || j == 9)
-                {
-                    task_msg.layers.push_back(layer_msg);
-                    layer_msg.nodes = {};
-                }
-            }
-            else if (this->typeOfTree == 1)
-            {
-                if (j == 0 || j == 2 || j == 4 || j == 6)
+                if (j == 0 || j == 1 || j == 3 || j == 5)
                 {
                     task_msg.layers.push_back(layer_msg);
                     layer_msg.nodes = {};
@@ -321,17 +314,17 @@ public:
             }
 
             //tree_counter = rand() % 4 + 1;
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "task_id: %d", tree_counter); //debug
+            // RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "task_id: %d", tree_counter); //debug
             tree = std::make_unique<handmadeTrees>(this,tree_counter);
 
             auto jobRequest = std::make_shared<spice_msgs::srv::RobotTask::Request>();
             jobRequest->task = this->tree->to_task_msg();
             jobRequest->task_id = tree_counter;
+            RCLCPP_INFO(this->get_logger(), "Allocating task [%d] to %s",tree_counter, robot.id.id.c_str());
             tree_counter++;
             if (tree_counter > 4)
                 tree_counter = 1;
 
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Allocating task to %s", robot.id.id.c_str());
 
             using ServiceResponseFuture =
                 rclcpp::Client<spice_msgs::srv::RobotTask>::SharedFuture;
