@@ -8,6 +8,15 @@ QueueManager::QueueManager(rclcpp::Node& nodehandle, std::string work_cell_name,
     m_queue_points_publisher = m_nodehandle.create_publisher<spice_msgs::msg::QueuePoints>(
         work_cell_name + "/queue_points", 10);
     m_work_cell_state_machine = work_cell_state_machine;
+    m_work_cell_name = work_cell_name;
+
+    auto qos_profile_TL = rmw_qos_profile_default;
+    qos_profile_TL.durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
+
+    m_enqueued_pub = m_nodehandle.create_publisher<spice_msgs::msg::QueueOccupancy>(
+        "/workstations_occupancy",
+        rclcpp::QoS(rclcpp::QoSInitialization(qos_profile_TL.history, 10), qos_profile_TL)
+    );
     
 }
 
@@ -26,6 +35,15 @@ void QueueManager::initialize_points(int num_points, double time)
         m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
     }
     publish_queue_points();
+
+
+
+    spice_msgs::msg::QueueOccupancy msg;
+    msg.id.id = m_work_cell_name;
+    msg.enqueued = 0;
+    m_enqueued_pub->publish(msg);
+
+    
 }
 
 std::optional<QueuePoint*> QueueManager::get_queue_point()
@@ -35,6 +53,19 @@ std::optional<QueuePoint*> QueueManager::get_queue_point()
         if(!it->occupied)
         {
             it->occupied = true;
+
+            if (m_occupied_queue_counter < m_queue_id_counter)
+            {
+                m_occupied_queue_counter++;
+                spice_msgs::msg::QueueOccupancy msg;
+                msg.id.id = m_work_cell_name;
+                msg.enqueued = m_occupied_queue_counter;
+                m_enqueued_pub->publish(msg);
+            }
+            else{
+                RCLCPP_ERROR(m_nodehandle.get_logger(), "Error in keeping track of occupied queues");
+            }
+
             return {&*it};
         }
     }
@@ -48,6 +79,20 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
         if(it->id == queuepoint->id)
         {   
             it->occupied = false;
+
+            if (m_occupied_queue_counter != 0 && m_occupied_queue_counter <= m_queue_id_counter)
+            {
+                m_occupied_queue_counter--;
+                spice_msgs::msg::QueueOccupancy msg;
+                msg.id.id = m_work_cell_name;
+                msg.enqueued = m_occupied_queue_counter;
+                m_enqueued_pub->publish(msg);
+            }
+            else{
+                RCLCPP_ERROR(m_nodehandle.get_logger(), "Error in keeping track of occupied queues");
+            }
+            
+
             it->queued_robot = spice_msgs::msg::Id{};
             return;
         }
@@ -70,7 +115,7 @@ void QueueManager::publish_queue_points()
     for(auto& queue_point : m_queue_points)
     {
         spice_msgs::msg::QueuePoint queue_point_msg;
-        
+
         geometry_msgs::msg::Pose queue_pose_stamped = m_work_cell_state_machine->transform_to_map(queue_point.transform, m_work_cell_state_machine->m_transform);
         queue_point_msg.queue_transform.translation.x = queue_pose_stamped.position.x;
         queue_point_msg.queue_transform.translation.y = queue_pose_stamped.position.y; 
