@@ -248,8 +248,8 @@ class MapfPlanner(Node):
                 non_ready_agents.append((agent, dist))
             else:
                 ready_agents.append((agent,dist))
-        # self.get_logger().info(f'Non ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in non_ready_agents]}')                
-        # self.get_logger().info(f'Ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in ready_agents]}')                
+        #self.get_logger().info(f'Non ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in non_ready_agents]}')                
+        #self.get_logger().info(f'Ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in ready_agents]}')                
         
         return len(non_ready_agents) == 0    
     

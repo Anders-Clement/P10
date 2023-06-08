@@ -15,9 +15,9 @@ void QueueManager::initialize_points(int num_points, double time)
 {
     m_queue_points.clear();
     geometry_msgs::msg::Transform q_transform = m_work_cell_state_machine->m_entry_transform;
-    m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
+    //m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
     // static queue positions, can be replaced with dynamic positions
-    for (int i = 0; i < num_points-1/*to make num queue points fit */; i++)
+    for (int i = 0; i < num_points/*-1to make num queue points fit */; i++)
     {
         q_transform.translation.x = -STEP_DISTANCE + (STEP_DISTANCE*i);
         q_transform.translation.y =  WORKCELL_RADIUS + ROBOT_RADIUS;
@@ -90,7 +90,6 @@ void QueueManager::publish_queue_points()
 
 
 void QueueManager::fill_queue_points(){
-    return;
     for(auto queue_point_empty = m_queue_points.begin(); queue_point_empty != m_queue_points.end(); queue_point_empty++){
         if(queue_point_empty->occupied == false){
             auto queue_point_occ = queue_point_empty++;

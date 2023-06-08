@@ -440,8 +440,9 @@ void WorkCellStateMachine::nav_goal_cb(const std::shared_ptr<geometry_msgs::msg:
 }
 
 void WorkCellStateMachine::move_work_cell(){
-    if(prepare_move && m_enqueued_robots.size() == 0){
+    if(prepare_move && m_enqueued_robots.size() == 0 && ready_to_move){
         m_transform = goal_point.transform;
         publish_transform();
+        prepare_move = false;
     }
 }
