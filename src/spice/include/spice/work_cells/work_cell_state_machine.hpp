@@ -95,6 +95,7 @@ public:
     geometry_msgs::msg::Transform m_entry_transform;
     geometry_msgs::msg::Transform m_exit_transform;
     std::list<carrier_robot> m_enqueued_robots;
+    bool ready_to_move = false;
 
 
 private:
@@ -150,6 +151,7 @@ private:
     std::shared_ptr<nav2_costmap_2d::Costmap2D> m_global_costmap;
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmap_subscriber;
     bool prepare_move = false;
+
     std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::PoseStamped>> m_nav_goal_subscriber;
     geometry_msgs::msg::TransformStamped goal_point;
 };
