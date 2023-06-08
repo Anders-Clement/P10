@@ -7,8 +7,10 @@ import dataclasses
 import struct
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TransformStamped
 from nav_msgs.msg import Odometry
+from tf2_msgs.msg import TFMessage
+
 from tf_transformations import quaternion_from_euler
 
 @dataclasses.dataclass
@@ -46,7 +48,13 @@ class ArduinoSerial:
     def check_for_msg(self) -> None | RobotMeasurementPacket:
         INCOMING_PACKET_SIZE = 28
         # read up to a packet size
-        incoming = self.serial_port.read(INCOMING_PACKET_SIZE)
+        incoming = ""
+        try:
+            incoming = self.serial_port.read(INCOMING_PACKET_SIZE)
+        except serial.SerialException:
+            # something maybe in OS is reading/writing to serial port sometimes
+            # catch exception instead of crashing. 
+            pass
 
         if len(incoming) > 0:
             self.buffer += incoming
@@ -76,23 +84,37 @@ class PolybotBaseNode(Node):
         super().__init__('polybot_base_node')
         self.odom_publisher = self.create_publisher(Odometry, 'odom', 10)
         self.cmd_vel_sub = self.create_subscription(Twist, 'cmd_vel', self.cmd_vel_cb, 10)
+        self.tf_publisher = self.create_publisher(TFMessage, 'tf', 10)
         self.arduino = ArduinoSerial('/dev/ttyACM0', self.incoming_msg_cb)
 
     def incoming_msg_cb(self, message: RobotMeasurementPacket):
-        msg = Odometry()
+        odom_msg = Odometry()
         now = self.get_clock().now()
-        msg.header.stamp = now.to_msg()
-        msg.twist.twist.linear.x = message.wheel_lin_vel
-        msg.twist.twist.angular.z = message.imu_yaw_rate
-        msg.pose.pose.position.x = message.odom_x_pos
-        msg.pose.pose.position.y = message.odom_y_pos
+        odom_msg.header.stamp = now.to_msg()
+        odom_msg.twist.twist.linear.x = message.wheel_lin_vel
+        odom_msg.twist.twist.angular.z = message.imu_yaw_rate
+        odom_msg.pose.pose.position.x = message.odom_x_pos
+        odom_msg.pose.pose.position.y = message.odom_y_pos
         q = quaternion_from_euler(0,0, message.odom_yaw)
-        msg.pose.pose.orientation.x = q[0]
-        msg.pose.pose.orientation.y = q[1]
-        msg.pose.pose.orientation.z = q[2]
-        msg.pose.pose.orientation.w = q[3]
+        odom_msg.pose.pose.orientation.x = q[0]
+        odom_msg.pose.pose.orientation.y = q[1]
+        odom_msg.pose.pose.orientation.z = q[2]
+        odom_msg.pose.pose.orientation.w = q[3]
         
-        self.odom_publisher.publish(msg)
+        self.odom_publisher.publish(odom_msg)
+        tf_msg = TFMessage()
+        transform = TransformStamped()
+        transform.header = odom_msg.header
+        transform.header.frame_id = 'odom'
+        transform.child_frame_id = 'base_footprint'
+        transform.transform.translation.x = message.odom_x_pos
+        transform.transform.translation.y = message.odom_y_pos
+        transform.transform.rotation.x = q[0]
+        transform.transform.rotation.y = q[1]
+        transform.transform.rotation.z = q[2]
+        transform.transform.rotation.w = q[3]
+        tf_msg.transforms.append(transform)
+        self.tf_publisher.publish(tf_msg)
 
     def cmd_vel_cb(self, msg: Twist):
         self.arduino.send_cmd_vel(msg)
