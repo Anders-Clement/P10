@@ -314,6 +314,7 @@ class EnqueuedState(RobotStateTemplate):
         self.sm = sm
     
     def init(self):
+        self.got_queue_points = False
         self.num_navigation_erorrs = 0
         self.MAX_NAVIGATION_RETRIES = 5
         self.ROBOT_READY_AT_CELL_DIST = 1.0 # m
@@ -354,13 +355,15 @@ class EnqueuedState(RobotStateTemplate):
         self.timer = self.sm.create_timer(0.1, self.check_service_cb) ##What is going on here??
         self.timer.cancel()
 
-        self.nav2queue_timer = self.sm.create_timer(0.1, self.navigate_to_queue_point)
+        #self.nav2queue_timer = self.sm.create_timer(0.5, self.navigate_to_queue_point)
 
         self.navigate_to_queue_point()
 
 
         
     def queue_points_cb(self, msg: QueuePoints) -> None:
+        if self.got_queue_points:
+            return
         for queue_point in msg.queue_points:
             queue_point : QueuePoint = queue_point
             current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
@@ -376,7 +379,7 @@ class EnqueuedState(RobotStateTemplate):
 
                 # self.update_nav_goal()
                 
-            
+                self.got_queue_points = True
                 self.robot_is_at_queue_point = False
                 self.num_navigation_erorrs -= 1
                 self.navigate_to_queue_point()
@@ -408,12 +411,12 @@ class EnqueuedState(RobotStateTemplate):
             #     self.sm.on_nav_feedback)
             # self.nav_reponse_future.add_done_callback(self.nav_goal_response_cb)
 
-    def update_nav_goal(self):
-        msg = PoseStamped()
-        msg.header.frame_id = "map"
-        msg.header.stamp = self.sm.get_clock().now().to_msg()  #datetime.now()
-        msg.pose = self.sm.current_work_cell_info.queue_pose.pose
-        self.goal_update_pub.publish(msg)
+    # def update_nav_goal(self):
+    #     msg = PoseStamped()
+    #     msg.header.frame_id = "map"
+    #     msg.header.stamp = self.sm.get_clock().now().to_msg()  #datetime.now()
+    #     msg.pose = self.sm.current_work_cell_info.queue_pose.pose
+    #     self.goal_update_pub.publish(msg)
 
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
@@ -458,6 +461,7 @@ class EnqueuedState(RobotStateTemplate):
         #self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.robot_is_at_queue_point = True
+            self.got_queue_points = False
             self.call_robot_ready_in_queue()
         else:
             self.num_navigation_erorrs += 1
@@ -495,12 +499,13 @@ class EnqueuedState(RobotStateTemplate):
         self.sm.get_logger().info(self.sm.id.id+  ' call_robot_cb') 
         response.success = True
         self.robot_is_called = True
+        #self.nav2queue_timer.cancel()
         return response
     
     def deinit(self):
         self.timer.destroy()
         self.srv_call_robot.destroy()
-        self.nav2queue_timer.destroy()
+        #self.nav2queue_timer.destroy()
         self.sm.destroy_subscription(self.queue_points_sub)
         self.sm.destroy_publisher(self.goal_update_pub)
 
