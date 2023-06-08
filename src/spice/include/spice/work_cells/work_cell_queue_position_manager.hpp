@@ -65,7 +65,6 @@ class WorkCellQueuePositionManager{
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmap_subscriber;
     rclcpp::Subscription<spice_msgs::msg::RobotPlan>::SharedPtr m_plans_subscriber;
     rclcpp::Subscription<spice_msgs::msg::Param>::SharedPtr m_param_subcriber;
-    
     std::map<std::string, nav_msgs::msg::Path> m_all_robot_plans;
     std::chrono::_V2::system_clock::time_point lastTime;
     std::pair<unsigned int, unsigned int> map_coord_entry;

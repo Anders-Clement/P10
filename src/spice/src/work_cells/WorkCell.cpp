@@ -127,6 +127,7 @@ ProcessingState::ProcessingState(WorkCellStateMachine& sm) : m_sm(sm)
 }
 void ProcessingState::init()
 {
+    m_sm.m_queue_manager->free_queue_point(m_sm.m_current_robot_work->queue_point); // free quueu point
     std::string robot_done_processing_topic = m_sm.m_current_robot_work->robot_id.id + "/robot_done_processing";
     m_sm.m_done_processing_client = m_sm.m_nodehandle.create_client
         <std_srvs::srv::Trigger>(robot_done_processing_topic);
@@ -179,7 +180,10 @@ void RobotExitingState::init()
 void RobotExitingState::deinit()
 {
     max_exiting_timer.reset();
-    m_sm.release_robot();
+    if(m_sm.m_current_robot_work)
+    {
+        m_sm.m_current_robot_work.reset();
+    }
 }
 
 void RobotExitingState::on_robot_exited(

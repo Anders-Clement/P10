@@ -79,14 +79,16 @@ def generate_launch_description():
                 'use_composition': 'True',
                 'params_file': nav2_config_path,
                 'namespace' : namespace,
-                'autostart' : 'True'
+                'autostart' : 'True',
+                'run_nav_stack' : 'False'
             }.items()
         ),
         Node(
             package='spice_mapf',
             executable='mapf_navigator_node.py',
             name='mapf_navigator_node',
-            namespace=namespace
+            namespace=namespace,
+            remappings=[("/tf", "tf"), ("/tf_static", "tf_static")]
         ),
         Node
         (

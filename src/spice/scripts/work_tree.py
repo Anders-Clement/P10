@@ -43,7 +43,7 @@ class WorkTree():
                         break
         self.__rootVertex = self.__vertices[0]
         self.__currentTask = self.__rootVertex
-        #self.__currentTask = self.__rootVertex
+
         
     def get_root(self):
         return self.__rootVertex
