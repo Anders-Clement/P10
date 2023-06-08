@@ -9,7 +9,7 @@ from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
 
-DEFAULT_MAP_NAME = 'C4.yaml' 
+DEFAULT_MAP_NAME = 'low_res/A4_nav.yaml' 
 
 def generate_launch_description():
 

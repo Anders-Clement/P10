@@ -30,6 +30,7 @@ set(msg_files
   "msg/QueuePoints.msg"
   "msg/Param.msg"
   "msg/TaskData.msg"
+  "msg/QueueOccupancy.msg"
 )
 
 set(srv_files

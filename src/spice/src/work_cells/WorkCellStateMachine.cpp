@@ -54,7 +54,7 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, rclcpp::N
     m_exit_transform.translation.x = STEP_DISTANCE;
     double time = m_nodehandle.get_clock()->now().seconds();
     m_queue_manager = std::make_unique<QueueManager>(m_nodehandle, m_work_cell_name, this);
-    m_queue_manager->initialize_points(3, time);
+    m_queue_manager->initialize_points(4, time);
 
     m_current_state = WORK_CELL_STATE::STARTUP;
     m_states = {
