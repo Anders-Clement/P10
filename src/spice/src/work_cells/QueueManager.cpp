@@ -52,8 +52,8 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
             return;
         }
     }
+    RCLCPP_WARN(m_nodehandle.get_logger(), "freeing queue point");
     fill_queue_points();
-    publish_queue_points();
 }
 
 std::vector<geometry_msgs::msg::Transform> QueueManager::get_queue_point_transforms()
