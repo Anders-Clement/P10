@@ -129,11 +129,11 @@ private:
             RCLCPP_INFO(this->get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
             continue;
           }
-          RCLCPP_INFO(this->get_logger(), "[debug] Allocating ws [%s] with q [%d] and dist [%f] to robot [%s]", workcellType.id.c_str(), minEnqueued, minDist, request->robot_id.id.c_str()); // debug
-
         }  
       }
     }
+    RCLCPP_WARN(this->get_logger(), "[debug] Allocating ws [%s] with q [%d] and dist [%f] to robot [%s]", workcellType.id.c_str(), minEnqueued, minDist, request->robot_id.id.c_str()); // debug
+
 
     if(workcellType == spice_msgs::msg::Id {}){
       response->found_job = false;

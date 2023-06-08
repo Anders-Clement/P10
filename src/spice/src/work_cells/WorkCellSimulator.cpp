@@ -118,7 +118,7 @@ public:
             poses[3].rotation.x = 0.0;
             poses[3].rotation.y = 0.0;
             poses[3].rotation.z = -0.7;
-            poses[3].translation.x = 1.0;
+            poses[3].translation.x = 1.5;
             poses[3].translation.y = 2.5;
             poses[3].translation.z = 0;
 
@@ -126,7 +126,7 @@ public:
             poses[4].rotation.x = 0.0;
             poses[4].rotation.y = 0.0;
             poses[4].rotation.z = -0.7;
-            poses[4].translation.x = 1.0;
+            poses[4].translation.x = 1.5;
             poses[4].translation.y = 4.5;
             poses[4].translation.z = 0;
 
@@ -134,7 +134,7 @@ public:
             poses[5].rotation.x = 0.0;
             poses[5].rotation.y = 0.0;
             poses[5].rotation.z = -0.7;
-            poses[5].translation.x = 2.5;
+            poses[5].translation.x = 3.0;
             poses[5].translation.y = 4.0;
             poses[5].translation.z = 0;
         }
