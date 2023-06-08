@@ -124,15 +124,19 @@ class MapfPlanner(Node):
         # assign goal
         for agent in self.agents:
             if agent.id == request.robot_pose.id:
+                # TODO: Consider clearing obsolete constraints if agent preempts a goal
+
                 if agent.target_goal is not None or len(agent.path) > 0 or agent.current_loc != agent.next_loc:
-                    self.get_logger().warn(f'Agent: {request.robot_pose.id.id} tried to preempt goal, but it is not supported')
-                    response.currently_occupied = True
-                    return response
+                    # self.get_logger().warn(f'Agent: {request.robot_pose.id.id} tried to preempt goal, but it is not supported')
+                    # response.currently_occupied = True
+                    # return response
+                    self.get_logger().info(f'Agent: {request.robot_pose.id.id} preempted goal, this is not yet tested')
                 
                 agent.workcell_id = request.workcell_id                
                 agent.target_goal = goal
                 agent.current_loc = agent.next_loc # ensure update of current location
                 agent.start_loc = agent.current_loc
+                agent.path = []
                 goal_in_world = self.map.map_to_world(goal)
                 response.goal_position.x = goal_in_world[0]
                 response.goal_position.y = goal_in_world[1]

@@ -69,8 +69,16 @@ class Visualizer:
             if agent.target_goal is not None:
                 self.ax.add_patch(Rectangle((agent.target_goal[1] - 0.25, y_max - 0.5 - agent.target_goal[0]-0.25), 0.5, 0.5, facecolor=agent.color,
                                           edgecolor='black', alpha=0.5))
-                
-            # arrow to next loc
+            
+            # arrow to next_loc from current_pos
+            y,x = agent.current_pos
+            y_next, x_next = agent.next_loc
+            dx = x_next -x
+            dy = y_next -y
+            arrow = Arrow(x,y_max-y-0.5,dx,-dy,width=0.2, facecolor=agent.color)
+            self.ax.add_patch(arrow)
+
+            # arrow to path from next loc
             if len(agent.path) > 0:
                 y,x = agent.next_loc
                 y_next, x_next = agent.path[0]

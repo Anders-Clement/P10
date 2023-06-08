@@ -135,6 +135,7 @@ void QueueManager::publish_queue_points()
 
 
 void QueueManager::fill_queue_points(){
+    return;
     for(auto queue_point_empty = m_queue_points.begin(); queue_point_empty != m_queue_points.end(); queue_point_empty++){
         if(queue_point_empty->occupied == false){
             auto queue_point_occ = queue_point_empty++;
@@ -143,7 +144,8 @@ void QueueManager::fill_queue_points(){
                     queue_point_empty->queued_robot = queue_point_occ->queued_robot;
                     queue_point_empty->occupied = true;
                     queue_point_occ->occupied=false;
-                    queue_point_occ->queued_robot = spice_msgs::msg::Id{};
+                    spice_msgs::msg::Id reset;
+                    queue_point_occ->queued_robot = reset;
                     break;
                 }
             }
@@ -158,4 +160,5 @@ void QueueManager::fill_queue_points(){
             }
         }
     }
+    publish_queue_points();
 }
