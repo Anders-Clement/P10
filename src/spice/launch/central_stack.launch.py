@@ -19,23 +19,23 @@ def generate_launch_description():
             description='Map name.yaml'
         ),
 
-        # Node(
-        #     package='spice',
-        #     executable='SwarmManager.py',
-        #     name='SwarmManager'
-        # ),
+        Node(
+            package='spice',
+            executable='SwarmManager.py',
+            name='SwarmManager'
+        ),
 
-        # Node(
-        #     package='spice',
-        #     executable='work_cell_allocator',
-        #     name='work_cell_allocator'
-        # ),
+        Node(
+            package='spice',
+            executable='work_cell_allocator',
+            name='work_cell_allocator'
+        ),
 
-        # Node(
-        #     package='spice',
-        #     executable='task_allocator',
-        #     name='task_allocator'
-        # ),
+        Node(
+            package='spice',
+            executable='task_allocator',
+            name='task_allocator'
+        ),
 
         Node(
             package='spice',
@@ -55,28 +55,28 @@ def generate_launch_description():
             ]
         ),
 
-        # Node(
-        #     package='spice',
-        #     executable='central_path_planner',
-        #     name='central_path_planner',
-        #     parameters=[
-        #         {'priority_scheme': 0}, # 0 static priorites, 1 shortest dist hihgest priority, 2 planning failed gives highest priority 
-        #         {'future_lookup': 0}, # number of higer priority plan steps to consider when planning 
-        #         {'cost': 254} # cost of other higher priority robots' plans 
-        #     ]
-        # ),
-        # Node(
-        #     package='spice_mapf',
-        #     executable='mapf_planner_node.py',
-        #     name='mapf_planner_node'
-        # ),
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource(
-        #         os.path.join(
-        #             get_package_share_directory('spice_nav'),
-        #             'launch/global_map_server.launch.py'
-        #         )
-        #     ),
-        #     launch_arguments={'map': map_name}.items()
-        # )
+        Node(
+            package='spice',
+            executable='central_path_planner',
+            name='central_path_planner',
+            parameters=[
+                {'priority_scheme': 0}, # 0 static priorites, 1 shortest dist hihgest priority, 2 planning failed gives highest priority 
+                {'future_lookup': 0}, # number of higer priority plan steps to consider when planning 
+                {'cost': 254} # cost of other higher priority robots' plans 
+            ]
+        ),
+        Node(
+            package='spice_mapf',
+            executable='mapf_planner_node.py',
+            name='mapf_planner_node'
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(
+                    get_package_share_directory('spice_nav'),
+                    'launch/global_map_server.launch.py'
+                )
+            ),
+            launch_arguments={'map': map_name}.items()
+        )
     ])

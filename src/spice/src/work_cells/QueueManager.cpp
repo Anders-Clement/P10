@@ -92,13 +92,13 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
                 RCLCPP_ERROR(m_nodehandle.get_logger(), "Error in keeping track of occupied queues");
             }
             
-
+            RCLCPP_WARN(m_nodehandle.get_logger(), "freeing queue point");
+            fill_queue_points();
             it->queued_robot = spice_msgs::msg::Id{};
             return;
         }
     }
-    RCLCPP_WARN(m_nodehandle.get_logger(), "freeing queue point");
-    fill_queue_points();
+
 }
 
 std::vector<geometry_msgs::msg::Transform> QueueManager::get_queue_point_transforms()
@@ -143,21 +143,21 @@ void QueueManager::fill_queue_points(){
                     queue_point_empty->queued_robot = queue_point_occ->queued_robot;
                     queue_point_empty->occupied = true;
                     queue_point_occ->occupied=false;
-                    spice_msgs::msg::Id reset;
-                    queue_point_occ->queued_robot = reset;
+                    queue_point_occ->queued_robot = spice_msgs::msg::Id{};
                     break;
                 }
             }
             break;
         }
     }
-    //update enqueued robot list
-    for(auto enqueued_robot = m_work_cell_state_machine->m_enqueued_robots.begin(); enqueued_robot != m_work_cell_state_machine->m_enqueued_robots.end(); enqueued_robot++){
-        for(auto queue_point = m_queue_points.begin(); queue_point != m_queue_points.end(); queue_point++){
-            if(enqueued_robot->robot_id.id == queue_point->queued_robot.id){
-                enqueued_robot->queue_point = &*queue_point;
-            }
-        }
-    }
+    
+    // //update enqueued robot list
+    // for(auto enqueued_robot = m_work_cell_state_machine->m_enqueued_robots.begin(); enqueued_robot != m_work_cell_state_machine->m_enqueued_robots.end(); enqueued_robot++){
+    //     for(auto queue_point = m_queue_points.begin(); queue_point != m_queue_points.end(); queue_point++){
+    //         if(enqueued_robot->robot_id.id == queue_point->queued_robot.id){
+    //             enqueued_robot->queue_point = &*queue_point;
+    //         }
+    //     }
+    // }
     publish_queue_points();
 }
