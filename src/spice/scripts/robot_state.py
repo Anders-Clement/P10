@@ -362,8 +362,6 @@ class EnqueuedState(RobotStateTemplate):
 
         
     def queue_points_cb(self, msg: QueuePoints) -> None:
-        if self.got_queue_points:
-            return
         for queue_point in msg.queue_points:
             queue_point : QueuePoint = queue_point
             current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
@@ -380,9 +378,10 @@ class EnqueuedState(RobotStateTemplate):
                 # self.update_nav_goal()
                 
                 self.got_queue_points = True
-                self.robot_is_at_queue_point = False
+                #self.robot_is_at_queue_point = False
+                
                 self.num_navigation_erorrs -= 1
-                self.navigate_to_queue_point()
+                #self.navigate_to_queue_point()
                 return
             
     # def set_planner_cb(self, future: Future):
@@ -419,12 +418,12 @@ class EnqueuedState(RobotStateTemplate):
     #     self.goal_update_pub.publish(msg)
 
     def nav_goal_response_cb(self, future: Future):
-        goal_handle: ClientGoalHandle = future.result()
-        if not goal_handle.accepted:
+        self.goal_handle: ClientGoalHandle = future.result()
+        if not self.goal_handle.accepted:
             self.sm.get_logger().error('Nav 2 goal was rejected, aborting task. Going to ERROR')
             self.sm.change_state(ROBOT_STATE.ERROR)
         
-        self.nav_goal_done_future: Future = goal_handle.get_result_async()
+        self.nav_goal_done_future: Future = self.goal_handle.get_result_async()
         self.nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
 
     def on_nav_feedback(self, msg: NavigateMapf_FeedbackMessage):
@@ -440,7 +439,8 @@ class EnqueuedState(RobotStateTemplate):
         # if msg.feedback.distance_remaining < self.ROBOT_READY_AT_CELL_DIST:
         #     self.call_robot_ready_in_queue()
 
-    def call_robot_ready_in_queue(self):
+    def call_robot_ready_in_queue(self):  
+        self.got_queue_points = False
         if self.robot_is_ready:
             return
         
@@ -461,8 +461,9 @@ class EnqueuedState(RobotStateTemplate):
         #self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.robot_is_at_queue_point = True
-            self.got_queue_points = False
             self.call_robot_ready_in_queue()
+            if self.got_queue_points:
+                self.navigate_to_queue_point()
         else:
             self.num_navigation_erorrs += 1
             self.sm.get_logger().warn(f'Failed navigation, number of tries: {self.num_navigation_erorrs}/{self.MAX_NAVIGATION_RETRIES}')
@@ -481,7 +482,7 @@ class EnqueuedState(RobotStateTemplate):
             self.timer.reset()        
     
     def check_service_cb(self):
-        if self.robot_is_called:
+        if self.robot_is_called and self.goal_handle.status == GoalStatus.STATUS_SUCCEEDED:
             self.timer.cancel()
             self.sm.change_state(ROBOT_STATE.ENTER_WORKCELL)
     

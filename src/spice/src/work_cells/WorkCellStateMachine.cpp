@@ -54,7 +54,7 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, rclcpp::N
     m_exit_transform.translation.x = STEP_DISTANCE;
     double time = m_nodehandle.get_clock()->now().seconds();
     m_queue_manager = std::make_unique<QueueManager>(m_nodehandle, m_work_cell_name, this);
-    m_queue_manager->initialize_points(3, time);
+    m_queue_manager->initialize_points(4, time);
 
     m_current_state = WORK_CELL_STATE::STARTUP;
     m_states = {
@@ -440,8 +440,9 @@ void WorkCellStateMachine::nav_goal_cb(const std::shared_ptr<geometry_msgs::msg:
 }
 
 void WorkCellStateMachine::move_work_cell(){
-    if(prepare_move && m_enqueued_robots.size() == 0){
+    if(prepare_move && m_enqueued_robots.size() == 0 && ready_to_move){
         m_transform = goal_point.transform;
         publish_transform();
+        prepare_move = false;
     }
 }
