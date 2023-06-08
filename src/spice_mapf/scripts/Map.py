@@ -9,7 +9,7 @@ import nav_msgs.msg as nav_msgs
 import spice_mapf_msgs.msg as spice_mapf_msgs
 
 class Map:
-    def __init__(self, nodehandle: Node, load_map_from_topic: bool = True, inflate_map: bool = False):
+    def __init__(self, nodehandle: Node, load_map_from_topic: bool = True, inflate_map: bool = True):
         self.has_map = False
         self.inflate_map_upon_load = inflate_map
         if not load_map_from_topic:
@@ -118,6 +118,26 @@ class Map:
     
     def map_to_world(self, location: tuple[int,int]) -> tuple[float,float]:
         """Take location in planner map (y,x) and convert to world (x,y)"""
-        y_world = (len(self.map)-1 - location[0])*self.map_info.resolution + self.map_info.resolution/2
-        x_world = location[1]*self.map_info.resolution + self.map_info.resolution/2
+        y_world = (len(self.map)-1 - location[0])*self.map_info.resolution
+        x_world = location[1]*self.map_info.resolution
         return (x_world, y_world)
+    
+    # def world_to_map(self, position: spice_mapf_msgs.Position) -> tuple[int,int]:
+    #     y_map = len(self.map)-1 - (position.y/self.map_info.resolution + self.map_info.resolution/2)
+    #     x_map = position.x/self.map_info.resolution + self.map_info.resolution/2
+        
+    #     position = (int(round(y_map,0)), int(round(x_map,0)))
+    #     return position
+    
+    # def world_to_map_float(self, position: spice_mapf_msgs.Position) -> tuple[float, float]:
+    #     y_map = len(self.map)-1 - (position.y/self.map_info.resolution + self.map_info.resolution/2)
+    #     x_map = position.x/self.map_info.resolution + self.map_info.resolution/2
+        
+    #     position = (y_map, x_map)
+    #     return position
+    
+    # def map_to_world(self, location: tuple[int,int]) -> tuple[float,float]:
+    #     """Take location in planner map (y,x) and convert to world (x,y)"""
+    #     y_world = (len(self.map)-1 - location[0])*self.map_info.resolution - self.map_info.resolution/2
+    #     x_world = location[1]*self.map_info.resolution - self.map_info.resolution/2
+    #     return (x_world, y_world)
