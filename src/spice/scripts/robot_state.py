@@ -351,8 +351,10 @@ class EnqueuedState(RobotStateTemplate):
             10
             )
         
-        self.timer = self.sm.create_timer(0.1, self.check_service_cb)
+        self.timer = self.sm.create_timer(0.1, self.check_service_cb) ##What is going on here??
         self.timer.cancel()
+
+        self.nav2queue_timer = self.sm.create_timer(0.1, self.navigate_to_queue_point)
 
         self.navigate_to_queue_point()
 
@@ -362,7 +364,7 @@ class EnqueuedState(RobotStateTemplate):
         for queue_point in msg.queue_points:
             queue_point : QueuePoint = queue_point
             current_work_cell_info : RegisterWork.Response = self.sm.current_work_cell_info
-            if queue_point.queue_id == current_work_cell_info.queue_id:
+            if queue_point.queue_robot_id == self.sm.id:
                 # self.sm.get_logger().info(f'new queue point: {queue_point.queue_transform.translation}')
                 current_work_cell_info.queue_pose.pose.position.x = queue_point.queue_transform.translation.x
                 current_work_cell_info.queue_pose.pose.position.y = queue_point.queue_transform.translation.y
@@ -498,6 +500,7 @@ class EnqueuedState(RobotStateTemplate):
     def deinit(self):
         self.timer.destroy()
         self.srv_call_robot.destroy()
+        self.nav2queue_timer.destroy()
         self.sm.destroy_subscription(self.queue_points_sub)
         self.sm.destroy_publisher(self.goal_update_pub)
 

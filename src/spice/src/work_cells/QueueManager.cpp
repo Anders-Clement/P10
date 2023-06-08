@@ -14,14 +14,15 @@ QueueManager::QueueManager(rclcpp::Node& nodehandle, std::string work_cell_name,
 void QueueManager::initialize_points(int num_points, double time)
 {
     m_queue_points.clear();
+    geometry_msgs::msg::Transform q_transform = m_work_cell_state_machine->m_entry_transform;
+    m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
     // static queue positions, can be replaced with dynamic positions
-    for (int i = 0; i < num_points; i++)
+    for (int i = 0; i < num_points-1/*to make num queue points fit */; i++)
     {
-        geometry_msgs::msg::Transform q_transform;
         q_transform.translation.x = -STEP_DISTANCE + (STEP_DISTANCE*i);
         q_transform.translation.y =  WORKCELL_RADIUS + ROBOT_RADIUS;
-        q_transform.rotation.z = 0.7071; // rotate 90 deg cc
-        q_transform.rotation.w = 0.7071;
+        q_transform.rotation.z = 1; // rotate 180 deg cc
+        q_transform.rotation.w = 0;
         m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
     }
     publish_queue_points();
@@ -47,9 +48,12 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
         if(it->id == queuepoint->id)
         {   
             it->occupied = false;
+            it->queued_robot = spice_msgs::msg::Id{};
             return;
         }
-    }   
+    }
+    fill_queue_points();
+    publish_queue_points();
 }
 
 std::vector<geometry_msgs::msg::Transform> QueueManager::get_queue_point_transforms()
@@ -78,7 +82,35 @@ void QueueManager::publish_queue_points()
         queue_point_msg.queue_transform.rotation.w =  queue_pose_stamped.orientation.w;
 
         queue_point_msg.queue_id = queue_point.id;
+        queue_point_msg.queue_robot_id = queue_point.queued_robot;
         msg.queue_points.push_back(queue_point_msg);
     }
     m_queue_points_publisher->publish(msg);
+}
+
+
+void QueueManager::fill_queue_points(){
+    for(auto queue_point_empty = m_queue_points.begin(); queue_point_empty != m_queue_points.end(); queue_point_empty++){
+        if(queue_point_empty->occupied == false){
+            auto queue_point_occ = queue_point_empty++;
+            for(queue_point_occ; queue_point_occ != m_queue_points.end(); queue_point_occ++){
+                if(queue_point_occ->occupied = true){
+                    queue_point_empty->queued_robot = queue_point_occ->queued_robot;
+                    queue_point_empty->occupied = true;
+                    queue_point_occ->occupied=false;
+                    queue_point_occ->queued_robot = spice_msgs::msg::Id{};
+                    break;
+                }
+            }
+            break;
+        }
+    }
+    //update enqueued robot list
+    for(auto enqueued_robot = m_work_cell_state_machine->m_enqueued_robots.begin(); enqueued_robot != m_work_cell_state_machine->m_enqueued_robots.end(); enqueued_robot++){
+        for(auto queue_point = m_queue_points.begin(); queue_point != m_queue_points.end(); queue_point++){
+            if(enqueued_robot->robot_id.id == queue_point->queued_robot.id){
+                enqueued_robot->queue_point = &*queue_point;
+            }
+        }
+    }
 }

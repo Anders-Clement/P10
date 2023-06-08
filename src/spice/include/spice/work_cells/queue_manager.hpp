@@ -32,6 +32,7 @@ public:
     void free_queue_point(QueuePoint* queuepoint);
     std::vector<geometry_msgs::msg::Transform> get_queue_point_transforms();
     void publish_queue_points();
+    void fill_queue_points();
 
     std::list<QueuePoint> m_queue_points;
     WorkCellStateMachine* m_work_cell_state_machine;
