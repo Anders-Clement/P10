@@ -20,11 +20,17 @@ def generate_launch_description():
     rplidar2_launch_path = PathJoinSubstitution(
         [FindPackageShare('rplidar_ros2'), 'launch', 'rplidar_a3_launch.py']
     )
+    description_launch_path = PathJoinSubstitution(
+        [FindPackageShare('linorobot2_description'), 'launch', 'description.launch.py']
+    )    
 
     ns_bringup=GroupAction(actions=[
         PushRosNamespace(namespace),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(rplidar2_launch_path)
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(description_launch_path)
         ),
         Node(
             package='spice',
