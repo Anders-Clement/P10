@@ -10,7 +10,6 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist, TransformStamped
 from nav_msgs.msg import Odometry
 from tf2_msgs.msg import TFMessage
-
 from tf_transformations import quaternion_from_euler
 
 @dataclasses.dataclass
@@ -21,20 +20,27 @@ class RobotMeasurementPacket:
     odom_x_pos: float
     odom_y_pos: float
     odom_yaw: float
+    cmd_vel_x: float
+    cmd_vel_z: float
+    BYTES_PER_FLOAT = 4
+    NUM_FLOATS = 8
 
     def __init__(self, msg: bytes):
+        
         self.imu_yaw_rate, self.wheel_lin_vel, self.wheel_angular_vel, \
-            self.odom_x_pos, self.odom_y_pos, self.odom_yaw = struct.unpack('ffffff', msg[1:25])       
+            self.odom_x_pos, self.odom_y_pos, self.odom_yaw, self.cmd_vel_x, self.cmd_vel_z = struct.unpack(
+            'f'*self.NUM_FLOATS, msg[1:self.BYTES_PER_FLOAT*self.NUM_FLOATS+1])       
 
 class ArduinoSerial:
-    def __init__(self, usb_port: str, message_callback) -> None:
+    def __init__(self, usb_port: str, message_callback, logger) -> None:
         # open serial port with 1ms read timeout
-        self.serial_port = serial.Serial(usb_port, 115200, timeout=0.001)
+        self.serial_port = serial.Serial(usb_port, 0, timeout=0.01)
         self.buffer = bytes()
         self.stopped = False
         self.read_thread = threading.Thread(target=self.read_msgs, daemon=True)
         self.read_thread.start()
         self.message_callback = message_callback
+        self.logger = logger
 
     def stop(self):
         self.stopped = True
@@ -43,17 +49,19 @@ class ArduinoSerial:
         while not self.stopped:
             msg = self.check_for_msg()
             if msg is not None:
+                # self.logger.info(f'Msg: {msg}')
                 self.message_callback(msg)
 
     def check_for_msg(self) -> None | RobotMeasurementPacket:
-        INCOMING_PACKET_SIZE = 28
+        INCOMING_PACKET_SIZE = 4 + RobotMeasurementPacket.NUM_FLOATS*RobotMeasurementPacket.BYTES_PER_FLOAT
         # read up to a packet size
         incoming = ""
         try:
             incoming = self.serial_port.read(INCOMING_PACKET_SIZE)
-        except serial.SerialException:
+        except serial.SerialException as e:
             # something maybe in OS is reading/writing to serial port sometimes
             # catch exception instead of crashing. 
+            self.logger.warn(f'Got serial exception: {e}')
             pass
 
         if len(incoming) > 0:
@@ -77,6 +85,7 @@ class ArduinoSerial:
         cmd_msg += struct.pack('ff', cmd_vel.linear.x, cmd_vel.angular.z)
         # end of packet
         cmd_msg += bytes([2,1,0])
+        # self.logger.info(f'Sending bytes: {cmd_msg}')
         self.serial_port.write(cmd_msg)
 
 class PolybotBaseNode(Node):
@@ -85,7 +94,11 @@ class PolybotBaseNode(Node):
         self.odom_publisher = self.create_publisher(Odometry, 'odom', 10)
         self.cmd_vel_sub = self.create_subscription(Twist, 'cmd_vel', self.cmd_vel_cb, 10)
         self.tf_publisher = self.create_publisher(TFMessage, 'tf', 10)
-        self.arduino = ArduinoSerial('/dev/ttyACM0', self.incoming_msg_cb)
+        self.declare_parameter('serial_port', '/dev/ttyACM0')
+        port = self.get_parameter('serial_port').value
+        self.get_logger().info(f'Connecting to serial port: {port}')
+
+        self.arduino = ArduinoSerial(port, self.incoming_msg_cb, self.get_logger())
 
     def incoming_msg_cb(self, message: RobotMeasurementPacket):
         odom_msg = Odometry()
