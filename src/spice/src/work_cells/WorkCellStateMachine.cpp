@@ -283,7 +283,8 @@ std::optional<carrier_robot> WorkCellStateMachine::get_enqueued_robot()
 {
     for(auto enqueued_robot = m_enqueued_robots.begin(); enqueued_robot != m_enqueued_robots.end(); enqueued_robot++)
     {
-        if(enqueued_robot->ready_in_queue)
+        //if(enqueued_robot->ready_in_queue)
+        if(enqueued_robot->queue_point->id == 0 && enqueued_robot->ready_in_queue)
         {
             std::optional<carrier_robot> next_robot(*enqueued_robot);
             m_enqueued_robots.erase(enqueued_robot);
@@ -444,5 +445,6 @@ void WorkCellStateMachine::move_work_cell(){
         m_transform = goal_point.transform;
         publish_transform();
         prepare_move = false;
+        m_queue_manager->publish_queue_points();
     }
 }

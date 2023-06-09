@@ -486,7 +486,7 @@ class EnqueuedState(RobotStateTemplate):
             self.timer.reset()        
     
     def check_service_cb(self):
-        if self.robot_is_called and self.goal_handle.status == GoalStatus.STATUS_SUCCEEDED:
+        if self.robot_is_called and self.robot_is_at_queue_point: # self.goal_handle.status == GoalStatus.STATUS_SUCCEEDED:
             self.timer.cancel()
             self.sm.change_state(ROBOT_STATE.ENTER_WORKCELL)
     
