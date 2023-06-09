@@ -15,7 +15,7 @@ using namespace std::chrono_literals;
 
 std::map<uint8_t, std::string> state_to_string{{spice_msgs::msg::RobotState::ERROR, "ERROR"}, {spice_msgs::msg::RobotState::MR_PROCESSING_JOB, "PROCESSING"}, {spice_msgs::msg::RobotState::MR_READY_FOR_JOB, "READY FOR JOB"}, {spice_msgs::msg::RobotState::STARTUP, "STARTUP"}, {spice_msgs::msg::RobotState::WC_READY_FOR_ROBOTS, "READY FOR ROBOT"}};
 
-std::map<uint8_t, std::vector<float>> state_to_colour{{spice_msgs::msg::RobotState::ERROR, {0.7, 0.0, 0.0, 1.0}}, {spice_msgs::msg::RobotState::MR_PROCESSING_JOB, {0.0, 0.0, 1.0, 1.0}}, {spice_msgs::msg::RobotState::MR_READY_FOR_JOB, {0.0, 1.0, 0.0, 1.0}}, {spice_msgs::msg::RobotState::STARTUP, {0.5, 0.5, 0.0, 1.0}}, {spice_msgs::msg::RobotState::WC_READY_FOR_ROBOTS, {0.0, 0.5, 0.0, 1.0}}};
+std::map<uint8_t, std::vector<float>> state_to_colour{{spice_msgs::msg::RobotState::ERROR, {0.75, 0.0, 0.0, 1.0}}, {spice_msgs::msg::RobotState::MR_PROCESSING_JOB, {0.0, 0.0, 0.75, 1.0}}, {spice_msgs::msg::RobotState::MR_READY_FOR_JOB, {0.0, 0.75, 0.0, 1.0}}, {spice_msgs::msg::RobotState::STARTUP, {0.75, 0.75, 0.0, 1.0}}, {spice_msgs::msg::RobotState::WC_READY_FOR_ROBOTS, {0.3, 0.99, 0.3, 1.0}}};//0.1, 0.67, 0.23 grøn; 0.1, 0.5, 0.9 blå
 
 class RobotMeshPublisher : public rclcpp::Node
 {
@@ -120,7 +120,7 @@ private:
                 catch (const tf2::TransformException &ex)
                 {
 
-                    return;
+                    continue;
                 }
                 std::vector<float> state_colour = state_to_colour[work_cell.robot_state.state];
                 geometry_msgs::msg::Pose pose;
@@ -154,6 +154,7 @@ private:
                 marker.scale.z = 0.2;
                 marker.pose.position.z += 0.2;
                 msg.markers.push_back(marker);
+
                 std::string internal_state_condensed = removeSpaces(work_cell.robot_state.internal_state);
                 marker.id = 2;
                 marker.action = visualization_msgs::msg::Marker::ADD;
@@ -162,12 +163,129 @@ private:
                 marker.scale.z = 0.1;
                 marker.pose.position.y += 0.2;
                 msg.markers.push_back(marker);
+
+
+                marker.id = 4;
+                float cubeScale = 0.5;
+                marker.pose.position.y = t.transform.translation.y;
+                marker.pose.position.z = t.transform.translation.z+cubeScale/2;    
+                marker.action = visualization_msgs::msg::Marker::ADD;
+                marker.type = visualization_msgs::msg::Marker::CUBE;
+                marker.scale.x = cubeScale;
+                marker.scale.y = cubeScale;
+                marker.scale.z = cubeScale;
+
+                marker.color.a = 0.03;
+                marker.color.r = 0.0;
+                marker.color.g = 0.0;
+                marker.color.b = 0.0;
+                msg.markers.push_back(marker);
+
+
+                marker.id = 3;  
+                float lines_offset = 0.24;
+                marker.header.frame_id = work_cell.id.id;
+                marker.action = visualization_msgs::msg::Marker::ADD;
+                marker.type = visualization_msgs::msg::Marker::LINE_LIST;
+                marker.scale.x = 0.05;
+                marker.pose.position.x = 0.0;
+                marker.pose.position.y = 0.0;
+                marker.pose.position.z = 0.0;
+                marker.pose.orientation.x = 0.0;
+                marker.pose.orientation.y = 0.0;
+                marker.pose.orientation.z = 0.0;
+                marker.pose.orientation.w = 1.0;
+                geometry_msgs::msg::Point point = marker.pose.position;
+                point.x = lines_offset;
+                point.y = -lines_offset;
+                marker.points.push_back(point);
+                point.x = -lines_offset;
+                point.y = -lines_offset;
+                marker.points.push_back(point);
+                point.x = lines_offset;
+                point.y = lines_offset;
+                marker.points.push_back(point);
+                point.x = -lines_offset;
+                point.y = lines_offset;
+                marker.points.push_back(point);
+                marker.color.a = 1.0;
+                marker.color.r = 0.35;
+                marker.color.g = 0.35;
+                marker.color.b = 0.35;
+                msg.markers.push_back(marker);
+
+
+
+
+                std::string frame_id_exit = work_cell.id.id+"_exit";
+                // std::string frame_id_entry = work_cell.id.id+"_entry";
+
+                colour.a = 1.0;
+                colour.r = 1.0;
+                colour.g = 0.0;
+                colour.b = 0.0;
+
+                msg.markers.push_back(makeArrow(frame_id_exit,colour,0));
+                // msg.markers.push_back(makeArrow(frame_id_entry,colour,0));
+
+                for (size_t i = 0; i < 99; i++)
+                {
+                    std::string frame_id =work_cell.id.id+"_q"+std::to_string(i);
+                    try
+                    {
+                        t = tf_buffer_->lookupTransform(
+                            "map", frame_id,
+                            tf2::TimePointZero);
+                    }
+                    catch (const tf2::TransformException &ex)
+                    {
+                        
+                        break;
+                    }
+
+                    colour.a = 1.0;
+                    colour.r = 1.0;
+                    colour.g = 1.0;
+                    colour.b = 1.0;
+                    int id = i;
+
+                    msg.markers.push_back(makeArrow(frame_id,colour,id));
+                }
+                
             }
             m_mesh_publisher->publish(msg);
         };
 
         auto futureResult = get_work_cells_cli->async_send_request(request, response_received_callback);
     }
+
+    visualization_msgs::msg::Marker makeArrow(std::string frame_id, std_msgs::msg::ColorRGBA colour, int id)
+    {
+        visualization_msgs::msg::Marker marker;
+        marker.ns = frame_id;
+        marker.header.frame_id = frame_id;
+        marker.header.stamp = this->get_clock()->now();
+        float xScale = 0.2;
+        marker.pose.position.x = -xScale/2;
+        marker.pose.position.y = 0.0;
+        marker.pose.position.z = 0.0;
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
+
+        marker.color = colour;
+
+        marker.id = id;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        marker.type = visualization_msgs::msg::Marker::ARROW;
+        marker.scale.x = xScale;
+        marker.scale.y = 0.1;
+        marker.scale.z = 0.000001;
+
+        return marker;
+    }
+
 
     void PublishCarrierRobotMesh()
     {
