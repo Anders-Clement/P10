@@ -93,12 +93,11 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
             }
             
             RCLCPP_WARN(m_nodehandle.get_logger(), "freeing queue point");
-            fill_queue_points();
             it->queued_robot = spice_msgs::msg::Id{};
-            return;
+            break;
         }
     }
-
+    fill_queue_points();
 }
 
 std::vector<geometry_msgs::msg::Transform> QueueManager::get_queue_point_transforms()
@@ -147,7 +146,6 @@ void QueueManager::fill_queue_points(){
                     break;
                 }
             }
-            break;
         }
     }
     
