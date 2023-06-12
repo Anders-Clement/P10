@@ -20,4 +20,4 @@ printenv | grep rmw
 
 sleep 5s # otherwise there is an internet race condition
 
-ros2 launch spice robot_bringup.launch.py
+ros2 launch spice bringup_polybot.launch.py

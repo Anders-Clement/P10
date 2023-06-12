@@ -34,32 +34,14 @@ def generate_launch_description():
          'config', 'navigation.yaml']
     )
 
-    DeclareLaunchArgument(
-        name = 'nr',
-        description='The PolyBot\'s number'
-    ),
+    # DeclareLaunchArgument(
+    #     name = 'nr',
+    #     description='The PolyBot\'s number'
+    # ),
 
     use_namespace = 'true'
-    namespace = ['polybot', LaunchConfiguration("nr")]
+    #namespace = ['polybot', LaunchConfiguration("nr")]
 
-    DeclareLaunchArgument(
-            name='sim',
-            default_value='false',
-            description='Enable use_sime_time to true'
-        ),
-
-    DeclareLaunchArgument(
-            name='map',
-            default_value = DEFAULT_MAP_NAME,
-            description='Map name.yaml'
-        ),
-
-    DeclareLaunchArgument(
-            name='map_path',
-            default_value = default_map_path,
-            description='Map path'
-        ),
-    
     rplidar2_launch_path = PathJoinSubstitution(
         [FindPackageShare('rplidar_ros2'), 'launch', 'rplidar_a3_launch.py']
     )
@@ -68,6 +50,7 @@ def generate_launch_description():
     )    
 
     ns_bringup=GroupAction(actions=[
+        
         PushRosNamespace(namespace),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(rplidar2_launch_path)
@@ -87,6 +70,9 @@ def generate_launch_description():
             package='spice',
             executable='polybot_agent.py',
             name='polybot_agent',
+            parameters=[
+                {"serial_port": '/dev/ttyACM0'}
+            ]
         ),
          IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch_path),
@@ -106,5 +92,23 @@ def generate_launch_description():
     )
     
     return LaunchDescription([
+        DeclareLaunchArgument(
+            name='sim',
+            default_value='false',
+            description='Enable use_sime_time to true'
+        ),
+
+        DeclareLaunchArgument(
+            name='map',
+            default_value = DEFAULT_MAP_NAME,
+            description='Map name.yaml'
+        ),
+
+        DeclareLaunchArgument(
+            name='map_path',
+            default_value = default_map_path,
+            description='Map path'
+        ),
+    
         ns_bringup
     ])
