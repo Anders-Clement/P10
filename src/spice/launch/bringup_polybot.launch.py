@@ -74,20 +74,7 @@ def generate_launch_description():
                 {"serial_port": '/dev/ttyACM0'}
             ]
         ),
-         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(nav2_launch_path),
-            launch_arguments={
-                'map_path': map_path,
-                'use_sim_time': LaunchConfiguration("sim"),
-                'namespace': namespace,
-                'use_namespace': use_namespace,
-                'use_composition': 'True',
-                'params_file': nav2_config_path,
-                'namespace' : namespace,
-                'autostart' : 'True',
-                'run_nav_stack' : 'False'
-            }.items()
-        ),
+         
       ]
     )
     
@@ -110,5 +97,19 @@ def generate_launch_description():
             description='Map path'
         ),
     
-        ns_bringup
+        ns_bringup,
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(nav2_launch_path),
+            launch_arguments={
+                'map_path': map_path,
+                'use_sim_time': LaunchConfiguration("sim"),
+                'namespace': namespace,
+                'use_namespace': use_namespace,
+                'use_composition': 'True',
+                'params_file': nav2_config_path,
+                'namespace' : namespace,
+                'autostart' : 'True',
+                'run_nav_stack' : 'False'
+            }.items()
+        )
     ])
