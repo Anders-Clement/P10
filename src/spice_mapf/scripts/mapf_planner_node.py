@@ -31,10 +31,10 @@ class MapfPlanner(Node):
         self.agents: list[Agent] = []
         self.planner = Planner(self.map, self.agents, self)
         self.workcell_obstacle = WorkcellObstacle(self)
-        self.visualizer = Visualizer(self.map, self.agents, self.workcell_obstacle)
+        self.visualizer = Visualizer(self.map, self.agents, self.workcell_obstacle, True)
         self.visualizer.visualize()
         self.timer = self.create_timer(0.1, self.tick)
-        self.visualizer_timer = self.create_timer(1.0, self.visualizer.visualize)
+        self.visualizer_timer = self.create_timer(0.1, self.visualizer.visualize)
         self.GOAL_TOLERANCE = 0.25
         self.declare_parameter('goal_tolerance', self.GOAL_TOLERANCE)
 
