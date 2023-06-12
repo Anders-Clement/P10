@@ -94,6 +94,8 @@ public:
     geometry_msgs::msg::Transform m_transform;
     geometry_msgs::msg::Transform m_entry_transform;
     geometry_msgs::msg::Transform m_exit_transform;
+    std::list<carrier_robot> m_enqueued_robots;
+    bool ready_to_move = false;
 
 
 private:
@@ -114,6 +116,9 @@ private:
         const std::shared_ptr<spice_msgs::srv::Heartbeat::Request> request,
         std::shared_ptr<spice_msgs::srv::Heartbeat::Response> response);
     void check_robot_heartbeat_cb();
+    void nav_goal_cb(const std::shared_ptr<geometry_msgs::msg::PoseStamped> msg);
+    void move_work_cell();
+
     spice_msgs::msg::RobotState internal_state_to_robot_state(WORK_CELL_STATE state);
     std::unique_ptr<WorkCellQueuePositionManager> m_work_cell_queue_manager;
 
@@ -140,12 +145,15 @@ private:
     std::shared_ptr<rclcpp::Service<std_srvs::srv::Trigger>> m_robot_exited_service;
     std::shared_ptr<rclcpp::Service<spice_msgs::srv::Heartbeat>> m_heartbeat_service;
     std::shared_ptr<rclcpp::Publisher<spice_msgs::msg::RobotStateTransition>> m_state_transition_event_pub;
-    std::list<carrier_robot> m_enqueued_robots;
     rclcpp::TimerBase::SharedPtr m_timer{nullptr};
     rclcpp::TimerBase::SharedPtr m_robot_heartbeat_timer;
+    rclcpp::TimerBase::SharedPtr m_nav_goal_timer;
     std::shared_ptr<nav2_costmap_2d::Costmap2D> m_global_costmap;
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr m_costmap_subscriber;
-    
+    bool prepare_move = false;
+
+    std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::PoseStamped>> m_nav_goal_subscriber;
+    geometry_msgs::msg::TransformStamped goal_point;
 };
 
 #endif

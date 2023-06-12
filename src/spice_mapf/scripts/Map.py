@@ -40,11 +40,11 @@ class Map:
         for y in range(self.map.shape[0]):
             for x in range(self.map.shape[1]):
                 if self.map[y][x] == 100: # map obstacle
-                    for expand_y in range(-1+y,2+y,1):
+                    for expand_y in range(-1+y,1+y,1):
                         if expand_y < 0: continue
                         if expand_y >= self.map.shape[0]: continue
 
-                        for expand_x in range(-1+x,2+x,1):
+                        for expand_x in range(0+x,2+x,1):
                             if expand_x < 0: continue
                             if expand_x >= self.map.shape[1]: continue
                             
@@ -121,3 +121,23 @@ class Map:
         y_world = (len(self.map)-1 - location[0])*self.map_info.resolution
         x_world = location[1]*self.map_info.resolution
         return (x_world, y_world)
+    
+    # def world_to_map(self, position: spice_mapf_msgs.Position) -> tuple[int,int]:
+    #     y_map = len(self.map)-1 - (position.y/self.map_info.resolution + self.map_info.resolution/2)
+    #     x_map = position.x/self.map_info.resolution + self.map_info.resolution/2
+        
+    #     position = (int(round(y_map,0)), int(round(x_map,0)))
+    #     return position
+    
+    # def world_to_map_float(self, position: spice_mapf_msgs.Position) -> tuple[float, float]:
+    #     y_map = len(self.map)-1 - (position.y/self.map_info.resolution + self.map_info.resolution/2)
+    #     x_map = position.x/self.map_info.resolution + self.map_info.resolution/2
+        
+    #     position = (y_map, x_map)
+    #     return position
+    
+    # def map_to_world(self, location: tuple[int,int]) -> tuple[float,float]:
+    #     """Take location in planner map (y,x) and convert to world (x,y)"""
+    #     y_world = (len(self.map)-1 - location[0])*self.map_info.resolution - self.map_info.resolution/2
+    #     x_world = location[1]*self.map_info.resolution - self.map_info.resolution/2
+    #     return (x_world, y_world)

@@ -1,30 +1,22 @@
-# Copyright (c) 2021 Juan Miguel Jimeno
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http:#www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import os
+from ament_index_python import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.conditions import IfCondition
-from launch_ros.substitutions import FindPackageShare
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch_ros.actions import Node
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
+from launch.actions import GroupAction
+from launch_ros.actions import PushRosNamespace
 
 DEFAULT_MAP_NAME = 'low_res/A4_nav.yaml' # change to the name.yaml of the default map here
 
 def generate_launch_description():
-
+    namespace = os.environ.get('ROBOT_NAMESPACE')
+    if namespace is None:
+        print('Failed to find ROBOT_NAMESPACE in environment, please add it!')
+        return
+    
     map_name = LaunchConfiguration('map')
     map_path = LaunchConfiguration('map_path')
 
@@ -42,14 +34,50 @@ def generate_launch_description():
          'config', 'navigation.yaml']
     )
 
-    DeclareLaunchArgument(
-        name = 'nr',
-        description='The PolyBot\'s number'
-    ),
+    # DeclareLaunchArgument(
+    #     name = 'nr',
+    #     description='The PolyBot\'s number'
+    # ),
 
     use_namespace = 'true'
-    namespace = ['polybot', LaunchConfiguration("nr")]
+    #namespace = ['polybot', LaunchConfiguration("nr")]
 
+    rplidar2_launch_path = PathJoinSubstitution(
+        [FindPackageShare('rplidar_ros2'), 'launch', 'rplidar_a3_launch.py']
+    )
+    description_launch_path = PathJoinSubstitution(
+        [FindPackageShare('linorobot2_description'), 'launch', 'description.launch.py']
+    )    
+
+    ns_bringup=GroupAction(actions=[
+        
+        PushRosNamespace(namespace),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(rplidar2_launch_path)
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(description_launch_path)
+        ),
+        Node(
+            package='spice',
+            executable='robot_tf_pose',
+            name='robot_pose_relayer',
+            remappings=[("to_tf_global", "/tf"),
+                        ("/tf", "tf"),
+                        ("/tf_static", "tf_static")],
+        ),
+        Node(
+            package='spice',
+            executable='polybot_agent.py',
+            name='polybot_agent',
+            parameters=[
+                {"serial_port": '/dev/ttyACM0'}
+            ]
+        ),
+         
+      ]
+    )
+    
     return LaunchDescription([
         DeclareLaunchArgument(
             name='sim',
@@ -68,7 +96,8 @@ def generate_launch_description():
             default_value = default_map_path,
             description='Map path'
         ),
-
+    
+        ns_bringup,
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch_path),
             launch_arguments={
@@ -82,19 +111,5 @@ def generate_launch_description():
                 'autostart' : 'True',
                 'run_nav_stack' : 'False'
             }.items()
-        ),
-        Node(
-            package='spice_mapf',
-            executable='mapf_navigator_node.py',
-            name='mapf_navigator_node',
-            namespace=namespace,
-            remappings=[("/tf", "tf"), ("/tf_static", "tf_static")]
-        ),
-        Node
-        (
-            package='spice',
-            executable='robot_state_manager_node.py',
-            name='robot_state_manager_node',
-            namespace=namespace
         )
     ])

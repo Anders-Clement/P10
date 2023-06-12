@@ -18,7 +18,8 @@ def generate_launch_description():
             package='spice_mapf',
             executable='mapf_navigator_node.py',
             name='mapf_navigator_node',
-            namespace=namespace
+            namespace=namespace,
+            remappings=[("/tf", "tf"), ("/tf_static", "tf_static")]
         ),
         Node
         (

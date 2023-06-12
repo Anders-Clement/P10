@@ -9,6 +9,8 @@
 #include "spice_msgs/msg/id.hpp"
 #include "spice_msgs/msg/queue_points.hpp"
 #include "spice/work_cells/work_cell_state_machine.hpp"
+#include "spice_msgs/msg/queue_occupancy.hpp"
+#include "rclcpp/qos.hpp"
 
 
 struct QueuePoint
@@ -32,13 +34,17 @@ public:
     void free_queue_point(QueuePoint* queuepoint);
     std::vector<geometry_msgs::msg::Transform> get_queue_point_transforms();
     void publish_queue_points();
+    void fill_queue_points();
 
     std::list<QueuePoint> m_queue_points;
     WorkCellStateMachine* m_work_cell_state_machine;
 private:
+    std::string m_work_cell_name;
     rclcpp::Node& m_nodehandle;
     rclcpp::Publisher<spice_msgs::msg::QueuePoints>::SharedPtr m_queue_points_publisher;
+    std::shared_ptr<rclcpp::Publisher<spice_msgs::msg::QueueOccupancy>> m_enqueued_pub;
     unsigned int m_queue_id_counter = 0;
+    unsigned int m_occupied_queue_counter = 0;
 };
 
 #endif //QUEUE_MANAGER_HPP
