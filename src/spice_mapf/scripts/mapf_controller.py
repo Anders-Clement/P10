@@ -1,5 +1,5 @@
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, Twist, TransformStamped
 import tf2_ros
 import tf2_geometry_msgs
 import rclpy
@@ -21,7 +21,7 @@ class MAPFController():
         self.nodehandle.declare_parameter('kp_linear_vel', 1.0)
         self.nodehandle.declare_parameter('goal_tolerance', 0.1)
 
-    def compute_cmd_vel(self, robot_pose: PoseStamped, goal_pose: PoseStamped) -> Twist | None:
+    def compute_cmd_vel(self, robot_transform: TransformStamped, goal_pose: PoseStamped) -> Twist | None:
         self.min_linear_vel = self.nodehandle.get_parameter('min_linear_vel').get_parameter_value().double_value
         self.max_linear_vel = self.nodehandle.get_parameter('max_linear_vel').get_parameter_value().double_value
         self.min_angular_vel = self.nodehandle.get_parameter('min_angular_vel').get_parameter_value().double_value
@@ -34,7 +34,7 @@ class MAPFController():
         try:
             transform = self.tf_buffer.lookup_transform("base_link",
                                                         "map",
-                                                        robot_pose.header.stamp)
+                                                        robot_transform.header.stamp)
 
             goal_in_base_link = tf2_geometry_msgs.do_transform_pose(goal_pose.pose, transform)
         except TransformException as e:
@@ -44,8 +44,8 @@ class MAPFController():
 
         twist_msg = Twist()
 
-        x_diff = robot_pose.pose.position.x - goal_pose.pose.position.x
-        y_diff = robot_pose.pose.position.y - goal_pose.pose.position.y
+        x_diff = robot_transform.transform.translation.x - goal_pose.pose.position.x
+        y_diff = robot_transform.transform.translation.y - goal_pose.pose.position.y
         goal_dist = math.sqrt(x_diff**2 + y_diff**2)
         py_clip = lambda x, lower, upper: lower if x < lower else upper if x > upper else x
         # at the goal, turn to face it:
@@ -53,13 +53,12 @@ class MAPFController():
             q = goal_pose.pose.orientation
             q = [q.w, q.x, q.y, q.z]
             goal_rpy = tf_transformations.euler_from_quaternion(q)
-            q = robot_pose.pose.orientation
+            q = robot_transform.transform.rotation
             q = [q.w, q.x, q.y, q.z]
             robot_rpy = tf_transformations.euler_from_quaternion(q)
             goal_yaw = goal_rpy[2]
             robot_yaw = robot_rpy[2]
             PI = 3.1416
-            # using δ=(T−C+540°)mod360°−180°
             # figure out which way to turn: https://math.stackexchange.com/questions/110080/shortest-way-to-achieve-target-angle
             robot_yaw += PI
             goal_yaw += PI
