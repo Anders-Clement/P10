@@ -3,11 +3,14 @@
 import os
 import random
 import numpy as np
+import matplotlib as mpl
 import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
-from rclpy.time import Time
-from geometry_msgs.msg import Quaternion
+from rclpy.time import Time, Duration
+from rclpy.executors import MultiThreadedExecutor
+from geometry_msgs.msg import Quaternion, Point
+from visualization_msgs.msg import Marker, MarkerArray
 import spice_msgs.msg as spice_msgs
 import spice_msgs.srv as spice_srvs
 import spice_mapf_msgs.msg as spice_mapf_msgs
@@ -32,6 +35,8 @@ class MapfPlanner(Node):
         self.visualizer.visualize()
         self.timer = self.create_timer(0.1, self.tick)
         self.visualizer_timer = self.create_timer(1.0, self.visualizer.visualize)
+        self.GOAL_TOLERANCE = 0.25
+        self.declare_parameter('goal_tolerance', self.GOAL_TOLERANCE)
 
         self.timestep = 0
         self.time_interpolated = 0
@@ -41,6 +46,7 @@ class MapfPlanner(Node):
         self.join_planner_service = self.create_service(spice_mapf_srvs.JoinPlanner, "/join_planner", self.join_planner_cb)
         self.request_goal_service = self.create_service(spice_mapf_srvs.RequestGoal, "/request_goal", self.request_goal_cb)
         self.paths_publisher = self.create_publisher(spice_mapf_msgs.RobotPoses, "/mapf_paths", 10)
+        self.debug_paths_publisher = self.create_publisher(MarkerArray, "/planned_paths", 10)
         self.robot_pos_subscriber = self.create_subscription(spice_mapf_msgs.RobotPose, "/robot_pos", self.robot_pos_cb, 10)
 
     def robot_pos_cb(self, msg: spice_mapf_msgs.RobotPose) -> None:
@@ -118,15 +124,19 @@ class MapfPlanner(Node):
         # assign goal
         for agent in self.agents:
             if agent.id == request.robot_pose.id:
+                # TODO: Consider clearing obsolete constraints if agent preempts a goal
+
                 if agent.target_goal is not None or len(agent.path) > 0 or agent.current_loc != agent.next_loc:
-                    self.get_logger().warn(f'Agent: {request.robot_pose.id.id} tried to preempt goal, but it is not supported')
-                    response.currently_occupied = True
-                    return response
+                    # self.get_logger().warn(f'Agent: {request.robot_pose.id.id} tried to preempt goal, but it is not supported')
+                    # response.currently_occupied = True
+                    # return response
+                    self.get_logger().info(f'Agent: {request.robot_pose.id.id} preempted goal, this is not yet tested')
                 
                 agent.workcell_id = request.workcell_id                
                 agent.target_goal = goal
                 agent.current_loc = agent.next_loc # ensure update of current location
                 agent.start_loc = agent.current_loc
+                agent.path = []
                 goal_in_world = self.map.map_to_world(goal)
                 response.goal_position.x = goal_in_world[0]
                 response.goal_position.y = goal_in_world[1]
@@ -180,8 +190,6 @@ class MapfPlanner(Node):
         if not self.ready_to_tick():
             return
         
-        self.visualizer.visualize()
-
         # update agents' next locations
         for agent in self.agents:
             agent.current_loc = agent.next_loc
@@ -201,6 +209,8 @@ class MapfPlanner(Node):
         self.planner.tick(self.timestep, self.workcell_obstacle.workcell_locations)
 
         self.publish_robot_paths()
+
+        self.debug_publish_planned_paths()
 
         # simulate positions in steps for simulated robots
         for i in range(1, self.time_interpolation_steps+1): #shift by one so last draw is at next_loc
@@ -228,17 +238,19 @@ class MapfPlanner(Node):
                 self.visualizer.visualize()
 
     def ready_to_tick(self):
+        GOAL_TOLERANCE = self.get_parameter('goal_tolerance').get_parameter_value().double_value
         non_ready_agents: list[Agent] = []
         ready_agents: list[Agent] = []
         for agent in self.agents:
             diff = np.array(agent.current_pos)-np.array(agent.next_loc)
             dist = np.linalg.norm(diff)/2.0 # have to divide by two here to make it a vector norm, I do not know why?
-            if dist > 0.25:
+            if dist > GOAL_TOLERANCE:
                 non_ready_agents.append((agent, dist))
             else:
                 ready_agents.append((agent,dist))
-        # self.get_logger().info(f'Non ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in non_ready_agents]}')                
-        # self.get_logger().info(f'Ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in ready_agents]}')                
+        if not len(non_ready_agents) is 0: 
+            self.get_logger().info(f'Non ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in non_ready_agents]}')                
+        #self.get_logger().info(f'Ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in ready_agents]}')                
         
         return len(non_ready_agents) == 0    
     
@@ -278,7 +290,47 @@ class MapfPlanner(Node):
         goal = self.planner.make_random_goal()
         agent.target_goal = goal
         self.get_logger().info(f'Created goal at: {goal} for agent {agent.id.id} from {agent.current_loc}')
-    
+
+    def debug_publish_planned_paths(self):
+        marker_array_msg = MarkerArray()
+        
+        for agent in self.agents:
+            if not agent.waiting:
+                marker = Marker()
+                marker.action = 0
+                marker.type = 4
+                marker.scale.x = 0.05
+                marker.lifetime = Duration(seconds=30).to_msg()
+                marker.header.stamp = self.get_clock().now().to_msg()
+                marker.ns = agent.id.id
+                marker.id = 0
+                marker.header.frame_id = "map"
+                r,g,b = mpl.colors.to_rgb(agent.color)
+                marker.color.a = 1.0
+                marker.color.r = r
+                marker.color.g = g
+                marker.color.b = b
+                x,y = self.map.map_to_world(agent.current_loc)
+                point = Point()
+                point.x = x
+                point.y = y
+                marker.points.append(point)
+                x,y = self.map.map_to_world(agent.next_loc)
+                point = Point()
+                point.x = x
+                point.y = y
+                marker.points.append(point)
+
+                for location in agent.path:
+                    x,y = self.map.map_to_world(location)
+                    point = Point()
+                    point.x = x
+                    point.y = y
+                    marker.points.append(point)
+                
+                marker_array_msg.markers.append(marker)
+
+        self.debug_paths_publisher.publish(marker_array_msg)
 
 
 class WorkcellObstacle():
@@ -337,3 +389,9 @@ if __name__ == '__main__':
     rclpy.init()
     planner = MapfPlanner()
     rclpy.spin(planner)
+    executor = MultiThreadedExecutor(num_threads=4)
+    executor.add_node(planner)
+    try:
+        executor.spin()
+    except KeyboardInterrupt:
+        pass

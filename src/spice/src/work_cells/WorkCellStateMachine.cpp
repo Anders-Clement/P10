@@ -35,10 +35,9 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, rclcpp::N
     m_robot_heartbeat_timer = rclcpp::create_timer(&m_nodehandle, m_nodehandle.get_clock(), 
         rclcpp::Duration::from_seconds(ROBOT_HEARTBEAT_TIMEOUT_PERIOD),
         std::bind(&WorkCellStateMachine::check_robot_heartbeat_cb, this));
-
-   
-
-    
+    m_nav_goal_timer = rclcpp::create_timer(&m_nodehandle, m_nodehandle.get_clock(), 
+        rclcpp::Duration::from_seconds(1.0),
+        std::bind(&WorkCellStateMachine::move_work_cell, this));
 
     auto qos_profile_TL = rmw_qos_profile_default;
     qos_profile_TL.durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
@@ -49,6 +48,7 @@ WorkCellStateMachine::WorkCellStateMachine(std::string work_cell_name, rclcpp::N
     );
 
     m_tf_static_broadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(m_nodehandle);
+    m_nav_goal_subscriber = m_nodehandle.create_subscription<geometry_msgs::msg::PoseStamped>(m_work_cell_name + "/goal_pose",10,std::bind(&WorkCellStateMachine::nav_goal_cb, this, std::placeholders::_1));
     
     m_entry_transform.translation.x = -STEP_DISTANCE;
     m_exit_transform.translation.x = STEP_DISTANCE;
@@ -146,7 +146,8 @@ void WorkCellStateMachine::on_register_work(
     // TODO: do we want to implement simulated checks for work compatibility, queue length etc?
 
     auto queue_point_opt = m_queue_manager->get_queue_point();
-    if(!queue_point_opt)
+
+    if(!queue_point_opt || prepare_move)
     {
         RCLCPP_INFO(m_nodehandle.get_logger(), "Failed to register work due to no space in queue");
         response->work_is_enqueued = false;
@@ -282,7 +283,8 @@ std::optional<carrier_robot> WorkCellStateMachine::get_enqueued_robot()
 {
     for(auto enqueued_robot = m_enqueued_robots.begin(); enqueued_robot != m_enqueued_robots.end(); enqueued_robot++)
     {
-        if(enqueued_robot->ready_in_queue)
+        //if(enqueued_robot->ready_in_queue)
+        if(enqueued_robot->queue_point->id == 0 && enqueued_robot->ready_in_queue)
         {
             std::optional<carrier_robot> next_robot(*enqueued_robot);
             m_enqueued_robots.erase(enqueued_robot);
@@ -421,4 +423,28 @@ void WorkCellStateMachine::on_robot_exited(
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
     m_states[static_cast<int>(m_current_state)]->on_robot_exited(request, response);
+}
+
+void WorkCellStateMachine::nav_goal_cb(const std::shared_ptr<geometry_msgs::msg::PoseStamped> msg){
+    prepare_move = true;
+    goal_point.header = msg->header;
+    goal_point.child_frame_id = get_work_cell_id().id;
+    
+    goal_point.transform.translation.x = msg->pose.position.x;
+    goal_point.transform.translation.y = msg->pose.position.y;
+    goal_point.transform.translation.z = msg->pose.position.z;
+
+    goal_point.transform.rotation.x = msg->pose.orientation.x;
+    goal_point.transform.rotation.y = msg->pose.orientation.y;
+    goal_point.transform.rotation.z = msg->pose.orientation.z;
+    goal_point.transform.rotation.w = msg->pose.orientation.w;
+}
+
+void WorkCellStateMachine::move_work_cell(){
+    if(prepare_move && m_enqueued_robots.size() == 0 && ready_to_move){
+        m_transform = goal_point.transform;
+        publish_transform();
+        prepare_move = false;
+        m_queue_manager->publish_queue_points();
+    }
 }

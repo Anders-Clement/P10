@@ -21,7 +21,7 @@ public:
 
     geometry_msgs::msg::Transform work_cell_locations(){
 
-        geometry_msgs::msg::Transform poses[4];
+        geometry_msgs::msg::Transform poses[6];
         if(m_map_name == "A4.yaml" || m_map_name == "A4_legless.yaml") //A4
         {  
             poses[0].rotation.w = 0.709132;
@@ -74,7 +74,7 @@ public:
             poses[1].translation.y = 0.0 +4.0;
             poses[1].translation.z = 0;
 
-            poses[2].rotation.w = 1;
+            /** poses[2].rotation.w = 1;
             poses[2].rotation.x = 0;
             poses[2].rotation.y = 0;
             poses[2].rotation.z = 0.000737653;
@@ -89,6 +89,54 @@ public:
             poses[3].translation.x = 0.5 +2.0;
             poses[3].translation.y = 0.0 +4.0;
             poses[3].translation.z = 0;
+
+            poses[4].rotation.w = 0.0;
+            poses[4].rotation.x = 0.0;
+            poses[4].rotation.y = 0.0;
+            poses[4].rotation.z = 1.0;
+            poses[4].translation.x = 4.0;
+            poses[4].translation.y = 5.5;
+            poses[4].translation.z = 0;
+
+            poses[5].rotation.w = 0.0;
+            poses[5].rotation.x = 0.0;
+            poses[5].rotation.y = 0.0;
+            poses[5].rotation.z = 1.0;
+            poses[5].translation.x = 6.5;
+            poses[5].translation.y = 5.5;
+            poses[5].translation.z = 0; **/
+
+            poses[2].rotation.w = 0.7;
+            poses[2].rotation.x = 0.0;
+            poses[2].rotation.y = 0.0;
+            poses[2].rotation.z = 0.7;
+            poses[2].translation.x = 3.5;
+            poses[2].translation.y = 2.0;
+            poses[2].translation.z = 0.0;
+
+            poses[3].rotation.w = 0.7;
+            poses[3].rotation.x = 0.0;
+            poses[3].rotation.y = 0.0;
+            poses[3].rotation.z = -0.7;
+            poses[3].translation.x = 1.5;
+            poses[3].translation.y = 2.5;
+            poses[3].translation.z = 0;
+
+            poses[4].rotation.w = 0.7;
+            poses[4].rotation.x = 0.0;
+            poses[4].rotation.y = 0.0;
+            poses[4].rotation.z = -0.7;
+            poses[4].translation.x = 1.5;
+            poses[4].translation.y = 4.5;
+            poses[4].translation.z = 0;
+
+            poses[5].rotation.w = 0.7;
+            poses[5].rotation.x = 0.0;
+            poses[5].rotation.y = 0.0;
+            poses[5].rotation.z = -0.7;
+            poses[5].translation.x = 3.0;
+            poses[5].translation.y = 4.0;
+            poses[5].translation.z = 0;
         }
         // // C4 POSES
         else if(m_map_name == "C4.yaml")
@@ -289,6 +337,16 @@ public:
                 spice_msgs::msg::RobotType::WORK_CELL_TOP),
             std::make_shared<WorkCellStateMachine>(
                 "back_cover_cell", 
+                *this,
+                generator.work_cell_locations(),
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER),
+            std::make_shared<WorkCellStateMachine>(
+                "lid_cell2", 
+                *this,
+                generator.work_cell_locations(), 
+                spice_msgs::msg::RobotType::WORK_CELL_TOP),
+            std::make_shared<WorkCellStateMachine>(
+                "back_cover_cell2", 
                 *this,
                 generator.work_cell_locations(),
                 spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)
