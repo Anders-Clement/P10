@@ -40,11 +40,11 @@ class Map:
         for y in range(self.map.shape[0]):
             for x in range(self.map.shape[1]):
                 if self.map[y][x] == 100: # map obstacle
-                    for expand_y in range(-1+y,2+y,1):
+                    for expand_y in range(-1+y,1+y,1):
                         if expand_y < 0: continue
                         if expand_y >= self.map.shape[0]: continue
 
-                        for expand_x in range(-1+x,2+x,1):
+                        for expand_x in range(0+x,2+x,1):
                             if expand_x < 0: continue
                             if expand_x >= self.map.shape[1]: continue
                             

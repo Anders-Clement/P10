@@ -58,12 +58,12 @@ public:
         }
         else if(m_map_name == "low_res/A4.yaml")
         {
-            poses[0].rotation.w = 1.0; //0.709132;
+            poses[0].rotation.w = 0.0; //0.709132;
             poses[0].rotation.x = 0.0;
             poses[0].rotation.y = 0.0;
-            poses[0].rotation.z = 0.0; //0.7050776;
-            poses[0].translation.x = 5.0 +2.0;
-            poses[0].translation.y = 0.0 +4.0;
+            poses[0].rotation.z = 1.0; //0.7050776;
+            poses[0].translation.x = 3.5;
+            poses[0].translation.y = 5.5;
             poses[0].translation.z = 0.0;
             
             poses[1].rotation.w = 1.0; //0.723702;
@@ -110,8 +110,8 @@ public:
             poses[2].rotation.x = 0.0;
             poses[2].rotation.y = 0.0;
             poses[2].rotation.z = 0.7;
-            poses[2].translation.x = 3.5;
-            poses[2].translation.y = 2.0;
+            poses[2].translation.x = 4.0;
+            poses[2].translation.y = 1.5;
             poses[2].translation.z = 0.0;
 
             poses[3].rotation.w = 0.7;
@@ -135,7 +135,7 @@ public:
             poses[5].rotation.y = 0.0;
             poses[5].rotation.z = -0.7;
             poses[5].translation.x = 3.0;
-            poses[5].translation.y = 4.0;
+            poses[5].translation.y = 3.5;
             poses[5].translation.z = 0;
         }
         // // C4 POSES
