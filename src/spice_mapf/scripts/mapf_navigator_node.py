@@ -266,6 +266,7 @@ class MAPFNavigator(Node):
                     self.planner_type_is_set = False
                     self.planner_type_future = None
                     self.current_nav_goal = None
+                    self.next_nav_step_goal = None
                     return
 
                 if self.current_nav_step_goal != robot_pose:

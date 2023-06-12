@@ -23,16 +23,26 @@ QueueManager::QueueManager(rclcpp::Node& nodehandle, std::string work_cell_name,
 void QueueManager::initialize_points(int num_points, double time)
 {
     m_queue_points.clear();
+
     geometry_msgs::msg::Transform q_transform = m_work_cell_state_machine->m_entry_transform;
-    //m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
+    geometry_msgs::msg::Transform last_q_transform = q_transform;
+
+    m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
     // static queue positions, can be replaced with dynamic positions
+
     for (int i = 0; i < num_points/*-1to make num queue points fit */; i++)
     {
         q_transform.translation.x = -STEP_DISTANCE + (STEP_DISTANCE*i);
         q_transform.translation.y =  WORKCELL_RADIUS + ROBOT_RADIUS;
-        q_transform.rotation.z = 1; // rotate 180 deg cc
-        q_transform.rotation.w = 0;
+        float angle = atan2(last_q_transform.translation.y - q_transform.translation.y, last_q_transform.translation.x - q_transform.translation.x);
+        tf2::Quaternion rotation;
+        rotation.setRPY(0.0,0.0,angle);
+        q_transform.rotation.x = rotation.getX(); 
+        q_transform.rotation.y = rotation.getY(); 
+        q_transform.rotation.z = rotation.getZ(); // rotate 180 deg cc
+        q_transform.rotation.w = rotation.getW();
         m_queue_points.emplace_back(q_transform, m_queue_id_counter++, time);
+        last_q_transform = q_transform;
     }
     publish_queue_points();
 
