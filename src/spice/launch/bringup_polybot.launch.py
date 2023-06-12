@@ -70,6 +70,9 @@ def generate_launch_description():
             package='spice',
             executable='polybot_agent.py',
             name='polybot_agent',
+            parameter=[
+                {"serial_port": '/dev/ttyACM0'}
+            ]
         ),
          IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch_path),
