@@ -12,27 +12,30 @@ from Map import Map
 
 
 class Visualizer:
-    def __init__(self, map: Map, agents: list[Agent], workcell) -> None:
+    def __init__(self, map: Map, agents: list[Agent], workcell, use_openCV = False) -> None:
         self.map = map
         self.agents = agents
         self.workcell = workcell
         self.fig = None
+        self.use_openCV = use_openCV
     
     def init_plot(self):
-        if not self.map.has_map:
-            return False
-        
         aspect = len(self.map.map[0]) / len(self.map.map)
         self.fig = plt.figure(frameon=False, figsize=(4 * aspect, 4))
         self.ax = self.fig.add_subplot(111, aspect='equal')
         self.fig.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=None, hspace=None)
 
-        return True
-
     def visualize(self):
+        if not self.map.has_map:
+            return
+        if self.use_openCV:
+            self.visualize_cv()
+        else:
+            self.visualize_matplotlib()
+
+    def visualize_matplotlib(self):
         if self.fig is None:
-            if not self.init_plot():
-                return
+            self.init_plot()
         Colors = ['yellow', 'blue', 'orange', 'pink', 'magenta', 'black', 'brown', 'lime']
         my_map = np.flip(np.transpose(self.map.map),1)
         self.ax.clear()
@@ -111,6 +114,67 @@ class Visualizer:
 
 
         plt.pause(0.1)
+
+    def visualize_cv(self):
+        DRAW_GRID = 30
+        HALF_DRAW_GRID = int(DRAW_GRID/2)
+        my_map = self.map.map
+        self.img = np.zeros((len(my_map)*DRAW_GRID, len(my_map[0])*DRAW_GRID, 3), dtype=np.uint8)
+        colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
+        # draw free space
+        for y in range(len(self.map.map)):
+            for x in range(len(self.map.map[0])):
+                if not self.map.map[y][x]: # free space
+                    top_left = (x*DRAW_GRID, y*DRAW_GRID+DRAW_GRID)
+                    bottom_right = (x*DRAW_GRID+DRAW_GRID, y*DRAW_GRID)
+                    cv2.rectangle(self.img, top_left, bottom_right, (255,255,255),-1)
+
+        # draw workstations
+        for workcell in self.workcell.workcell_locations:
+            id, pos = workcell
+            top_left = (int(pos[1]*DRAW_GRID+0.25*DRAW_GRID), int(pos[0]*DRAW_GRID+0.75*DRAW_GRID))
+            bottom_right = (int(pos[1]*DRAW_GRID+0.75*DRAW_GRID), int(pos[0]*DRAW_GRID+0.25*DRAW_GRID))
+            cv2.rectangle(self.img, top_left, bottom_right, (0,255,0), -1)
+
+        # draw path
+        for num_agent, agent in enumerate(self.agents):
+            color = colors[num_agent%len(colors)]
+            cv2.line(self.img,
+                                (int(agent.current_pos[1]*DRAW_GRID + 0.5*DRAW_GRID), int(agent.current_pos[0]*DRAW_GRID + 0.5*DRAW_GRID)), 
+                                (agent.next_loc[1]*DRAW_GRID + int(0.5*DRAW_GRID), agent.next_loc[0]*DRAW_GRID + int(0.5*DRAW_GRID)),
+                                color,
+                                int(DRAW_GRID/10)
+                    )
+            if len(agent.path) > 0:
+                cv2.line(self.img,
+                                (agent.next_loc[1]*DRAW_GRID + int(0.5*DRAW_GRID), agent.next_loc[0]*DRAW_GRID + int(0.5*DRAW_GRID)), 
+                                (agent.path[0][1]*DRAW_GRID + int(0.5*DRAW_GRID), agent.path[0][0]*DRAW_GRID + int(0.5*DRAW_GRID)),
+                                color,
+                                int(DRAW_GRID/10)
+                    )
+            for i in range(len(agent.path)-1):
+                cv2.line(self.img,
+                                (agent.path[i][1]*DRAW_GRID + int(0.5*DRAW_GRID), agent.path[i][0]*DRAW_GRID + int(0.5*DRAW_GRID)), 
+                                (agent.path[i+1][1]*DRAW_GRID + int(0.5*DRAW_GRID), agent.path[i+1][0]*DRAW_GRID + int(0.5*DRAW_GRID)),
+                                color,
+                                int(DRAW_GRID/10)
+                )
+        
+        # draw goal
+        for num_agent, agent in enumerate(self.agents):
+            color = colors[num_agent%len(colors)]
+            cv2.rectangle(self.img, 
+                          (agent.current_goal[1]*DRAW_GRID + int(0.25*DRAW_GRID), agent.current_goal[0]*DRAW_GRID + int(0.25*DRAW_GRID)), 
+                          (agent.current_goal[1]*DRAW_GRID + int(0.75*DRAW_GRID), agent.current_goal[0]*DRAW_GRID + int(0.75*DRAW_GRID)), 
+                          color, -1)
+
+        # draw agents
+        for num_agent, agent in enumerate(self.agents):
+            color = colors[num_agent%len(colors)]
+            cv2.circle(self.img, (int(agent.current_pos[1]*DRAW_GRID)+HALF_DRAW_GRID, int(agent.current_pos[0]*DRAW_GRID)+HALF_DRAW_GRID), HALF_DRAW_GRID, color,-1)
+
+        cv2.imshow("mapf", self.img)
+        cv2.waitKey(25)
 
     def save_fig(self):
         folder = 'plots'
