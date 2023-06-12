@@ -34,13 +34,13 @@ def generate_launch_description():
          'config', 'navigation.yaml']
     )
 
-    DeclareLaunchArgument(
-        name = 'nr',
-        description='The PolyBot\'s number'
-    ),
+    # DeclareLaunchArgument(
+    #     name = 'nr',
+    #     description='The PolyBot\'s number'
+    # ),
 
     use_namespace = 'true'
-    namespace = ['polybot', LaunchConfiguration("nr")]
+    #namespace = ['polybot', LaunchConfiguration("nr")]
 
     DeclareLaunchArgument(
             name='sim',
