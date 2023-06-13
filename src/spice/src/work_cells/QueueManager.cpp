@@ -102,7 +102,7 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
                 RCLCPP_ERROR(m_nodehandle.get_logger(), "Error in keeping track of occupied queues");
             }
             
-            RCLCPP_WARN(m_nodehandle.get_logger(), "freeing queue point");
+            // RCLCPP_WARN(m_nodehandle.get_logger(), "freeing queue point");
             it->queued_robot = spice_msgs::msg::Id{};
             break;
         }
@@ -146,7 +146,7 @@ void QueueManager::publish_queue_points()
 void QueueManager::fill_queue_points(){
     for(auto queue_point_empty = m_queue_points.begin(); queue_point_empty != m_queue_points.end(); queue_point_empty++){
         if(!queue_point_empty->occupied){
-            RCLCPP_WARN(m_nodehandle.get_logger(), "free queue point is %d", queue_point_empty->id);
+            // RCLCPP_WARN(m_nodehandle.get_logger(), "free queue point is %d", queue_point_empty->id);
             auto queue_point_occ = queue_point_empty;
             for(queue_point_occ; queue_point_occ != m_queue_points.end(); queue_point_occ++){
                 if(queue_point_occ->occupied){

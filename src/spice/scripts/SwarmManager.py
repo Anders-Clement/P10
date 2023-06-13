@@ -10,6 +10,7 @@ from rclpy.subscription import Subscription
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoSHistoryPolicy
 from dataclasses import dataclass
 from typing import Dict
+from std_msgs.msg import String
 
 @dataclass
 class RobotData():
@@ -31,6 +32,7 @@ class SwarmManager(Node):
         self.srv_get_robots_by_state = self.create_service(GetRobotsByState, 'get_robots_by_state', self.get_robots_by_state_callback)
         self.srv_heartbeat = self.create_service(Heartbeat, 'heartbeat', self.heartbeat_callback)
         self.timer_heartbeat = self.create_timer(1, self.heartbeat_timer_callback)
+        self.pub_carrier_timeout = self.create_publisher(String,'/carrier_timeout',10)
 
     def register_robot(self, id: Id) -> bool: #Register new robots and subscribe to their state_transition_event
         for robot in self.robots_dict.values():
@@ -60,6 +62,9 @@ class SwarmManager(Node):
         if found:
             self.destroy_subscription(self.robots_dict[id.id].state_subscriber)
             del self.robots_dict[id.id]
+            STAP_delete_carrier_msg = String()
+            STAP_delete_carrier_msg.data = id.id
+            self.pub_carrier_timeout.publish(STAP_delete_carrier_msg)
             self.get_logger().info(f"{id} has been removed")
             return True
         return False

@@ -88,7 +88,7 @@ private:
   void OnWorkCell(const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Request> request,
                   const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Response> response)
   {
-    RCLCPP_INFO(this->get_logger(), "Allocating task to robot: %s", request->robot_id.id.c_str());
+    // RCLCPP_INFO(this->get_logger(), "Allocating task to robot: %s", request->robot_id.id.c_str());
 
     std::string toFrameRel = request.get()->robot_id.id + "_base_link";
     geometry_msgs::msg::TransformStamped t;
@@ -104,35 +104,40 @@ private:
           std::string fromFrameRel = workcell.id.id + "_entry";
           try
           {
-            t = tf_buffer_->lookupTransform(
-            toFrameRel, fromFrameRel,
-            tf2::TimePointZero);
-            float dist = sqrt(std::pow(t.transform.translation.x, 2) + std::pow(t.transform.translation.y, 2) + std::pow(t.transform.translation.z, 2));
-            uint8_t enqueued = occupancy_dict.at(workcell.id.id);
-
-            if (enqueued < minEnqueued )
-            {
-              workcellType = workcell.id;
-              minEnqueued = enqueued;
-              minDist = dist;
-            }
-            else if (enqueued == minEnqueued && dist < minDist)
-            {
-              workcellType = workcell.id;
-              minEnqueued = enqueued;
-              minDist = dist;
-            }
-            
+            t = tf_buffer_->lookupTransform(toFrameRel, fromFrameRel, tf2::TimePointZero);
           }
           catch (const tf2::TransformException &ex)
           {
             RCLCPP_INFO(this->get_logger(), "Could not transform %s to %s: %s", toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
             continue;
           }
+
+          float dist = sqrt(std::pow(t.transform.translation.x, 2) + std::pow(t.transform.translation.y, 2) + std::pow(t.transform.translation.z, 2));
+          uint8_t enqueued = occupancy_dict.at(workcell.id.id);
+
+          if (enqueued < minEnqueued )
+          {
+            workcellType = workcell.id;
+            minEnqueued = enqueued;
+            minDist = dist;
+          }
+          else if (enqueued == minEnqueued && dist < minDist)
+          {
+            workcellType = workcell.id;
+            minEnqueued = enqueued;
+            minDist = dist;
+          }
         }  
+        // RCLCPP_INFO(this->get_logger(), "WS [%s] has enqueue [%d]", workcell.id.id.c_str(), occupancy_dict.at(workcell.id.id)); 
       }
     }
-    RCLCPP_WARN(this->get_logger(), "[debug] Allocating ws [%s] with q [%d] and dist [%f] to robot [%s]", workcellType.id.c_str(), minEnqueued, minDist, request->robot_id.id.c_str()); // debug
+    if (!workcellType.id.empty()){
+      RCLCPP_INFO(this->get_logger(), "Allocating WS [%s] with queue [%d] and distance [%f] to robot [%s]", workcellType.id.c_str(), minEnqueued, minDist, request->robot_id.id.c_str()); 
+      occupancy_dict.at(workcellType.id) += 1;
+    }
+    else{
+      RCLCPP_WARN(this->get_logger(), "Could not find a viable WS to allocate to robot [%s]", request->robot_id.id.c_str()); 
+    }
 
 
     if(workcellType == spice_msgs::msg::Id {}){
