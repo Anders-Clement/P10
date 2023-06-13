@@ -54,6 +54,7 @@ void ReadyForRobotState::init()
         m_sm.m_nodehandle.get_clock(),
         rclcpp::Duration::from_seconds(.1),
         std::bind(&ReadyForRobotState::try_call_robot, this));
+    m_sm.ready_to_move = true;
 }
 void ReadyForRobotState::deinit() 
 {
@@ -184,7 +185,7 @@ void RobotExitingState::deinit()
     {
         m_sm.m_current_robot_work.reset();
     }
-    m_sm.ready_to_move = true;
+   
 }
 
 void RobotExitingState::on_robot_exited(
