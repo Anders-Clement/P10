@@ -3,6 +3,7 @@ from geometry_msgs.msg import PoseStamped, Twist, TransformStamped
 import tf2_ros
 import tf2_geometry_msgs
 import rclpy
+from rclpy.time import Time
 from tf2_ros import TransformException
 import math
 import tf_transformations
@@ -34,8 +35,7 @@ class MAPFController():
         try:
             transform = self.tf_buffer.lookup_transform("base_link",
                                                         "map",
-                                                        robot_transform.header.stamp)
-
+                                                        Time())
             goal_in_base_link = tf2_geometry_msgs.do_transform_pose(goal_pose.pose, transform)
         except TransformException as e:
             self.nodehandle.get_logger().error(
