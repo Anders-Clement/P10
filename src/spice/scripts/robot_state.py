@@ -483,7 +483,8 @@ class EnqueuedState(RobotStateTemplate):
             self.sm.get_logger().warn("Failed to call robot ready at work cell queue")
             self.sm.change_state(ROBOT_STATE.ERROR)
         else:
-            self.timer.reset()        
+            if self.sm.current_state == ROBOT_STATE.ENQUEUED:
+                self.timer.reset()        
     
     def check_service_cb(self):
         if self.robot_is_called and self.robot_is_at_queue_point: # self.goal_handle.status == GoalStatus.STATUS_SUCCEEDED:
