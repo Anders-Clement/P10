@@ -6,7 +6,7 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
-from rclpy.time import Time
+from rclpy.time import Time, Duration
 from rclpy.action import ActionClient, ActionServer, GoalResponse
 from rclpy.action.client import ClientGoalHandle
 from rclpy.action.server import ServerGoalHandle
@@ -154,11 +154,11 @@ class MAPFNavigator(Node):
         try:
             from_frame_rel = "base_link"
             to_frame_rel = "map"
-            self.current_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, self.get_clock().now())
+            self.current_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, self.get_clock().now(), timeout=Duration(nanoseconds=5e7))
             return True
         except TransformException as e:
             self.get_logger().info(
-                        f'Could not transform {to_frame_rel} to {from_frame_rel}: {e}', once=False)
+                        f'Failed to get robot transform map->base_link: {e}', once=False)
             return False
         
     def paths_cb(self, msg: spice_mapf_msgs.RobotPoses):
