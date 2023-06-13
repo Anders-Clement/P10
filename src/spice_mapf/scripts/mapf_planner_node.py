@@ -8,6 +8,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
 from rclpy.time import Time, Duration
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import Quaternion, Point
 from visualization_msgs.msg import Marker, MarkerArray
@@ -48,7 +49,9 @@ class MapfPlanner(Node):
         self.request_goal_service = self.create_service(spice_mapf_srvs.RequestGoal, "/request_goal", self.request_goal_cb)
         self.paths_publisher = self.create_publisher(spice_mapf_msgs.RobotPoses, "/mapf_paths", 10)
         self.debug_paths_publisher = self.create_publisher(MarkerArray, "/planned_paths", 10)
-        self.robot_pos_subscriber = self.create_subscription(spice_mapf_msgs.RobotPose, "/robot_pos", self.robot_pos_cb, 10)
+        qos_best_effort = QoSProfile()
+        qos_best_effort.reliability.value = ReliabilityPolicy().BEST_EFFORT
+        self.robot_pos_subscriber = self.create_subscription(spice_mapf_msgs.RobotPose, "/robot_pos", self.robot_pos_cb, qos_best_effort)
         self.sub_carrier_timeout = self.create_subscription(String,'/carrier_timeout', self.remove_robot_cb,10)
 
     def robot_pos_cb(self, msg: spice_mapf_msgs.RobotPose) -> None:

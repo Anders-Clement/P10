@@ -7,6 +7,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
 from rclpy.time import Time, Duration
+from rclpy.qos import ReliabilityPolicy, QoSProfile
 from rclpy.action import ActionClient, ActionServer, GoalResponse
 from rclpy.action.client import ClientGoalHandle
 from rclpy.action.server import ServerGoalHandle
@@ -41,8 +42,9 @@ class MAPFNavigator(Node):
         self.id = spice_msgs.Id(id=robot_ns, robot_type=spice_msgs.RobotType(type=spice_msgs.RobotType.CARRIER_ROBOT))
         
         self.join_planner_client = self.create_client(spice_mapf_srvs.JoinPlanner, "/join_planner")
-
-        self.robot_pos_publisher = self.create_publisher(spice_mapf_msgs.RobotPose, "/robot_pos", 10)
+        qos_best_effort = QoSProfile()
+        qos_best_effort.reliability.value = ReliabilityPolicy().BEST_EFFORT
+        self.robot_pos_publisher = self.create_publisher(spice_mapf_msgs.RobotPose, "/robot_pos", qos_best_effort)
         self.paths_subscriber = self.create_subscription(spice_mapf_msgs.RobotPoses, "/mapf_paths", self.paths_cb, 10)
         self.cmd_vel_publisher = self.create_publisher(Twist, "cmd_vel", 10)
 
