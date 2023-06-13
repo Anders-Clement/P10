@@ -64,9 +64,13 @@ class MAPFNavigator(Node):
         self.control_timer = self.create_timer(0.1, self.control_loop)
 
     def control_loop(self):
+        clock = self.get_clock()
+        start = clock.now()
         if not self.get_robot_transform():
             return
+        point1 = clock.now()
         self.publish_current_pos()
+        point2 = clock.now()
         if self.at_step_goal():
             if self.next_nav_step_goal is not None:
                 self.current_nav_step_goal = self.next_nav_step_goal
@@ -88,11 +92,23 @@ class MAPFNavigator(Node):
         goal_pose.pose.position.z = 0.0
         goal_pose.pose.orientation = nav_goal.heading
         cmd_vel = self.controller.compute_cmd_vel(self.current_transform, goal_pose)
+        point3 = clock.now()
         if cmd_vel is not None:
             self.cmd_vel_publisher.publish(cmd_vel)
         else:
             self.cmd_vel_publisher.publish(Twist()) # empty if controller cannot run
-    
+        end = clock.now()
+
+        get_transform_time = (point1-start).nanoseconds * 1e-9
+        publish_pos_time = (point2-point1).nanoseconds * 1e-9
+        calc_cmd_vel_time = (point3-point2).nanoseconds * 1e-9
+        publish_cmd_time = (end-point3).nanoseconds * 1e-9
+
+        debug_msg = f'\nget_transform: {get_transform_time} \npublish_pos_time: {publish_pos_time} \n\
+calc_cmd_vel_time: {calc_cmd_vel_time} \npublish_cmd_vel_time: {publish_cmd_time}\n'
+        self.get_logger().info(debug_msg)
+
+        
     def at_step_goal(self) -> bool:
         if self.current_nav_step_goal is None:
             return True # assume we are there, if no goal is present
