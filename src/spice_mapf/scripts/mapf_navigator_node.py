@@ -105,8 +105,8 @@ class MAPFNavigator(Node):
         publish_cmd_time = (end-point3).nanoseconds * 1e-9
 
         debug_msg = f'\n\
-get_transform:        {get_transform_time:.5f} \npublish_pos_time:     {publish_pos_time:.5f} \n\
-calc_cmd_vel_time:    {calc_cmd_vel_time:.5f } \npublish_cmd_vel_time: {publish_cmd_time:.5f}\n'
+get_transform:        {get_transform_time} \npublish_pos_time:     {publish_pos_time} \n\
+calc_cmd_vel_time:    {calc_cmd_vel_time} \npublish_cmd_vel_time: {publish_cmd_time}\n'
         self.get_logger().info(debug_msg)
 
         
