@@ -95,7 +95,7 @@ public:
     geometry_msgs::msg::Transform m_entry_transform;
     geometry_msgs::msg::Transform m_exit_transform;
     std::list<carrier_robot> m_enqueued_robots;
-    bool ready_to_move = false;
+    bool ready_to_move = true;
 
 
 private:
