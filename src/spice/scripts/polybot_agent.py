@@ -100,7 +100,13 @@ class PolybotBaseNode(Node):
 
         self.arduino = ArduinoSerial(port, self.incoming_msg_cb, self.get_logger())
 
+        self.num_incoming_msgs = -1
+
     def incoming_msg_cb(self, message: RobotMeasurementPacket):
+        self.num_incoming_msgs += 1
+        # only publish odom and tf at 10 Hz
+        if self.num_incoming_msgs % 5 != 0:
+            return
         odom_msg = Odometry()
         now = self.get_clock().now()
         odom_msg.header.stamp = now.to_msg()
