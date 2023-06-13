@@ -174,6 +174,12 @@ class RobotStateManager(Node):
 
     def allocate_task_cb(self, request: RobotTask.Request, response: RobotTask.Response) -> RobotTask.Response:
         return self.states[self.current_state].on_allocate_task(request, response)
+    
+    def clear_task_data(self):
+        self.current_task = None
+        self.task_tree = None
+        if self.work_cell_heartbeat is not None:
+            self.work_cell_heartbeat.deactivate()
 
 
 def main(args=None):
