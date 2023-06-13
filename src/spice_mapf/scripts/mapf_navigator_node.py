@@ -154,7 +154,7 @@ class MAPFNavigator(Node):
         try:
             from_frame_rel = "base_link"
             to_frame_rel = "map"
-            self.current_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, self.get_clock().now(), timeout=Duration(nanoseconds=5e6))
+            self.current_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, self.get_clock().now(), timeout=Duration(nanoseconds=5e7))
             return True
         except TransformException as e:
             self.get_logger().info(
