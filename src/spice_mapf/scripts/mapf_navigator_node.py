@@ -6,7 +6,7 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
-from rclpy.time import Time
+from rclpy.time import Time, Duration
 from rclpy.action import ActionClient, ActionServer, GoalResponse
 from rclpy.action.client import ClientGoalHandle
 from rclpy.action.server import ServerGoalHandle
@@ -46,7 +46,7 @@ class MAPFNavigator(Node):
         self.paths_subscriber = self.create_subscription(spice_mapf_msgs.RobotPoses, "/mapf_paths", self.paths_cb, 10)
         self.cmd_vel_publisher = self.create_publisher(Twist, "cmd_vel", 10)
 
-        self.tf_buffer = tf2_ros.buffer.Buffer()
+        self.tf_buffer = tf2_ros.buffer.Buffer(Duration(seconds=1))
         self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self)
 
         self.controller = mapf_controller.MAPFController(self, self.tf_buffer)
@@ -154,11 +154,11 @@ class MAPFNavigator(Node):
         try:
             from_frame_rel = "base_link"
             to_frame_rel = "map"
-            self.current_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, self.get_clock().now())
+            self.current_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, Time())
             return True
         except TransformException as e:
             self.get_logger().info(
-                        f'Could not transform {to_frame_rel} to {from_frame_rel}: {e}', once=False)
+                        f'Failed to get robot transform map->base_link: {e}', once=False)
             return False
         
     def paths_cb(self, msg: spice_mapf_msgs.RobotPoses):
