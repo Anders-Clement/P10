@@ -44,6 +44,7 @@ class StartUpState(RobotStateTemplate):
         self.sm = sm
 
     def init(self):
+        self.sm.clear_task_data()
         self.sm.get_logger().info('init StartUpState')
         self.nav_stack_is_active = True
         self.registered_robot = False
@@ -109,6 +110,8 @@ class StartUpState(RobotStateTemplate):
             self.sm.get_logger().info('timeout on wait for service: set_planner_type')
 
     def register_robot(self):
+        if self.register_future is not None:
+            return
         register_robot_request = RegisterRobot.Request()
         register_robot_request.id = self.sm.id
         if not self.register_robot_client.wait_for_service(1):
@@ -119,6 +122,7 @@ class StartUpState(RobotStateTemplate):
         self.register_future.add_done_callback(self.register_robot_done_callback)
 
     def register_robot_done_callback(self, future: Future):
+        self.register_future = None
         response: RegisterRobot.Response = future.result()
         if response.success:
             self.registered_robot = True
@@ -705,7 +709,6 @@ class ProcessReadyForProcessingState(RobotStateTemplate):
     def robot_ready_process_done_cb(self, future:Future):
 
         if self.sm.current_state != ROBOT_STATE.READY_FOR_PROCESS:
-            response.success = False
             self.sm.get_logger().warn('robot_ready_process_done_cb, but ROBOT_STATE is not ROBOT_STATE.READY_FOR_PROCESS')
             return
         
@@ -850,12 +853,9 @@ class ErrorState(RobotStateTemplate):
         self.msg.stamp = self.sm.get_clock().now().to_msg()
         self.msg.total_time = self.sm.get_clock().now().seconds_nanoseconds()[0] - self.sm.task_start_time
         self.msg.task_id = self.sm.current_task_id
-        
         self.sm.state_data_pub.publish(self.msg)
-        self.sm.current_task = None
-        self.sm.task_tree = None
-        if(self.sm.work_cell_heartbeat is not None):
-            self.sm.work_cell_heartbeat.deactivate()
+        
+        self.sm.clear_task_data()
         
     def deinit(self):
         self.recovery_timer.cancel()
