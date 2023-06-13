@@ -19,6 +19,7 @@ from Planning import Planner, PlanningResult
 from Agent import Agent
 from Map import Map
 from Visualizer import Visualizer
+from std_msgs.msg import String
 
 import tf2_ros
 from tf2_ros import TransformException
@@ -48,6 +49,7 @@ class MapfPlanner(Node):
         self.paths_publisher = self.create_publisher(spice_mapf_msgs.RobotPoses, "/mapf_paths", 10)
         self.debug_paths_publisher = self.create_publisher(MarkerArray, "/planned_paths", 10)
         self.robot_pos_subscriber = self.create_subscription(spice_mapf_msgs.RobotPose, "/robot_pos", self.robot_pos_cb, 10)
+        self.sub_carrier_timeout = self.create_subscription(String,'/carrier_timeout', self.remove_robot_cb,10)
 
     def robot_pos_cb(self, msg: spice_mapf_msgs.RobotPose) -> None:
         for agent in self.agents:
@@ -248,8 +250,8 @@ class MapfPlanner(Node):
                 non_ready_agents.append((agent, dist))
             else:
                 ready_agents.append((agent,dist))
-        if not len(non_ready_agents) is 0: 
-            self.get_logger().info(f'Non ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in non_ready_agents]}')                
+        # if not len(non_ready_agents) is 0: 
+        #     self.get_logger().info(f'Non ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in non_ready_agents]}')                
         #self.get_logger().info(f'Ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in ready_agents]}')                
         
         return len(non_ready_agents) == 0    
@@ -331,6 +333,13 @@ class MapfPlanner(Node):
                 marker_array_msg.markers.append(marker)
 
         self.debug_paths_publisher.publish(marker_array_msg)
+
+    def remove_robot_cb(self, toDelID:String):
+        for agent in self.agents:
+            if agent.id.id == toDelID.data:
+                self.agents.remove(agent)
+                self.get_logger().info(f'STAP removed robot {agent.id.id} due to timeout')
+                break
 
 
 class WorkcellObstacle():

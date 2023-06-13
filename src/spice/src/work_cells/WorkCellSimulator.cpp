@@ -106,11 +106,11 @@ public:
             poses[5].translation.y = 5.5;
             poses[5].translation.z = 0; **/
 
-            poses[2].rotation.w = 0.7;
+            poses[2].rotation.w = 1.0;
             poses[2].rotation.x = 0.0;
             poses[2].rotation.y = 0.0;
-            poses[2].rotation.z = 0.7;
-            poses[2].translation.x = 4.0;
+            poses[2].rotation.z = 0.0;
+            poses[2].translation.x = 3.5;
             poses[2].translation.y = 1.5;
             poses[2].translation.z = 0.0;
 
