@@ -714,11 +714,11 @@ class ProcessReadyForProcessingState(RobotStateTemplate):
         
         response : Trigger.Response = future.result()
         
-        self.sm.get_logger().info( 'robot_ready_process_done_cb reponse: ' + response.success.__str__())
+        # self.sm.get_logger().info( 'robot_ready_process_done_cb reponse: ' + response.success.__str__())
         if(response.success):
             self.sm.change_state(ROBOT_STATE.PROCESS_DONE) # change state to processing
         
-            self.sm.get_logger().info(self.sm.id.id+  ' robot_ready_process_done_cb')
+            # self.sm.get_logger().info(self.sm.id.id+  ' robot_ready_process_done_cb')
 
     def deinit(self):
         if self.robot_ready_process_future:
@@ -742,15 +742,15 @@ class ProcessProcessingDoneState(RobotStateTemplate):
     def done_processing_cb(self,request:Trigger.Request, response:Trigger.Response) -> Trigger.Response:
         if self.sm.current_state != ROBOT_STATE.PROCESS_DONE:
             response.success = False
-            self.sm.get_logger().warn('done_processing_cb, but ROBOT_STATE is not ROBOT_STATE.PROCESS_DONE')
+            self.sm.get_logger().warn(f'done_processing_cb for [{self.sm.id.id}], but ROBOT_STATE is not ROBOT_STATE.PROCESS_DONE')
             return response
         
         if self.processing_is_done:
             response.success = False
-            self.sm.get_logger().warn('done processing but robot is already called')
+            self.sm.get_logger().warn(f'done processing but [{self.sm.id.id}] is already called')
             return response
 
-        self.sm.get_logger().info(self.sm.id.id+  ' done_processing_cb')
+        # self.sm.get_logger().info(self.sm.id.id+  ' done_processing_cb')
 
         response.success = True
         self.processing_is_done = True
@@ -770,7 +770,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
         self.sm = sm
     
     def init(self):
-        self.sm.get_logger().info(self.sm.id.id+  ' is done processing at ' + self.sm.current_task.workcell_id.id + ' exiting work cell')
+        # self.sm.get_logger().info(self.sm.id.id+  ' is done processing at ' + self.sm.current_task.workcell_id.id + ' exiting work cell')
         self.robot_exited_client = self.sm.create_client(Trigger, '/'+self.sm.current_task.workcell_id.id + "/robot_exited")
         
         # change_planner_type_request = SetPlannerType.Request()
