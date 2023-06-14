@@ -63,7 +63,7 @@ class MapfPlanner(Node):
                 agent.current_pos = self.map.world_to_map_float(msg.position)
                 return
 
-        self.get_logger().warn(f'Got robot_loc from agent: {msg.id.id}, but it has not joined the planner yet')
+        # self.get_logger().warn(f'Got robot_loc from agent: {msg.id.id}, but it has not joined the planner yet')
         msg.rejoin = True
         reset_msg = spice_mapf_msgs.RobotPoses()
         reset_msg.poses.append(msg)
@@ -75,9 +75,7 @@ class MapfPlanner(Node):
             return response
         
         join_location = self.map.world_to_map(request.robot_pose.position)
-        self.get_logger().info(
-            f'Trying to add agent {request.robot_pose.id.id} at world x,y: {request.robot_pose.position.x:.2f},{request.robot_pose.position.y:.2f}'
-            )
+        # self.get_logger().info(f'Trying to add agent {request.robot_pose.id.id} at world x,y: {request.robot_pose.position.x:.2f},{request.robot_pose.position.y:.2f}')
         
         # check if agent is already present, but old, if so, remove it before adding it
         for agent in self.agents:
@@ -91,14 +89,15 @@ class MapfPlanner(Node):
             response.success = True
         else:
             response.success = False
-            self.get_logger().warn(f'Requested to join planner at: {(request.robot_pose.position.y, request.robot_pose.position.x)}[y,x], but it is not possible currently')
+            self.get_logger().warn(f'Requested to join planner at [x:{request.robot_pose.position.x}, y:{request.robot_pose.position.y}], but it is not possible currently')
         
         return response
     
     def request_goal_cb(self, request: spice_mapf_srvs.RequestGoal.Request, response: spice_mapf_srvs.RequestGoal.Response):
         goal = self.map.world_to_map(request.robot_pose.position)
 
-        self.get_logger().info(f'Got goal world x,y: {request.robot_pose.position.x},{request.robot_pose.position.y}, map y,x: {goal} from agent: {request.robot_pose.id.id}')
+        # self.get_logger().info(f'Got goal world x,y: {request.robot_pose.position.x},{request.robot_pose.position.y}, map y,x: {goal} from agent: {request.robot_pose.id.id}')
+        # self.get_logger().info(f'Got goal map y,x: {goal} from agent: {request.robot_pose.id.id}')
 
         for agent in self.agents:
             if agent.id.id == request.robot_pose.id.id:
@@ -107,7 +106,7 @@ class MapfPlanner(Node):
                     goal_in_world = self.map.map_to_world(goal)
                     response.goal_position.x = goal_in_world[0]
                     response.goal_position.y = goal_in_world[1]
-                    self.get_logger().info(f'Agent: {agent.id.id} tried to navigate to its current position')
+                    self.get_logger().warn(f'Agent: {agent.id.id} tried to navigate to its current position')
                     return response
         
     # def is_goal_free(self, goal: tuple[int,int]) -> bool:
@@ -151,7 +150,7 @@ class MapfPlanner(Node):
                 planning_result = self.planner.replan_agent(agent)
                 if planning_result.value == PlanningResult.SUCCESS or planning_result.value == PlanningResult.WAITING:
                     response.success = True                
-                    self.get_logger().info(f'Accepted goal from agent: {request.robot_pose.id.id}')
+                    # self.get_logger().info(f'Accepted goal from agent: {request.robot_pose.id.id}')
                 else:
                     self.get_logger().warn(f'Unreachable goal requested from agent: {request.robot_pose.id.id}')
                 return response

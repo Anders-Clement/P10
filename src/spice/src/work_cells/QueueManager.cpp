@@ -150,12 +150,12 @@ void QueueManager::fill_queue_points(){
             auto queue_point_occ = queue_point_empty;
             for(queue_point_occ; queue_point_occ != m_queue_points.end(); queue_point_occ++){
                 if(queue_point_occ->occupied){
-                    RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point is %d", queue_point_occ->id);
+                    RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point is [%d]", queue_point_occ->id);
                     queue_point_empty->queued_robot = queue_point_occ->queued_robot;
                     queue_point_empty->occupied = true;
                     queue_point_occ->occupied = false;
                     queue_point_occ->queued_robot = spice_msgs::msg::Id{};
-                    RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point has robot: %s and empty quueue point has robot %s", queue_point_occ->queued_robot.id.c_str(), queue_point_empty->queued_robot.id.c_str());
+                    RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point has robot [%s] and empty queue point has robot [%s]", queue_point_occ->queued_robot.id.c_str(), queue_point_empty->queued_robot.id.c_str());
 
                     break;
                 }

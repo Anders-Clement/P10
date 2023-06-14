@@ -62,9 +62,9 @@ class SwarmManager(Node):
         if found:
             self.destroy_subscription(self.robots_dict[id.id].state_subscriber)
             del self.robots_dict[id.id]
-            STAP_delete_carrier_msg = String()
-            STAP_delete_carrier_msg.data = id.id
-            self.pub_carrier_timeout.publish(STAP_delete_carrier_msg)
+            timeout_carrier_id_msg = String()
+            timeout_carrier_id_msg.data = id.id
+            self.pub_carrier_timeout.publish(timeout_carrier_id_msg)
             self.get_logger().info(f"{id.id} has been removed")
             return True
         return False
@@ -97,9 +97,9 @@ class SwarmManager(Node):
         for robot in self.robots_dict.values():
             if datetime.now() - robot.heartbeat_time > timedelta(seconds=10):
                 idRobotsToDel.append(robot.id)
+                self.get_logger().info(f"Timeout of {robot.id.id}")
 
         for delId in idRobotsToDel:
-            self.get_logger().info(f"Timeout of {delId}")
             self.deregister_robot(delId)
 
     def robot_state_transition_callback(self, msg:RobotStateTransition):
@@ -108,7 +108,7 @@ class SwarmManager(Node):
         new_state = self.robots_dict[msg.id.id].robot_state
         self.robots_dict[msg.id.id].heartbeat_time = datetime.now()
 
-        self.get_logger().info(f'Got state transition event from: {msg.id.id} \n from state: {old_state.state}, to state: {new_state.state}')
+        # self.get_logger().info(f'Got state transition event from: {msg.id.id} \n from state: {old_state.state}, to state: {new_state.state}')
 
     def get_robots_by_type_callback(self, request: GetRobotsByType.Request, response: GetRobotsByType.Response):
         if request.type.type == RobotType.WORK_CELL_ANY:

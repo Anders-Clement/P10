@@ -108,19 +108,15 @@ class MAPFNavigator(Node):
         publish_pos_time = (point2-point1).nanoseconds * 1e-9
         calc_cmd_vel_time = (point3-point2).nanoseconds * 1e-9
         publish_cmd_time = (end-point3).nanoseconds * 1e-9
-        if get_transform_time > 0.01:
-            self.get_logger().warn(f'\nget_transform_time: {get_transform_time} sec')
-        if publish_pos_time > 0.01:
-            self.get_logger().warn(f'\npublish_pos_time: {publish_pos_time} sec')
-        if calc_cmd_vel_time > 0.01:
-            self.get_logger().warn(f'\ncalc_cmd_vel_time: {calc_cmd_vel_time} sec')
-        if publish_cmd_time > 0.01:
-            self.get_logger().warn(f'\npublish_cmd_vel_time: {publish_cmd_time} sec')
+        debug_msg = f'\n\
+        get_transform:        {get_transform_time} \npublish_pos_time:     {publish_pos_time}\n\
+        calc_cmd_vel_time:    {calc_cmd_vel_time}  \npublish_cmd_vel_time: {publish_cmd_time}\n'
 
-        # debug_msg = f'\n\
-# get_transform:        {get_transform_time} \npublish_pos_time:     {publish_pos_time}\n\
-# calc_cmd_vel_time:    {calc_cmd_vel_time}  \npublish_cmd_vel_time: {publish_cmd_time}\n'
-        # self.get_logger().info(debug_msg)
+        if get_transform_time > 0.01 or publish_pos_time > 0.01 or calc_cmd_vel_time > 0.01 or publish_cmd_time > 0.01:
+            self.get_logger().info(debug_msg)
+
+
+
 
         
 
@@ -208,7 +204,7 @@ class MAPFNavigator(Node):
                     return
 
                 if self.current_nav_step_goal != robot_pose:
-                    self.get_logger().info(f'Got new pose from path: {robot_pose.position}')
+                    self.get_logger().info(f'Got new pose from path: {robot_pose.position.x},{robot_pose.position.y}')
                     if self.at_step_goal():
                         self.current_nav_step_goal = robot_pose
                     else:
@@ -249,15 +245,15 @@ class MAPFNavigatorActionServer():
         return result
 
     def navigate_mapf_goal_cb(self, goal_request: spice_mapf_actions.NavigateMapf.Goal):
-        self.nodehandle.get_logger().info(f'Received goal request: {goal_request.goal_pose}')
+        # self.nodehandle.get_logger().info(f'Received goal request: [x:{goal_request.goal_pose.pose.position.x}, y:{goal_request.goal_pose.pose.position.y}]')
         if self.navigator.is_available_for_navigation() and self.current_nav_goal is None:
             return GoalResponse.ACCEPT
         else:
-            self.nodehandle.get_logger().info(f'Rejecting goal, already navigating, or have not joined planner yet')
+            self.nodehandle.get_logger().info(f'Rejecting goal [x:{goal_request.goal_pose.pose.position.x}, y:{goal_request.goal_pose.pose.position.y}], already navigating, or have not joined planner yet')
             return GoalResponse.REJECT            
     
     def navigate_mapf_cb(self, goal_handle: ServerGoalHandle):
-        self.nodehandle.get_logger().info(f'Executing request')
+        # self.nodehandle.get_logger().info(f'Executing request')
             
         goal: spice_mapf_actions.NavigateMapf.Goal = goal_handle.request
         self.current_nav_goal = spice_mapf_msgs.RobotPose()

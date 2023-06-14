@@ -70,7 +70,7 @@ void ReadyForRobotState::try_call_robot()
         std::string call_robot_client_topic_name = m_sm.m_current_robot_work->robot_id.id + "/call_robot";
         m_sm.m_call_robot_client = m_sm.m_nodehandle.create_client<std_srvs::srv::Trigger>(call_robot_client_topic_name);
         
-        RCLCPP_INFO(m_sm.get_logger(), "Calling robot into cell: %s", robot.value().robot_id.id.c_str());
+        RCLCPP_INFO(m_sm.get_logger(), "[%s] Calling robot [%s] into cell", m_sm.get_work_cell_id().id.c_str(), robot.value().robot_id.id.c_str());
         call_robot_request = std::make_shared<std_srvs::srv::Trigger::Request>();
         if (!m_sm.m_call_robot_client->wait_for_service(1s))
         {
@@ -115,7 +115,7 @@ void RobotEnteringState::on_robot_ready_for_processing(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request, 
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) 
 {
-    RCLCPP_INFO(m_sm.m_nodehandle.get_logger(), "robot is ready for processing");
+    // RCLCPP_INFO(m_sm.m_nodehandle.get_logger(), "robot is ready for processing");
     response->success = true;
     m_sm.change_state(WORK_CELL_STATE::PROCESSING);
 }
