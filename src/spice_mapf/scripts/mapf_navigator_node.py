@@ -109,13 +109,13 @@ class MAPFNavigator(Node):
         calc_cmd_vel_time = (point3-point2).nanoseconds * 1e-9
         publish_cmd_time = (end-point3).nanoseconds * 1e-9
         if get_transform_time > 0.01:
-            self.get_logger().info(f'get_transform_time: {get_transform_time}')
+            self.get_logger().warn(f'\nget_transform_time: {get_transform_time} sec')
         if publish_pos_time > 0.01:
-            self.get_logger().info(f'publish_pos_time: {publish_pos_time}')
+            self.get_logger().warn(f'\npublish_pos_time: {publish_pos_time} sec')
         if calc_cmd_vel_time > 0.01:
-            self.get_logger().info(f'calc_cmd_vel_time: {calc_cmd_vel_time}')
+            self.get_logger().warn(f'\ncalc_cmd_vel_time: {calc_cmd_vel_time} sec')
         if publish_cmd_time > 0.01:
-            self.get_logger().info(f'publish_cmd_vel_time: {publish_cmd_time}')
+            self.get_logger().warn(f'\npublish_cmd_vel_time: {publish_cmd_time} sec')
 
         # debug_msg = f'\n\
 # get_transform:        {get_transform_time} \npublish_pos_time:     {publish_pos_time}\n\
