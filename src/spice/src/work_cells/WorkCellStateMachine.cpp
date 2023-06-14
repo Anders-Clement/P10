@@ -74,8 +74,8 @@ void WorkCellStateMachine::change_state(WORK_CELL_STATE new_state)
         RCLCPP_WARN(m_nodehandle.get_logger(), "TRYING TO GO TO SAME STATE AS CURRENT STATE");
         return;
     }
-    RCLCPP_INFO(m_nodehandle.get_logger(), "%s state transition to %d from %d", m_work_cell_name.c_str(),
-            static_cast<int>(new_state), static_cast<int>(m_current_state));
+    // RCLCPP_INFO(m_nodehandle.get_logger(), "%s state transition from %d to %d", m_work_cell_name.c_str(),
+    //         static_cast<int>(m_current_state), static_cast<int>(new_state));
 
     auto robot_state_transition_msg = std::make_unique<spice_msgs::msg::RobotStateTransition>();
     robot_state_transition_msg->old_state = internal_state_to_robot_state(m_current_state);
@@ -142,14 +142,14 @@ void WorkCellStateMachine::on_register_work(
     const std::shared_ptr<spice_msgs::srv::RegisterWork::Request> request, 
     std::shared_ptr<spice_msgs::srv::RegisterWork::Response> response)
 {
-    RCLCPP_INFO(m_nodehandle.get_logger(), "On register work from %s", request->robot_id.id.c_str());
+    // RCLCPP_INFO(m_nodehandle.get_logger(), "On register work from %s", request->robot_id.id.c_str());
     // TODO: do we want to implement simulated checks for work compatibility, queue length etc?
 
     auto queue_point_opt = m_queue_manager->get_queue_point();
 
     if(!queue_point_opt || prepare_move)
     {
-        RCLCPP_INFO(m_nodehandle.get_logger(), "Failed to register work due to no space in queue");
+        RCLCPP_INFO(m_nodehandle.get_logger(), "Failed to register work to robot [%s] due to no space in queue", request->robot_id.id.c_str());
         response->work_is_enqueued = false;
         return;
     }
@@ -183,7 +183,7 @@ void WorkCellStateMachine::on_register_work(
     response->exit_pose.header.frame_id = "map";
     response->exit_pose.header.stamp = m_nodehandle.get_clock()->now();
     
-    RCLCPP_INFO(m_nodehandle.get_logger(), "Enqueued robot: %s", request->robot_id.id.c_str());
+    // RCLCPP_INFO(m_nodehandle.get_logger(), "Enqueued robot: %s", request->robot_id.id.c_str());
 }
 
 void WorkCellStateMachine::on_robot_ready_in_queue(

@@ -334,16 +334,11 @@ public:
             {
                 auto result = future.get();
 
-                std::string tookJob;
-                if (result->job_accepted)
+                if (!result->job_accepted)
                 {
-                    tookJob = "took the job";
+                    RCLCPP_INFO(this->get_logger(), "robot [%s] did not take the job ", robot.id.id.c_str());
                 }
-                else
-                {
-                    tookJob = "did not take the job";
-                }
-                RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "robot %s ", tookJob.c_str());
+
                 robot_clients.find(robot.id.id)->second.reset();
             };
 
