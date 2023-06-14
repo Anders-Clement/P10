@@ -108,11 +108,21 @@ class MAPFNavigator(Node):
         publish_pos_time = (point2-point1).nanoseconds * 1e-9
         calc_cmd_vel_time = (point3-point2).nanoseconds * 1e-9
         publish_cmd_time = (end-point3).nanoseconds * 1e-9
+        if get_transform_time > 0.01:
+            self.get_logger().info(f'get_transform_time: {get_transform_time}')
+        if publish_pos_time > 0.01:
+            self.get_logger().info(f'publish_pos_time: {publish_pos_time}')
+        if calc_cmd_vel_time > 0.01:
+            self.get_logger().info(f'calc_cmd_vel_time: {calc_cmd_vel_time}')
+        if publish_cmd_time > 0.01:
+            self.get_logger().info(f'publish_cmd_vel_time: {publish_cmd_time}')
 
-        debug_msg = f'\n\
-get_transform:        {get_transform_time} \npublish_pos_time:     {publish_pos_time} \n\
-calc_cmd_vel_time:    {calc_cmd_vel_time} \npublish_cmd_vel_time: {publish_cmd_time}\n'
-        self.get_logger().info(debug_msg)
+        # debug_msg = f'\n\
+# get_transform:        {get_transform_time} \npublish_pos_time:     {publish_pos_time}\n\
+# calc_cmd_vel_time:    {calc_cmd_vel_time}  \npublish_cmd_vel_time: {publish_cmd_time}\n'
+        # self.get_logger().info(debug_msg)
+
+        
 
         
     def at_step_goal(self) -> bool:
