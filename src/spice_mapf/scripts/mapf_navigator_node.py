@@ -7,7 +7,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
 from rclpy.time import Time, Duration
-from rclpy.qos import ReliabilityPolicy, QoSProfile
+from rclpy.qos import QoSReliabilityPolicy, QoSHistoryPolicy, QoSProfile
 from rclpy.action import ActionClient, ActionServer, GoalResponse
 from rclpy.action.client import ClientGoalHandle
 from rclpy.action.server import ServerGoalHandle
@@ -42,8 +42,11 @@ class MAPFNavigator(Node):
         self.id = spice_msgs.Id(id=robot_ns, robot_type=spice_msgs.RobotType(type=spice_msgs.RobotType.CARRIER_ROBOT))
         
         self.join_planner_client = self.create_client(spice_mapf_srvs.JoinPlanner, "/join_planner")
-        qos_best_effort = QoSProfile()
-        qos_best_effort.reliability.value = ReliabilityPolicy().BEST_EFFORT
+        qos_best_effort = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=1
+        )
         self.robot_pos_publisher = self.create_publisher(spice_mapf_msgs.RobotPose, "/robot_pos", qos_best_effort)
         self.paths_subscriber = self.create_subscription(spice_mapf_msgs.RobotPoses, "/mapf_paths", self.paths_cb, 10)
         self.cmd_vel_publisher = self.create_publisher(Twist, "cmd_vel", 10)
@@ -105,11 +108,21 @@ class MAPFNavigator(Node):
         publish_pos_time = (point2-point1).nanoseconds * 1e-9
         calc_cmd_vel_time = (point3-point2).nanoseconds * 1e-9
         publish_cmd_time = (end-point3).nanoseconds * 1e-9
+        if get_transform_time > 0.01:
+            self.get_logger().info(f'get_transform_time: {get_transform_time}')
+        if publish_pos_time > 0.01:
+            self.get_logger().info(f'publish_pos_time: {publish_pos_time}')
+        if calc_cmd_vel_time > 0.01:
+            self.get_logger().info(f'calc_cmd_vel_time: {calc_cmd_vel_time}')
+        if publish_cmd_time > 0.01:
+            self.get_logger().info(f'publish_cmd_vel_time: {publish_cmd_time}')
 
-        debug_msg = f'\n\
-get_transform:        {get_transform_time} \npublish_pos_time:     {publish_pos_time} \n\
-calc_cmd_vel_time:    {calc_cmd_vel_time} \npublish_cmd_vel_time: {publish_cmd_time}\n'
-        self.get_logger().info(debug_msg)
+        # debug_msg = f'\n\
+# get_transform:        {get_transform_time} \npublish_pos_time:     {publish_pos_time}\n\
+# calc_cmd_vel_time:    {calc_cmd_vel_time}  \npublish_cmd_vel_time: {publish_cmd_time}\n'
+        # self.get_logger().info(debug_msg)
+
+        
 
         
     def at_step_goal(self) -> bool:

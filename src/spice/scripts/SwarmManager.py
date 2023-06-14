@@ -49,7 +49,7 @@ class SwarmManager(Node):
         statesub = self.create_subscription(RobotStateTransition, topic, self.robot_state_transition_callback, qos)
         robot = RobotData(id, RobotState(state=RobotState.STARTUP), datetime.now(),statesub)
         self.robots_dict[id.id] = robot
-        self.get_logger().info(f"{id} has been registered, subscribing to topic: {topic}")
+        self.get_logger().info(f"{id.id} has been registered, subscribing to topic: {topic}")
         return True
 
     def deregister_robot(self, id:Id) -> bool: # unregister robot and stop subcribing to the that state event topic 
@@ -65,7 +65,7 @@ class SwarmManager(Node):
             STAP_delete_carrier_msg = String()
             STAP_delete_carrier_msg.data = id.id
             self.pub_carrier_timeout.publish(STAP_delete_carrier_msg)
-            self.get_logger().info(f"{id} has been removed")
+            self.get_logger().info(f"{id.id} has been removed")
             return True
         return False
 
