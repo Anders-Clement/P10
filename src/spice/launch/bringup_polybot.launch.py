@@ -60,14 +60,6 @@ def generate_launch_description():
         ),
         Node(
             package='spice',
-            executable='robot_tf_pose',
-            name='robot_pose_relayer',
-            remappings=[("to_tf_global", "/tf"),
-                        ("/tf", "tf"),
-                        ("/tf_static", "tf_static")],
-        ),
-        Node(
-            package='spice',
             executable='polybot_agent.py',
             name='polybot_agent',
             parameters=[
@@ -78,38 +70,6 @@ def generate_launch_description():
       ]
     )
     
-    return LaunchDescription([
-        DeclareLaunchArgument(
-            name='sim',
-            default_value='false',
-            description='Enable use_sime_time to true'
-        ),
-
-        DeclareLaunchArgument(
-            name='map',
-            default_value = DEFAULT_MAP_NAME,
-            description='Map name.yaml'
-        ),
-
-        DeclareLaunchArgument(
-            name='map_path',
-            default_value = default_map_path,
-            description='Map path'
-        ),
-    
-        ns_bringup,
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(nav2_launch_path),
-            launch_arguments={
-                'map_path': map_path,
-                'use_sim_time': LaunchConfiguration("sim"),
-                'namespace': namespace,
-                'use_namespace': use_namespace,
-                'use_composition': 'True',
-                'params_file': nav2_config_path,
-                'namespace' : namespace,
-                'autostart' : 'True',
-                'run_nav_stack' : 'False'
-            }.items()
-        )
+    return LaunchDescription([ 
+        ns_bringup
     ])
