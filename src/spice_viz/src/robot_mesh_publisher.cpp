@@ -10,7 +10,9 @@
 #include "tf2/exceptions.h"
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
+#include "std_msgs/msg/string.hpp"
 
+using std::placeholders::_1;
 using namespace std::chrono_literals;
 
 std::map<uint8_t, std::string> state_to_string{{spice_msgs::msg::RobotState::ERROR, "ERROR"}, {spice_msgs::msg::RobotState::MR_PROCESSING_JOB, "PROCESSING"}, {spice_msgs::msg::RobotState::MR_READY_FOR_JOB, "READY FOR JOB"}, {spice_msgs::msg::RobotState::STARTUP, "STARTUP"}, {spice_msgs::msg::RobotState::WC_READY_FOR_ROBOTS, "READY FOR ROBOT"}};
@@ -46,6 +48,8 @@ public:
             std::make_unique<tf2_ros::Buffer>(this->get_clock());
         tf_listener_ =
             std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+        // sub_remove_object = this->create_subscription<std_msgs::msg::String>("/carrier_timeout", 10, std::bind(&RobotMeshPublisher::remove_marker_cb, this, _1));
     }
 
 private:
@@ -286,24 +290,16 @@ private:
         return marker;
     }
 
-
     void PublishCarrierRobotMesh()
     {
         visualization_msgs::msg::MarkerArray msg;
         geometry_msgs::msg::TransformStamped t;
 
-        for (auto robot : m_carrier_robots)
-        {
-
-            try
-            {
-                t = tf_buffer_->lookupTransform(
-                    "map", robot.id.id + "_base_link",
-                    tf2::TimePointZero);
+        for (auto robot : m_carrier_robots){
+            try{
+                t = tf_buffer_->lookupTransform("map", robot.id.id + "_base_link", tf2::TimePointZero);
             }
-            catch (const tf2::TransformException &ex)
-            {
-
+            catch (const tf2::TransformException &ex){
                 return;
             }
             // mesh transform;
@@ -339,6 +335,7 @@ private:
 
             visualization_msgs::msg::Marker marker;
             marker.ns = robot.id.id;
+            marker.lifetime.sec = 15;
             marker.header.frame_id = "map";
             marker.header.stamp = this->get_clock()->now();
             marker.action = visualization_msgs::msg::Marker::ADD;
@@ -351,7 +348,6 @@ private:
             marker.scale.z = 0.15;
             marker.color = colour;
             msg.markers.push_back(marker);
-            // m_mesh_publisher->publish(marker);
 
             marker.id = 1;
             marker.action = visualization_msgs::msg::Marker::ADD;
@@ -416,6 +412,30 @@ private:
         m_mesh_publisher->publish(msg);
     }
 
+    void remove_marker_cb(std_msgs::msg::String to_delete_id){
+        std::string robot_to_delete = to_delete_id.data;
+        RCLCPP_INFO(this->get_logger(), "remove mesh with ID: [%s]", robot_to_delete.c_str());
+
+        visualization_msgs::msg::Marker marker;
+        visualization_msgs::msg::MarkerArray msg;
+        marker.ns = robot_to_delete;
+        marker.id = 0;
+        // marker.header.frame_id = "map";
+        marker.header.stamp = this->get_clock()->now();
+        marker.action = visualization_msgs::msg::Marker::DELETE;
+        // marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
+        // marker.mesh_resource = work_cell_mesh;
+        // marker.scale.x = 0.0;
+        // marker.scale.y = 0.0;
+        // marker.scale.z = 0.0;
+        // marker.pose.position.x = 0.0;
+        // marker.pose.position.y = 0.0;
+        // marker.pose.position.z = 0.0;
+        marker.color.a = 0.0; marker.color.r = 0.0; marker.color.g = 0.0; marker.color.b = 0.0;
+        msg.markers.push_back(marker);
+        m_mesh_publisher->publish(msg);
+    }
+
     std::vector<spice_msgs::msg::Robot> m_carrier_robots;
     std::vector<spice_msgs::msg::Robot> m_work_cells;
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> m_mesh_publisher;
@@ -431,6 +451,8 @@ private:
 
     std::string carrier_robot_mesh;
     std::string work_cell_mesh;
+
+    std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> sub_remove_object;
 };
 
 
