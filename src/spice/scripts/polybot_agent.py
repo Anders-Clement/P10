@@ -6,6 +6,7 @@ import threading
 import dataclasses
 import struct
 import rclpy
+from rclpy.qos import QoSReliabilityPolicy, QoSHistoryPolicy, QoSProfile
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, TransformStamped
 from nav_msgs.msg import Odometry
@@ -91,8 +92,13 @@ class ArduinoSerial:
 class PolybotBaseNode(Node):
     def __init__(self):
         super().__init__('polybot_base_node')
+        qos_best_effort = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=1
+        )
         self.odom_publisher = self.create_publisher(Odometry, 'odom', 10)
-        self.cmd_vel_sub = self.create_subscription(Twist, 'cmd_vel', self.cmd_vel_cb, 10)
+        self.cmd_vel_sub = self.create_subscription(Twist, 'cmd_vel', self.cmd_vel_cb, qos_best_effort)
         self.tf_publisher = self.create_publisher(TFMessage, 'tf', 10)
         self.declare_parameter('serial_port', '/dev/ttyACM0')
         port = self.get_parameter('serial_port').value
