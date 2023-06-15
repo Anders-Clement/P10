@@ -39,6 +39,7 @@ class MapfPlanner(Node):
         self.visualizer_timer = self.create_timer(0.1, self.visualizer.visualize)
         self.GOAL_TOLERANCE = 0.25
         self.declare_parameter('goal_tolerance', self.GOAL_TOLERANCE)
+        self.declare_parameter('print_non_ready_agents', False)
 
         self.timestep = 0
         self.time_interpolated = 0
@@ -255,8 +256,10 @@ class MapfPlanner(Node):
                 non_ready_agents.append((agent, dist))
             else:
                 ready_agents.append((agent,dist))
-        # if not len(non_ready_agents) is 0: 
-        #     self.get_logger().info(f'Non ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in non_ready_agents]}')                
+        if len(non_ready_agents) > 0: 
+            debug_print = self.get_parameter('print_non_ready_agents').value
+            if debug_print:
+                self.get_logger().info(f'Non ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in non_ready_agents]}')                
         #self.get_logger().info(f'Ready agents: {[a.debug_str(self) + f" dist: {dist:.2f}" for a,dist in ready_agents]}')                
         
         return len(non_ready_agents) == 0    
