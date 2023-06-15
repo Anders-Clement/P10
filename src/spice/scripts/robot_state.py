@@ -276,7 +276,7 @@ class ProcessRegisterWorkState(RobotStateTemplate):
         self.register_work_future.add_done_callback(self.register_work_cb)
 
     def register_work_cb(self, future:Future):
-        self.sm.get_logger().info(self.sm.id.id+  ' register_work_cb')
+        # self.sm.get_logger().info(self.sm.id.id+  ' register_work_cb')
         response : RegisterWork.Response = future.result()
         if response.work_is_enqueued:
             self.sm.current_work_cell_info = response
@@ -349,7 +349,7 @@ class EnqueuedState(RobotStateTemplate):
 
         current_task: AllocWorkCell.Response = self.sm.current_task
         queue_points_topic_name = "/" + current_task.workcell_id.id + "/queue_points"
-        self.sm.get_logger().info(f'queue_points:topic: {queue_points_topic_name}')
+        # self.sm.get_logger().info(f'queue_points:topic: {queue_points_topic_name}')
         self.queue_points_sub = self.sm.create_subscription(
             QueuePoints, 
             queue_points_topic_name,
@@ -580,7 +580,7 @@ class EnterWorkCellState(RobotStateTemplate):
     def on_cell_entry_nav_done(self, future: Future):
         nav_result = future.result()
         nav_goal_result: GoalStatus = nav_result.status
-        self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
+        # self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             # change_planner_type_request = SetPlannerType.Request()
             # change_planner_type_request.planner_type.type = PlannerType.PLANNER_STRAIGHT_LINE
@@ -667,7 +667,7 @@ class EnterWorkCellState(RobotStateTemplate):
 
     def on_nav_done(self, future: Future):
         nav_goal_result: GoalStatus = future.result().status
-        self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
+        # self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.sm.change_state(ROBOT_STATE.READY_FOR_PROCESS)
         else:
@@ -811,7 +811,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
 
     def on_nav_done(self, future: Future):
         nav_goal_result: GoalStatus = future.result().status
-        self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
+        # self.sm.get_logger().info('Navigation result: ' + str(nav_goal_result))
         if nav_goal_result == GoalStatus.STATUS_SUCCEEDED:
             self.call_robot_exited_cell()
         else:
