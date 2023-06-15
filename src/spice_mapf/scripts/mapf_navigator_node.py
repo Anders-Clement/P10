@@ -108,11 +108,11 @@ class MAPFNavigator(Node):
         publish_pos_time = (point2-point1).nanoseconds * 1e-9
         calc_cmd_vel_time = (point3-point2).nanoseconds * 1e-9
         publish_cmd_time = (end-point3).nanoseconds * 1e-9
-        debug_msg = f'\n\
-        get_transform:        {get_transform_time} \npublish_pos_time:     {publish_pos_time}\n\
-        calc_cmd_vel_time:    {calc_cmd_vel_time}  \npublish_cmd_vel_time: {publish_cmd_time}\n'
+        debug_msg = f'\
+        \nget_transform:     {"{:.5f}".format(get_transform_time)}  publish_pos_time:     {"{:.5f}".format(publish_pos_time)}\
+        \ncalc_cmd_vel_time: {"{:.5f}".format(calc_cmd_vel_time)}   publish_cmd_vel_time: {"{:.5f}".format(publish_cmd_time)}'
 
-        if get_transform_time > 0.01 or publish_pos_time > 0.01 or calc_cmd_vel_time > 0.01 or publish_cmd_time > 0.01:
+        if (get_transform_time + publish_pos_time + calc_cmd_vel_time + publish_cmd_time) > 0.09:
             self.get_logger().info(debug_msg)
 
 
@@ -230,7 +230,7 @@ class MAPFNavigatorActionServer():
         request_goal_future = self.request_goal_client.call_async(request_goal)
         rate = self.nodehandle.create_rate(10, self.nodehandle.get_clock())
         TIMEOUT = 5.0
-        self.nodehandle.get_logger().info(f'Requesting goal')
+        # self.nodehandle.get_logger().info(f'Requesting goal')
         start_time = self.nodehandle.get_clock().now()
         while not request_goal_future.done():
             rate.sleep()
@@ -283,9 +283,9 @@ class MAPFNavigatorActionServer():
                 break
 
         self.nodehandle.get_logger().info(
-            f'Requested goal: {self.current_nav_goal.position}, \
-                going to: {result.goal_position}, \
-                robot is starting at: {self.navigator.current_transform.transform.translation}')
+            f'Requested goal: [{self.current_nav_goal.position.x}, {self.current_nav_goal.position.y}], '
+                + f'going to: [{result.goal_position.x}, {result.goal_position.x}], '
+                + f'robot is starting at: [{"{:.2f}".format(self.navigator.current_transform.transform.translation.x)}, {"{:.2f}".format(self.navigator.current_transform.transform.translation.y)}]')
         self.current_nav_goal.position = result.goal_position
         rate = self.nodehandle.create_rate(5, self.nodehandle.get_clock())
 
