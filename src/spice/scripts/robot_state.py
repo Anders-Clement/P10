@@ -259,23 +259,27 @@ class ProcessRegisterWorkState(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.ERROR)
         self.register_work_client = self.sm.create_client(
                     RegisterWork, '/'+self.sm.current_task.workcell_id.id+'/register_work')
+        
+        self.retry_register_work_timer = self.sm.create_timer(1.0, self.register_work)
+        self.retry_register_work_timer.cancel()
         self.register_work_future = None
         self.register_work()
 
     def register_work(self):
+        self.retry_register_work_timer.cancel()
         register_work_request = RegisterWork.Request()
         register_work_request.robot_id = self.sm.id
         register_work_request.work.type = self.sm.current_task.workcell_id.robot_type
         register_work_request.work.info = "register work pls"
 
-        if not self.register_work_client.wait_for_service(timeout_sec=1.0):
-            self.sm.get_logger().info("register work server not avialable")
-            return
+        while not self.register_work_client.wait_for_service(timeout_sec=1.0):
+            self.sm.get_logger().info("register work server not avialable, retrying...")
         
         self.register_work_future = self.register_work_client.call_async(register_work_request)
         self.register_work_future.add_done_callback(self.register_work_cb)
 
     def register_work_cb(self, future:Future):
+        self.register_work_future = None
         # self.sm.get_logger().info(self.sm.id.id+  ' register_work_cb')
         response : RegisterWork.Response = future.result()
         if response.work_is_enqueued:
@@ -290,8 +294,8 @@ class ProcessRegisterWorkState(RobotStateTemplate):
             self.sm.change_state(ROBOT_STATE.ENQUEUED)
             
         else:
-            self.sm.get_logger().warn(f"Could not register work at work cell: {self.sm.current_task.workcell_id.id}, going to ERROR!")
-            self.sm.change_state(ROBOT_STATE.ERROR)       
+            self.sm.get_logger().warn(f"Could not register work at work cell: {self.sm.current_task.workcell_id.id}, retrying in 1 seconds")
+            self.retry_register_work_timer.reset()  
 
     def deinit(self):
 
@@ -300,6 +304,7 @@ class ProcessRegisterWorkState(RobotStateTemplate):
                 self.register_work_future.cancel()
         
         self.register_work_client.destroy()
+        self.sm.destroy_timer(self.retry_register_work_timer)
 
 
 class MovingState(RobotStateTemplate):
