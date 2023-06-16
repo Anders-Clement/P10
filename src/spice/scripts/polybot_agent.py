@@ -6,6 +6,7 @@ import threading
 import dataclasses
 import struct
 import rclpy
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import QoSReliabilityPolicy, QoSHistoryPolicy, QoSProfile
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, TransformStamped
@@ -97,39 +98,19 @@ class PolybotBaseNode(Node):
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=1
         )
-        self.odom_publisher = self.create_publisher(Odometry, 'odom', 10)
         self.cmd_vel_sub = self.create_subscription(Twist, 'cmd_vel', self.cmd_vel_cb, qos_best_effort)
-        self.tf_publisher = self.create_publisher(TFMessage, 'tf', 10)
+        self.tf_publisher = self.create_publisher(TFMessage, 'tf', 1)
         self.declare_parameter('serial_port', '/dev/ttyACM0')
         port = self.get_parameter('serial_port').value
         self.get_logger().info(f'Connecting to serial port: {port}')
 
         self.arduino = ArduinoSerial(port, self.incoming_msg_cb, self.get_logger())
 
-        self.num_incoming_msgs = -1
-
     def incoming_msg_cb(self, message: RobotMeasurementPacket):
-        self.num_incoming_msgs += 1
-        # only publish odom and tf at 10 Hz
-        # if self.num_incoming_msgs % 5 != 0:
-        #     return
-        odom_msg = Odometry()
-        now = self.get_clock().now()
-        odom_msg.header.stamp = now.to_msg()
-        odom_msg.twist.twist.linear.x = message.wheel_lin_vel
-        odom_msg.twist.twist.angular.z = message.imu_yaw_rate
-        odom_msg.pose.pose.position.x = message.odom_x_pos
-        odom_msg.pose.pose.position.y = message.odom_y_pos
         q = quaternion_from_euler(0,0, message.odom_yaw)
-        odom_msg.pose.pose.orientation.x = q[0]
-        odom_msg.pose.pose.orientation.y = q[1]
-        odom_msg.pose.pose.orientation.z = q[2]
-        odom_msg.pose.pose.orientation.w = q[3]
-        
-        self.odom_publisher.publish(odom_msg)
         tf_msg = TFMessage()
         transform = TransformStamped()
-        transform.header = odom_msg.header
+        transform.header.stamp = self.get_clock().now().to_msg()
         transform.header.frame_id = 'odom'
         transform.child_frame_id = 'base_footprint'
         transform.transform.translation.x = message.odom_x_pos
@@ -147,6 +128,11 @@ class PolybotBaseNode(Node):
 if __name__ == "__main__":
     rclpy.init()
     node = PolybotBaseNode()
-    rclpy.spin(node)
+    executor = MultiThreadedExecutor(num_threads=2)
+    executor.add_node(node)
+    try:
+        executor.spin()
+    except KeyboardInterrupt:
+        pass
     node.arduino.stop()
     rclpy.shutdown() 
