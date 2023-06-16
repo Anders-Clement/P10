@@ -211,29 +211,29 @@ public:
             
             //drill
             poses[1].rotation.w = 0.0; //0.723702;
-            poses[1].rotation.x = 0;
-            poses[1].rotation.y = 0;
+            poses[1].rotation.x = 0.0;
+            poses[1].rotation.y = 0.0;
             poses[1].rotation.z = 1.0; //0.690113;
-            poses[1].translation.x = 6*CELL_SIZE;
+            poses[1].translation.x = 7*CELL_SIZE;
             poses[1].translation.y = 8*CELL_SIZE;
             poses[1].translation.z = 0;
 
             //lid
-            poses[2].rotation.w = 0.7;
+            poses[2].rotation.w = 1.0;
             poses[2].rotation.x = 0.0;
             poses[2].rotation.y = 0.0;
-            poses[2].rotation.z = 0.7;
-            poses[2].translation.x = 6*CELL_SIZE;
-            poses[2].translation.y = 4*CELL_SIZE;
+            poses[2].rotation.z = 0.0;
+            poses[2].translation.x = 4*CELL_SIZE;
+            poses[2].translation.y = 3*CELL_SIZE;
             poses[2].translation.z = 0.0;
             
             //backcover
-            poses[3].rotation.w = 0.7;
+            poses[3].rotation.w = 0.0;
             poses[3].rotation.x = 0.0;
             poses[3].rotation.y = 0.0;
-            poses[3].rotation.z = -0.7;
-            poses[3].translation.x = 3*CELL_SIZE;
-            poses[3].translation.y = 4*CELL_SIZE;
+            poses[3].rotation.z = 1.0;
+            poses[3].translation.x = 11*CELL_SIZE;
+            poses[3].translation.y = 8*CELL_SIZE;
             poses[3].translation.z = 0;
 
             // lid 2
@@ -459,19 +459,20 @@ public:
                 "back_cover_cell", 
                 *this,
                 generator.work_cell_locations(),
-                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)},
-            {"lid_cell2",
-            std::make_shared<WorkCellStateMachine>(
-                "lid_cell2", 
-                *this,
-                generator.work_cell_locations(), 
-                spice_msgs::msg::RobotType::WORK_CELL_TOP)},
-            {"back_cover_cell2",
-            std::make_shared<WorkCellStateMachine>(
-                "back_cover_cell2", 
-                *this,
-                generator.work_cell_locations(),
                 spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)}
+                // ,
+            // {"lid_cell2",
+            // std::make_shared<WorkCellStateMachine>(
+            //     "lid_cell2", 
+            //     *this,
+            //     generator.work_cell_locations(), 
+            //     spice_msgs::msg::RobotType::WORK_CELL_TOP)},
+            // {"back_cover_cell2",
+            // std::make_shared<WorkCellStateMachine>(
+            //     "back_cover_cell2", 
+            //     *this,
+            //     generator.work_cell_locations(),
+            //     spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)}
         };
 
         delete_wc_service = create_service<spice_msgs::srv::DeleteWorkCell>("delete_workcell", std::bind(&WorkCellSimulator::Remove_workcell, this,
