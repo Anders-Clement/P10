@@ -180,7 +180,7 @@ class MAPFNavigator(Node):
 
     def get_robot_transform(self) -> bool:
         try:
-            from_frame_rel = "base_link"
+            from_frame_rel = self.id.id + "_base_link"
             to_frame_rel = "map"
             self.current_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, Time())
             return True

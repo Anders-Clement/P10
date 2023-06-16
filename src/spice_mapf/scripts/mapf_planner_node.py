@@ -62,6 +62,7 @@ class MapfPlanner(Node):
         for agent in self.agents:
             if agent.id == msg.id:
                 agent.current_pos = self.map.world_to_map_float(msg.position)
+                agent.current_heading = msg.heading
                 return
 
         # self.get_logger().warn(f'Got robot_loc from agent: {msg.id.id}, but it has not joined the planner yet')
@@ -283,6 +284,9 @@ class MapfPlanner(Node):
     def add_agent(self, loc: tuple[int,int], robot_pose: spice_mapf_msgs.RobotPose, is_simulated=False):
         self.get_logger().info(f"Adding agent at position: {loc}, world: {self.map.map_to_world(loc)}, is_simulated: {is_simulated}")
         self.agents.append(Agent(loc, robot_pose.heading, robot_pose.id, is_simulated))
+        Colors = ['yellow', 'blue', 'orange', 'pink', 'magenta', 'black', 'brown', 'lime']
+        color = Colors[len(self.agents) % len(Colors)]
+        self.agents[-1].color = color
 
     def add_random_agent(self):
         num_tries = 0

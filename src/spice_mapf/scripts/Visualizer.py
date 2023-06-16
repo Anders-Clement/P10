@@ -10,6 +10,8 @@ import spice_msgs.msg as spice_msgs
 from Agent import Agent
 from Map import Map
 
+import tf_transformations
+
 
 class Visualizer:
     def __init__(self, map: Map, agents: list[Agent], workcell, use_openCV = False) -> None:
@@ -172,6 +174,16 @@ class Visualizer:
         for num_agent, agent in enumerate(self.agents):
             color = colors[num_agent%len(colors)]
             cv2.circle(self.img, (int(agent.current_pos[1]*DRAW_GRID)+HALF_DRAW_GRID, int(agent.current_pos[0]*DRAW_GRID)+HALF_DRAW_GRID), HALF_DRAW_GRID, color,-1)
+            _,_, yaw = tf_transformations.euler_from_quaternion([agent.current_heading.x, agent.current_heading.y, agent.current_heading.z, agent.current_heading.w])
+            robot_pos = (int(agent.current_pos[1]*DRAW_GRID + 0.5*DRAW_GRID), int(agent.current_pos[0]*DRAW_GRID + 0.5*DRAW_GRID))
+            robot_heading_pos = (int(agent.current_pos[1]*DRAW_GRID + 0.5*DRAW_GRID + np.cos(yaw)*DRAW_GRID*0.5), int(agent.current_pos[0]*DRAW_GRID + 0.5*DRAW_GRID - np.sin(yaw)*DRAW_GRID*0.5))
+            cv2.line(self.img,
+                        robot_pos, 
+                        robot_heading_pos,
+                        (0,0,0),
+                        int(1)
+                )
+
 
         cv2.imshow("mapf", self.img)
         cv2.waitKey(25)

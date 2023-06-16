@@ -33,7 +33,7 @@ class MAPFController():
         self.goal_tolerance = self.nodehandle.get_parameter('goal_tolerance').get_parameter_value().double_value
 
         try:
-            transform = self.tf_buffer.lookup_transform("base_link",
+            transform = self.tf_buffer.lookup_transform(self.nodehandle.id.id + "_base_link",
                                                         "map",
                                                         Time())
             goal_in_base_link = tf2_geometry_msgs.do_transform_pose(goal_pose.pose, transform)
