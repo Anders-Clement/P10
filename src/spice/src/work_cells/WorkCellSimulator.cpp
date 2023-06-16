@@ -1,8 +1,12 @@
 #include <vector>
+#include <map>
 #include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
 #include "geometry_msgs/msg/transform.hpp"
 #include "spice/work_cells/work_cell_state_machine.hpp"
-
+#include "spice_msgs/srv/delete_work_cell.hpp"
+#include "spice_msgs/srv/create_work_cell.hpp"
+using namespace std::chrono_literals;
 class PositionGenerator
 {
 public:
@@ -432,42 +436,85 @@ public:
         //geometry_msgs::msg::Transform transform, spice_msgs::msg::RobotType::_type_type robot_type
         PositionGenerator generator(3, 3, 2, MAP_NAME);
         work_cell_state_machines = {
+            {"fuses_cell",
             std::make_shared<WorkCellStateMachine>(
                 "fuses_cell", 
                 *this,
                 generator.work_cell_locations(), 
-                spice_msgs::msg::RobotType::WORK_CELL_FUSES),
+                spice_msgs::msg::RobotType::WORK_CELL_FUSES)},
+            {"drill_cell",
             std::make_shared<WorkCellStateMachine>(
                 "drill_cell", 
                 *this,
                 generator.work_cell_locations(),
-                spice_msgs::msg::RobotType::WORK_CELL_DRILL),
+                spice_msgs::msg::RobotType::WORK_CELL_DRILL)},
+            {"lid_cell",
             std::make_shared<WorkCellStateMachine>(
                 "lid_cell", 
                 *this,
                 generator.work_cell_locations(), 
-                spice_msgs::msg::RobotType::WORK_CELL_TOP),
+                spice_msgs::msg::RobotType::WORK_CELL_TOP)},
+            {"back_cover_cell",
             std::make_shared<WorkCellStateMachine>(
                 "back_cover_cell", 
                 *this,
                 generator.work_cell_locations(),
-                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER),
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)},
+            {"lid_cell2",
             std::make_shared<WorkCellStateMachine>(
                 "lid_cell2", 
                 *this,
                 generator.work_cell_locations(), 
-                spice_msgs::msg::RobotType::WORK_CELL_TOP),
+                spice_msgs::msg::RobotType::WORK_CELL_TOP)},
+            {"back_cover_cell2",
             std::make_shared<WorkCellStateMachine>(
                 "back_cover_cell2", 
                 *this,
                 generator.work_cell_locations(),
-                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)}
         };
+
+        delete_wc_service = create_service<spice_msgs::srv::DeleteWorkCell>("delete_workcell", std::bind(&WorkCellSimulator::Remove_workcell, this,
+                                std::placeholders::_1, std::placeholders::_2));
+
+        create_wc_service = create_service<spice_msgs::srv::CreateWorkCell>("create_workcell", std::bind(&WorkCellSimulator::Add_workcell, this,
+                                std::placeholders::_1, std::placeholders::_2));
     }
+    void Add_workcell(std::shared_ptr<spice_msgs::srv::CreateWorkCell::Request> request,
+          std::shared_ptr<spice_msgs::srv::CreateWorkCell::Response> response)
+    {
+        if (work_cell_state_machines.find(request->id.id) == work_cell_state_machines.end()) {
+            work_cell_state_machines[request->id.id] = std::make_shared<WorkCellStateMachine>(request->id.id, *this, request->position, request->id.robot_type.type);
+            response->succes = true;
+        }
+        else{
+            RCLCPP_WARN(get_logger(), "[WorkCellSimulator] Cannot create new workcell, workcell already exists");
+            response->succes = false;
+        }
+        return;
+    }
+
+    void Remove_workcell(std::shared_ptr<spice_msgs::srv::DeleteWorkCell::Request> request,
+                         std::shared_ptr<spice_msgs::srv::DeleteWorkCell::Response> response)
+    {
+
+        if (work_cell_state_machines.find(request->id) != work_cell_state_machines.end())
+        {
+            work_cell_state_machines.erase(request->id);
+            response->succes = true;
+        }
+        else
+        {
+            RCLCPP_WARN(get_logger(), "[WorkCellSimulator] Workcell doesnt exist");
+            response->succes = false;
+        }
+    }
+
     std::string MAP_NAME;
 private:
-    std::vector<std::shared_ptr<WorkCellStateMachine>> work_cell_state_machines;
-    
+    std::map<std::string, std::shared_ptr<WorkCellStateMachine>> work_cell_state_machines;
+    rclcpp::Service<spice_msgs::srv::DeleteWorkCell>::SharedPtr delete_wc_service;
+    rclcpp::Service<spice_msgs::srv::CreateWorkCell>::SharedPtr create_wc_service;
 };
 
 int main(int argc, char** argv)

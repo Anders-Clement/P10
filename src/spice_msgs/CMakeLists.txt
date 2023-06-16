@@ -46,6 +46,8 @@ set(srv_files
   "srv/GetPlan.srv"
   "srv/SetPlannerType.srv"
   "srv/RobotReady.srv"
+  "srv/CreateWorkCell.srv"
+  "srv/DeleteWorkCell.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
