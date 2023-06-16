@@ -26,9 +26,9 @@
 #include "spice_msgs/srv/get_robots_by_type.hpp"
 #include "spice/work_cells/work_cell_queue_position_manager.hpp"
 
-#define ROBOT_RADIUS 0.25
-#define WORKCELL_RADIUS 0.25
-#define STEP_DISTANCE 0.5
+#define STEP_DISTANCE 0.65
+#define ROBOT_RADIUS STEP_DISTANCE/2.0
+#define WORKCELL_RADIUS ROBOT_RADIUS
 #define ROBOT_HEARTBEAT_TIMEOUT_PERIOD 5.0
 
 enum class WORK_CELL_STATE : uint8_t{
