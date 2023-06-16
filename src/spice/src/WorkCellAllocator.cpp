@@ -19,7 +19,7 @@
 #include "spice_msgs/msg/queue_occupancy.hpp"
 #include "rclcpp/qos.hpp"
 
-
+#define WORKCELL_QUEUE_SIZE 4
 
 using namespace std::chrono_literals;
 
@@ -83,6 +83,7 @@ private:
   void nrEnqueued_cb(spice_msgs::msg::QueueOccupancy::SharedPtr msg)
   {
     occupancy_dict.insert_or_assign(msg->id.id, msg->enqueued);
+    allocated_occupancy_dict.insert_or_assign(msg->id.id, 0);
   }
 
   void OnWorkCell(const std::shared_ptr<spice_msgs::srv::AllocWorkCell::Request> request,
@@ -98,6 +99,8 @@ private:
     spice_msgs::msg::Id workcellType;
 
     for(auto workcell : workcells){
+      if(occupancy_dict.at(workcell.id.id) > WORKCELL_QUEUE_SIZE)
+        continue;
       for(auto type : request.get()->robot_types ){ // check if robot is of requested type
         if(type.type == workcell.id.robot_type.type){
           
@@ -113,7 +116,7 @@ private:
           }
 
           float dist = sqrt(std::pow(t.transform.translation.x, 2) + std::pow(t.transform.translation.y, 2) + std::pow(t.transform.translation.z, 2));
-          uint8_t enqueued = occupancy_dict.at(workcell.id.id);
+          uint8_t enqueued = occupancy_dict.at(workcell.id.id) + allocated_occupancy_dict.at(workcell.id.id);
 
           if (enqueued < minEnqueued )
           {
@@ -133,7 +136,7 @@ private:
     }
     if (!workcellType.id.empty()){
       RCLCPP_INFO(this->get_logger(), "Allocating WS [%s] with queue [%d] and distance [%f] to robot [%s]", workcellType.id.c_str(), minEnqueued, round(minDist), request->robot_id.id.c_str()); 
-      occupancy_dict.at(workcellType.id) += 1;
+      allocated_occupancy_dict.at(workcellType.id) += 1;
     }
     else{
       RCLCPP_WARN(this->get_logger(), "Could not find a viable WS to allocate to robot [%s]", request->robot_id.id.c_str()); 
@@ -157,6 +160,7 @@ private:
   rclcpp::Client<spice_msgs::srv::GetRobotsByType>::SharedPtr get_robots_cli;
   std::vector<spice_msgs::msg::Robot> workcells; //list of all robots including workcells
   std::map<std::string,uint8_t> occupancy_dict;
+  std::map<std::string,uint8_t> allocated_occupancy_dict;
 };
 
 int main(int argc, char *argv[])
