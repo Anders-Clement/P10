@@ -368,6 +368,7 @@ class WorkcellObstacle():
     def get_robots_cb(self, future: Future):
         result: spice_srvs.GetRobotsByType.Response = future.result()
         robots: list[spice_msgs.Robot] = result.robots
+        self.workcell_ids.clear()
         for robot in robots:
             if robot.id not in self.workcell_ids:
                 self.workcell_ids.append(robot.id)

@@ -173,7 +173,7 @@ void RobotExitingState::init()
         rclcpp::Duration::from_seconds(30.0),
         [this]() -> void {
             this->max_exiting_timer->cancel();
-            m_sm.change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
+            //m_sm.change_state(WORK_CELL_STATE::READY_FOR_ROBOT);
         }
     );
 }

@@ -1,8 +1,12 @@
 #include <vector>
+#include <map>
 #include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
 #include "geometry_msgs/msg/transform.hpp"
 #include "spice/work_cells/work_cell_state_machine.hpp"
-
+#include "spice_msgs/srv/delete_work_cell.hpp"
+#include "spice_msgs/srv/create_work_cell.hpp"
+using namespace std::chrono_literals;
 class PositionGenerator
 {
 public:
@@ -136,6 +140,118 @@ public:
             poses[5].rotation.z = -0.7;
             poses[5].translation.x = 3.0;
             poses[5].translation.y = 3.5;
+            poses[5].translation.z = 0;
+        }
+        else if(m_map_name == "low_res/A4_75.yaml")
+        {
+            // fuse
+            poses[0].rotation.w = 0.0; //0.709132;
+            poses[0].rotation.x = 0.0;
+            poses[0].rotation.y = 0.0;
+            poses[0].rotation.z = 1.0; //0.7050776;
+            poses[0].translation.x = 2.25;
+            poses[0].translation.y = 5.25;
+            poses[0].translation.z = 0.0;
+            
+            //drill
+            poses[1].rotation.w = 0.0; //0.723702;
+            poses[1].rotation.x = 0;
+            poses[1].rotation.y = 0;
+            poses[1].rotation.z = 1.0; //0.690113;
+            poses[1].translation.x = 5.25;
+            poses[1].translation.y = 5.25;
+            poses[1].translation.z = 0;
+
+            //lid
+            poses[2].rotation.w = 0.7;
+            poses[2].rotation.x = 0.0;
+            poses[2].rotation.y = 0.0;
+            poses[2].rotation.z = 0.7;
+            poses[2].translation.x = 3.75;
+            poses[2].translation.y = 3.0;
+            poses[2].translation.z = 0.0;
+            
+            //backcover
+            poses[3].rotation.w = 0.7;
+            poses[3].rotation.x = 0.0;
+            poses[3].rotation.y = 0.0;
+            poses[3].rotation.z = -0.7;
+            poses[3].translation.x = 1.5;
+            poses[3].translation.y = 3.0;
+            poses[3].translation.z = 0;
+
+            // lid 2
+            poses[4].rotation.w = 0.0;
+            poses[4].rotation.x = 0.0;
+            poses[4].rotation.y = 0.0;
+            poses[4].rotation.z = 1.0;
+            poses[4].translation.x = 7.5;
+            poses[4].translation.y = 5.25;
+            poses[4].translation.z = 0;
+
+            // poses[5].rotation.w = 0.7;
+            // poses[5].rotation.x = 0.0;
+            // poses[5].rotation.y = 0.0;
+            // poses[5].rotation.z = -0.7;
+            // poses[5].translation.x = 3.0;
+            // poses[5].translation.y = 3.5;
+            // poses[5].translation.z = 0;
+        }
+        else if(m_map_name == "low_res/A4_65.yaml" || m_map_name == "low_res/A4_new_65.yaml")
+        {
+            double CELL_SIZE = 0.65;
+            // fuse
+            poses[0].rotation.w = 0.7; //0.709132;
+            poses[0].rotation.x = 0.0;
+            poses[0].rotation.y = 0.0;
+            poses[0].rotation.z = -0.7; //0.7050776;
+            poses[0].translation.x = 3*CELL_SIZE;
+            poses[0].translation.y = 7*CELL_SIZE;
+            poses[0].translation.z = 0.0;
+            
+            //drill
+            poses[1].rotation.w = 0.0; //0.723702;
+            poses[1].rotation.x = 0.0;
+            poses[1].rotation.y = 0.0;
+            poses[1].rotation.z = 1.0; //0.690113;
+            poses[1].translation.x = 7*CELL_SIZE;
+            poses[1].translation.y = 8*CELL_SIZE;
+            poses[1].translation.z = 0;
+
+            //lid
+            poses[2].rotation.w = 1.0;
+            poses[2].rotation.x = 0.0;
+            poses[2].rotation.y = 0.0;
+            poses[2].rotation.z = 0.0;
+            poses[2].translation.x = 4*CELL_SIZE;
+            poses[2].translation.y = 3*CELL_SIZE;
+            poses[2].translation.z = 0.0;
+            
+            //backcover
+            poses[3].rotation.w = 0.0;
+            poses[3].rotation.x = 0.0;
+            poses[3].rotation.y = 0.0;
+            poses[3].rotation.z = 1.0;
+            poses[3].translation.x = 11*CELL_SIZE;
+            poses[3].translation.y = 8*CELL_SIZE;
+            poses[3].translation.z = 0;
+
+            // lid 2
+            poses[4].rotation.w = 0.0;
+            poses[4].rotation.x = 0.0;
+            poses[4].rotation.y = 0.0;
+            poses[4].rotation.z = 1.0;
+            poses[4].translation.x = 12*CELL_SIZE;
+            poses[4].translation.y = 8*CELL_SIZE;
+            poses[4].translation.z = 0;
+
+            // backcover 2
+            poses[5].rotation.w = 0.0;
+            poses[5].rotation.x = 0.0;
+            poses[5].rotation.y = 0.0;
+            poses[5].rotation.z = 1.0;
+            poses[5].translation.x = 9*CELL_SIZE;
+            poses[5].translation.y = 8*CELL_SIZE;
             poses[5].translation.z = 0;
         }
         // // C4 POSES
@@ -320,42 +436,86 @@ public:
         //geometry_msgs::msg::Transform transform, spice_msgs::msg::RobotType::_type_type robot_type
         PositionGenerator generator(3, 3, 2, MAP_NAME);
         work_cell_state_machines = {
+            {"fuses_cell",
             std::make_shared<WorkCellStateMachine>(
                 "fuses_cell", 
                 *this,
                 generator.work_cell_locations(), 
-                spice_msgs::msg::RobotType::WORK_CELL_FUSES),
+                spice_msgs::msg::RobotType::WORK_CELL_FUSES)},
+            {"drill_cell",
             std::make_shared<WorkCellStateMachine>(
                 "drill_cell", 
                 *this,
                 generator.work_cell_locations(),
-                spice_msgs::msg::RobotType::WORK_CELL_DRILL),
+                spice_msgs::msg::RobotType::WORK_CELL_DRILL)},
+            {"lid_cell",
             std::make_shared<WorkCellStateMachine>(
                 "lid_cell", 
                 *this,
                 generator.work_cell_locations(), 
-                spice_msgs::msg::RobotType::WORK_CELL_TOP),
+                spice_msgs::msg::RobotType::WORK_CELL_TOP)},
+            {"back_cover_cell",
             std::make_shared<WorkCellStateMachine>(
                 "back_cover_cell", 
                 *this,
                 generator.work_cell_locations(),
-                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER),
-            std::make_shared<WorkCellStateMachine>(
-                "lid_cell2", 
-                *this,
-                generator.work_cell_locations(), 
-                spice_msgs::msg::RobotType::WORK_CELL_TOP),
-            std::make_shared<WorkCellStateMachine>(
-                "back_cover_cell2", 
-                *this,
-                generator.work_cell_locations(),
-                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)}
+                // ,
+            // {"lid_cell2",
+            // std::make_shared<WorkCellStateMachine>(
+            //     "lid_cell2", 
+            //     *this,
+            //     generator.work_cell_locations(), 
+            //     spice_msgs::msg::RobotType::WORK_CELL_TOP)},
+            // {"back_cover_cell2",
+            // std::make_shared<WorkCellStateMachine>(
+            //     "back_cover_cell2", 
+            //     *this,
+            //     generator.work_cell_locations(),
+            //     spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)}
         };
+
+        delete_wc_service = create_service<spice_msgs::srv::DeleteWorkCell>("delete_workcell", std::bind(&WorkCellSimulator::Remove_workcell, this,
+                                std::placeholders::_1, std::placeholders::_2));
+
+        create_wc_service = create_service<spice_msgs::srv::CreateWorkCell>("create_workcell", std::bind(&WorkCellSimulator::Add_workcell, this,
+                                std::placeholders::_1, std::placeholders::_2));
     }
+    void Add_workcell(std::shared_ptr<spice_msgs::srv::CreateWorkCell::Request> request,
+          std::shared_ptr<spice_msgs::srv::CreateWorkCell::Response> response)
+    {
+        if (work_cell_state_machines.find(request->id.id) == work_cell_state_machines.end()) {
+            work_cell_state_machines[request->id.id] = std::make_shared<WorkCellStateMachine>(request->id.id, *this, request->position, request->id.robot_type.type);
+            response->succes = true;
+        }
+        else{
+            RCLCPP_WARN(get_logger(), "[WorkCellSimulator] Cannot create new workcell, workcell already exists");
+            response->succes = false;
+        }
+        return;
+    }
+
+    void Remove_workcell(std::shared_ptr<spice_msgs::srv::DeleteWorkCell::Request> request,
+                         std::shared_ptr<spice_msgs::srv::DeleteWorkCell::Response> response)
+    {
+
+        if (work_cell_state_machines.find(request->id) != work_cell_state_machines.end())
+        {
+            work_cell_state_machines.erase(request->id);
+            response->succes = true;
+        }
+        else
+        {
+            RCLCPP_WARN(get_logger(), "[WorkCellSimulator] Workcell doesnt exist");
+            response->succes = false;
+        }
+    }
+
     std::string MAP_NAME;
 private:
-    std::vector<std::shared_ptr<WorkCellStateMachine>> work_cell_state_machines;
-    
+    std::map<std::string, std::shared_ptr<WorkCellStateMachine>> work_cell_state_machines;
+    rclcpp::Service<spice_msgs::srv::DeleteWorkCell>::SharedPtr delete_wc_service;
+    rclcpp::Service<spice_msgs::srv::CreateWorkCell>::SharedPtr create_wc_service;
 };
 
 int main(int argc, char** argv)
