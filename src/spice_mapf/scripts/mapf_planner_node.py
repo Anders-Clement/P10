@@ -48,12 +48,12 @@ class MapfPlanner(Node):
 
         self.join_planner_service = self.create_service(spice_mapf_srvs.JoinPlanner, "/join_planner", self.join_planner_cb)
         self.request_goal_service = self.create_service(spice_mapf_srvs.RequestGoal, "/request_goal", self.request_goal_cb)
-        self.paths_publisher = self.create_publisher(spice_mapf_msgs.RobotPoses, "/mapf_paths", 10)
-        self.debug_paths_publisher = self.create_publisher(MarkerArray, "/planned_paths", 10)
+        self.paths_publisher = self.create_publisher(spice_mapf_msgs.RobotPoses, "/mapf_paths", 2)
+        self.debug_paths_publisher = self.create_publisher(MarkerArray, "/planned_paths", 1)
         qos_best_effort = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
             history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1
+            depth=25
         )
         self.robot_pos_subscriber = self.create_subscription(spice_mapf_msgs.RobotPose, "/robot_pos", self.robot_pos_cb, qos_best_effort)
         self.sub_carrier_timeout = self.create_subscription(String,'/carrier_timeout', self.remove_robot_cb,10)
