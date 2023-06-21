@@ -144,10 +144,16 @@ void WorkCellStateMachine::on_register_work(
 {
     // RCLCPP_INFO(m_nodehandle.get_logger(), "On register work from %s", request->robot_id.id.c_str());
     // TODO: do we want to implement simulated checks for work compatibility, queue length etc?
+    if(prepare_move){
 
+        RCLCPP_INFO(m_nodehandle.get_logger(), "Failed to register work to robot [%s] due to workstation preparing to move", request->robot_id.id.c_str());
+        response->work_is_enqueued = false;
+        return;
+    }
+       
     auto queue_point_opt = m_queue_manager->get_queue_point();
 
-    if(!queue_point_opt || prepare_move)
+    if(!queue_point_opt)
     {
         RCLCPP_INFO(m_nodehandle.get_logger(), "Failed to register work to robot [%s] due to no space in queue", request->robot_id.id.c_str());
         response->work_is_enqueued = false;
