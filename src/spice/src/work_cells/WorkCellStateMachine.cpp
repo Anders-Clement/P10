@@ -195,12 +195,16 @@ void WorkCellStateMachine::on_robot_ready_in_queue(
         if(robot.robot_id.id == request->robot_id.id)
         {
             robot.ready_in_queue = true;
+            robot.queue_point->robot_is_at_queue_point = true;
             response->success = true;
+
+            // try to update queue points
+            m_queue_manager->fill_queue_points();
             return;
         }
     }
     RCLCPP_WARN(get_logger(), "On_robot_ready_in_queue got request for unknown robot");
-    response->success = false; // return false if we do now know the robot
+    response->success = true; // return true anyways, just ignore the call // return false if we do now know the robot
 }
 
 void WorkCellStateMachine::on_robot_ready_for_processing(

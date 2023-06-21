@@ -406,7 +406,8 @@ class EnqueuedState(RobotStateTemplate):
     #     self.navigate_to_queue_point()
 
     def navigate_to_queue_point(self):
-        if not self.robot_is_at_queue_point:
+        # if not self.robot_is_at_queue_point:
+            self.got_queue_points = False
             # TODO: NAV
             nav_goal = NavigateMapf.Goal()
             nav_goal.goal_pose = self.sm.current_work_cell_info.queue_pose
@@ -452,9 +453,10 @@ class EnqueuedState(RobotStateTemplate):
         #     self.call_robot_ready_in_queue()
 
     def call_robot_ready_in_queue(self):  
-        self.got_queue_points = False
-        if self.robot_is_ready:
-            return
+        # self.got_queue_points = False
+        # always call ready, in order to let  workcell know robot is at next queue point
+        # if self.robot_is_ready:
+        #     return
         
         self.robot_is_ready = True
         robot_ready_request = RobotReady.Request()
