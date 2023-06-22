@@ -38,7 +38,7 @@ def generate_launch_description():
             name='simulated_polybot_agent',
             namespace=namespace,
             parameters=[
-                {'initial_x': 7.0},
+                {'initial_x': 4.0},
                 {'initial_y': 4.0},
                 {'initial_theta': 0.0}
             ]        

@@ -197,7 +197,7 @@ public:
             // poses[5].translation.y = 3.5;
             // poses[5].translation.z = 0;
         }
-        else if(m_map_name == "low_res/A4_65.yaml" || m_map_name == "low_res/A4_new_65.yaml")
+        else if(m_map_name == "low_res/A4_65.yaml" || m_map_name == "low_res/A4_new_65.yaml" )
         {
             double CELL_SIZE = 0.65;
             // fuse
@@ -253,6 +253,45 @@ public:
             poses[5].translation.x = 9*CELL_SIZE;
             poses[5].translation.y = 8*CELL_SIZE;
             poses[5].translation.z = 0;
+        }
+        else if(m_map_name == "A4_new_65.yaml")
+        {
+            double CELL_SIZE = 0.65;
+            // fuse
+            poses[0].rotation.w = 0.7; //0.709132;
+            poses[0].rotation.x = 0.0;
+            poses[0].rotation.y = 0.0;
+            poses[0].rotation.z = -0.7; //0.7050776;
+            poses[0].translation.x = 2*CELL_SIZE;
+            poses[0].translation.y = 7*CELL_SIZE;
+            poses[0].translation.z = 0.0;
+            
+            //drill
+            poses[1].rotation.w = 0.0; //0.723702;
+            poses[1].rotation.x = 0.0;
+            poses[1].rotation.y = 0.0;
+            poses[1].rotation.z = 1.0; //0.690113;
+            poses[1].translation.x = 6*CELL_SIZE;
+            poses[1].translation.y = 8*CELL_SIZE;
+            poses[1].translation.z = 0;
+
+            //lid
+            poses[2].rotation.w = 1.0;
+            poses[2].rotation.x = 0.0;
+            poses[2].rotation.y = 0.0;
+            poses[2].rotation.z = 0.0;
+            poses[2].translation.x = 4*CELL_SIZE;
+            poses[2].translation.y = 3*CELL_SIZE;
+            poses[2].translation.z = 0.0;
+            
+            //backcover
+            poses[3].rotation.w = 0.7;
+            poses[3].rotation.x = 0.0;
+            poses[3].rotation.y = 0.0;
+            poses[3].rotation.z = -0.7;
+            poses[3].translation.x = 2*CELL_SIZE;
+            poses[3].translation.y = 11*CELL_SIZE;
+            poses[3].translation.z = 0;
         }
         // // C4 POSES
         else if(m_map_name == "C4.yaml")
