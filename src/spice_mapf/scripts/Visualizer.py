@@ -4,6 +4,7 @@ import numpy as np
 import os
 import cv2
 from natsort import realsorted
+import matplotlib as mpl
 
 import spice_msgs.msg as spice_msgs
 
@@ -122,7 +123,6 @@ class Visualizer:
         HALF_DRAW_GRID = int(DRAW_GRID/2)
         my_map = self.map.map
         self.img = np.zeros((len(my_map)*DRAW_GRID, len(my_map[0])*DRAW_GRID, 3), dtype=np.uint8)
-        colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
         # draw free space
         for y in range(len(self.map.map)):
             for x in range(len(self.map.map[0])):
@@ -140,7 +140,8 @@ class Visualizer:
 
         # draw path
         for num_agent, agent in enumerate(self.agents):
-            color = colors[num_agent%len(colors)]
+            r,g,b = mpl.colors.to_rgb(agent.color)
+            color = 255*np.array([b,g,r])
             cv2.line(self.img,
                                 (int(agent.current_pos[1]*DRAW_GRID + 0.5*DRAW_GRID), int(agent.current_pos[0]*DRAW_GRID + 0.5*DRAW_GRID)), 
                                 (agent.next_loc[1]*DRAW_GRID + int(0.5*DRAW_GRID), agent.next_loc[0]*DRAW_GRID + int(0.5*DRAW_GRID)),
@@ -164,7 +165,8 @@ class Visualizer:
         
         # draw goal
         for num_agent, agent in enumerate(self.agents):
-            color = colors[num_agent%len(colors)]
+            r,g,b = mpl.colors.to_rgb(agent.color)
+            color = 255*np.array([b,g,r])
             cv2.rectangle(self.img, 
                           (agent.current_goal[1]*DRAW_GRID + int(0.25*DRAW_GRID), agent.current_goal[0]*DRAW_GRID + int(0.25*DRAW_GRID)), 
                           (agent.current_goal[1]*DRAW_GRID + int(0.75*DRAW_GRID), agent.current_goal[0]*DRAW_GRID + int(0.75*DRAW_GRID)), 
@@ -172,7 +174,8 @@ class Visualizer:
 
         # draw agents
         for num_agent, agent in enumerate(self.agents):
-            color = colors[num_agent%len(colors)]
+            r,g,b = mpl.colors.to_rgb(agent.color)
+            color = 255*np.array([b,g,r])
             cv2.circle(self.img, (int(agent.current_pos[1]*DRAW_GRID)+HALF_DRAW_GRID, int(agent.current_pos[0]*DRAW_GRID)+HALF_DRAW_GRID), HALF_DRAW_GRID, color,-1)
             _,_, yaw = tf_transformations.euler_from_quaternion([agent.current_heading.x, agent.current_heading.y, agent.current_heading.z, agent.current_heading.w])
             robot_pos = (int(agent.current_pos[1]*DRAW_GRID + 0.5*DRAW_GRID), int(agent.current_pos[0]*DRAW_GRID + 0.5*DRAW_GRID))

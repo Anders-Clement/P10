@@ -60,7 +60,6 @@ class MAPFNavigator(Node):
         self.current_transform = None
         self.current_nav_step_goal: spice_mapf_msgs.RobotPose = None
         self.next_nav_step_goal: spice_mapf_msgs.RobotPose = None
-        self.has_published_feedback = False
 
         self.joined_planner = False
         self.join_planner_future = None
@@ -194,11 +193,7 @@ class MAPFNavigator(Node):
         for robot_pose in poses:
             if robot_pose.id == self.id:
                 if robot_pose.rejoin:
-                    self.join_planner_timer.reset()
                     self.try_join_planner()
-                    self.join_planner_future = None
-                    self.planner_type_is_set = False
-                    self.planner_type_future = None
                     self.navigation_action_server.current_nav_goal = None
                     self.next_nav_step_goal = None
                     return
@@ -209,7 +204,6 @@ class MAPFNavigator(Node):
                         self.current_nav_step_goal = robot_pose
                     else:
                         self.next_nav_step_goal = robot_pose
-                    self.has_published_feedback = False
                 return
     
 
@@ -222,30 +216,21 @@ class MAPFNavigatorActionServer():
                                                  spice_mapf_actions.NavigateMapf,
                                                  "navigate_mapf",
                                                  execute_callback=self.navigate_mapf_cb,
-                                                 goal_callback=self.navigate_mapf_goal_cb
+                                                 goal_callback=self.navigate_mapf_goal_cb,
+                                                 result_timeout=10
                                                  )
         self.current_nav_goal = None
 
     def req_goal(self, request_goal, goal_handle):
         request_goal_future = self.request_goal_client.call_async(request_goal)
-        rate = self.nodehandle.create_rate(3, self.nodehandle.get_clock())
-        TIMEOUT = 5.0
-        # self.nodehandle.get_logger().info(f'Requesting goal')
-        start_time = self.nodehandle.get_clock().now()
+        self.nodehandle.get_logger().info(f'Requesting goal')
         while not request_goal_future.done():
-            rate.sleep()
-            wait_time = self.nodehandle.get_clock().now() - start_time
-            if wait_time.to_msg().sec > TIMEOUT:
-                self.nodehandle.get_logger().warn(f'Timeout on request_goal')
-                self.current_nav_goal = None
-                goal_handle.abort()
-                return None            
-            
+            time.sleep(0.1)
         result: spice_mapf_srvs.RequestGoal.Response = request_goal_future.result()
         return result
 
     def navigate_mapf_goal_cb(self, goal_request: spice_mapf_actions.NavigateMapf.Goal):
-        # self.nodehandle.get_logger().info(f'Received goal request: [x:{goal_request.goal_pose.pose.position.x}, y:{goal_request.goal_pose.pose.position.y}]')
+        self.nodehandle.get_logger().info(f'Received goal request: [x:{goal_request.goal_pose.pose.position.x}, y:{goal_request.goal_pose.pose.position.y}]')
         if self.navigator.is_available_for_navigation() and self.current_nav_goal is None:
             return GoalResponse.ACCEPT
         else:
@@ -253,7 +238,7 @@ class MAPFNavigatorActionServer():
             return GoalResponse.REJECT            
     
     def navigate_mapf_cb(self, goal_handle: ServerGoalHandle):
-        # self.nodehandle.get_logger().info(f'Executing request')
+        self.nodehandle.get_logger().info(f'Executing request')
             
         goal: spice_mapf_actions.NavigateMapf.Goal = goal_handle.request
         self.current_nav_goal = spice_mapf_msgs.RobotPose()

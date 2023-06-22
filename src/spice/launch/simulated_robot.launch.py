@@ -20,7 +20,7 @@ def generate_launch_description():
     return LaunchDescription([ 
         Node(
             package='spice_mapf',
-            executable='mapf_navigator_node.py',
+            executable='mapf_navigator_node_cpp',
             name='mapf_navigator_node',
             namespace=namespace,
             # remappings=[("/tf", "tf"), ("/tf_static", "tf_static")]
