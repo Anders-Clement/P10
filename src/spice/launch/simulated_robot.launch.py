@@ -23,7 +23,7 @@ def generate_launch_description():
             executable='mapf_navigator_node_cpp',
             name='mapf_navigator_node',
             namespace=namespace,
-            remappings=[("/tf", "tf"), ("/tf_static", "tf_static")]
+            # remappings=[("/tf", "tf"), ("/tf_static", "tf_static")]
         ),
         Node
         (

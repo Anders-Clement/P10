@@ -191,6 +191,7 @@ void MAPFNavigator::is_navigator_ready_cb(
         spice_mapf_msgs::srv::IsNavigatorReady::Response::SharedPtr response
     )
 {
+    (void)request;
     response->ready = is_available_for_navigation();
 }
 
@@ -247,7 +248,7 @@ void MAPFNavigator::control_loop()
 
 std::optional<geometry_msgs::msg::Twist> MAPFNavigator::compute_cmd_vel(geometry_msgs::msg::PoseStamped goal_pose)
 {
-    std::string target_frame = "base_link";
+    std::string target_frame = id.id + "_base_link";
     std::string from_frame = "map";
     geometry_msgs::msg::TransformStamped map_to_base_link;
     try {
@@ -376,7 +377,7 @@ void MAPFNavigator::mapf_paths_cb(spice_mapf_msgs::msg::RobotPoses::SharedPtr ms
 
 bool MAPFNavigator::get_robot_transform()
 {
-    std::string from_frame_rel = "base_link";
+    std::string from_frame_rel = id.id + "_base_link";
     std::string to_frame_rel = "map";
     try {
         current_transform = tf_buffer->lookupTransform(
