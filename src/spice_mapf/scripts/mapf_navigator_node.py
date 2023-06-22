@@ -228,7 +228,7 @@ class MAPFNavigatorActionServer():
 
     def req_goal(self, request_goal, goal_handle):
         request_goal_future = self.request_goal_client.call_async(request_goal)
-        rate = self.nodehandle.create_rate(10, self.nodehandle.get_clock())
+        rate = self.nodehandle.create_rate(3, self.nodehandle.get_clock())
         TIMEOUT = 5.0
         # self.nodehandle.get_logger().info(f'Requesting goal')
         start_time = self.nodehandle.get_clock().now()
@@ -287,7 +287,7 @@ class MAPFNavigatorActionServer():
                 + f'going to: [{result.goal_position.x}, {result.goal_position.x}], '
                 + f'robot is starting at: [{"{:.2f}".format(self.navigator.current_transform.transform.translation.x)}, {"{:.2f}".format(self.navigator.current_transform.transform.translation.y)}]')
         self.current_nav_goal.position = result.goal_position
-        rate = self.nodehandle.create_rate(5, self.nodehandle.get_clock())
+        rate = self.nodehandle.create_rate(3, self.nodehandle.get_clock())
 
         # wait until goal is reached
         while not self.at_goal():
