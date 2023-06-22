@@ -17,6 +17,7 @@
 #include "spice_mapf_msgs/action/navigate_mapf.hpp"
 #include "spice_mapf_msgs/srv/request_goal.hpp"
 #include "spice_mapf_msgs/srv/join_planner.hpp"
+#include "spice_mapf_msgs/srv/is_navigator_ready.hpp"
 #include "spice_mapf_msgs/msg/robot_pose.hpp"
 #include "spice_mapf_msgs/msg/robot_poses.hpp"
 #include "spice_msgs/msg/id.hpp"
@@ -60,6 +61,10 @@ private:
     bool at_step_goal();
     void try_join_planner();
     void control_loop();
+    void is_navigator_ready_cb(
+            spice_mapf_msgs::srv::IsNavigatorReady::Request::SharedPtr request,
+            spice_mapf_msgs::srv::IsNavigatorReady::Response::SharedPtr response
+        );
     std::optional<geometry_msgs::msg::Twist> compute_cmd_vel(geometry_msgs::msg::PoseStamped goal_pose);
     std::unique_ptr<tf2_ros::Buffer> tf_buffer;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener;
@@ -68,6 +73,7 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher;
     rclcpp::Publisher<spice_mapf_msgs::msg::RobotPose>::SharedPtr robot_pos_publisher;
     rclcpp::Client<spice_mapf_msgs::srv::JoinPlanner>::SharedPtr join_planner_client;
+    rclcpp::Service<spice_mapf_msgs::srv::IsNavigatorReady>::SharedPtr is_navigator_ready_service;
     rclcpp::TimerBase::SharedPtr try_join_planner_timer;
     rclcpp::TimerBase::SharedPtr control_loop_timer;
 

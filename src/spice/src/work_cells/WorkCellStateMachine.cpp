@@ -273,7 +273,7 @@ void WorkCellStateMachine::check_robot_heartbeat_cb()
     // check robot in cell (or in its way into the cell)
     // TODO: consider adding a service call between cell and carrier once exited
     // Here, we omit heartbeat when carrier robot is exiting, due to lack of this last synchronization
-    if(m_current_robot_work && m_current_state != WORK_CELL_STATE::ROBOT_EXITING)
+    if(m_current_robot_work)
     {
         auto timeout_period = (current_time-m_current_robot_work->last_heartbeat_time).seconds();
         if(timeout_period > ROBOT_HEARTBEAT_TIMEOUT_PERIOD)

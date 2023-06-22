@@ -16,11 +16,14 @@ rclcpp_action::GoalResponse MAPFNavigatorActionServer::handle_goal(
 const rclcpp_action::GoalUUID & uuid,
 std::shared_ptr<const spice_mapf_msgs::action::NavigateMapf::Goal> goal)
 {
-    RCLCPP_INFO(navigator->get_logger(), "Received goal request");
     (void)uuid;
     (void)goal;
     if(goal_handle)
+    {
+        RCLCPP_INFO(navigator->get_logger(), "Rejection received goal request because goal_handle is present");
         return rclcpp_action::GoalResponse::REJECT;
+    }
+    RCLCPP_INFO(navigator->get_logger(), "Accepting received goal");
     return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 }
 
@@ -64,7 +67,16 @@ void MAPFNavigatorActionServer::execute()
     while(1)
     {
         auto future = req_goal_client->async_send_request(goal_request);
-        future.wait();
+        auto status = future.wait_for(1s);
+        if(status != std::future_status::ready)
+        {
+            RCLCPP_WARN(navigator->get_logger(), "Request goal took too long. Aborting navigation");
+            end_execution();
+            action_result->success = false;
+            goal_handle->abort(action_result);
+            return;
+        }
+        
         auto result = future.get();
         
         if(!result->success && result->currently_occupied)
@@ -99,7 +111,7 @@ void MAPFNavigatorActionServer::execute()
         goal_handle->succeed(action_result);
         RCLCPP_INFO(navigator->get_logger(), "Goal succeeded");
     }
-    goal_handle.reset();
+    end_execution();
 }
 
 bool MAPFNavigatorActionServer::at_goal()
@@ -122,6 +134,7 @@ bool MAPFNavigatorActionServer::at_goal()
 void MAPFNavigatorActionServer::end_execution()
 {
     current_nav_goal.reset();
+    goal_handle.reset();
 }
 
 MAPFNavigator::MAPFNavigator() : Node("mapf_navigator")
@@ -151,6 +164,16 @@ MAPFNavigator::MAPFNavigator() : Node("mapf_navigator")
         10,
         std::bind(&MAPFNavigator::mapf_paths_cb, this, std::placeholders::_1));
 
+    is_navigator_ready_service = create_service<spice_mapf_msgs::srv::IsNavigatorReady>(
+        "is_navigator_ready",
+        std::bind(
+            &MAPFNavigator::is_navigator_ready_cb,
+            this,
+            std::placeholders::_1,
+            std::placeholders::_2
+        )
+    );
+
     join_planner_client = create_client<spice_mapf_msgs::srv::JoinPlanner>("/join_planner");
     try_join_planner_timer = rclcpp::create_timer(this, get_clock(), 
         rclcpp::Duration::from_seconds(1.0),
@@ -161,6 +184,14 @@ MAPFNavigator::MAPFNavigator() : Node("mapf_navigator")
     control_loop_timer = rclcpp::create_timer(this, get_clock(),
         rclcpp::Duration::from_seconds(0.1),
         std::bind(&MAPFNavigator::control_loop, this));
+}
+
+void MAPFNavigator::is_navigator_ready_cb(
+        spice_mapf_msgs::srv::IsNavigatorReady::Request::SharedPtr request,
+        spice_mapf_msgs::srv::IsNavigatorReady::Response::SharedPtr response
+    )
+{
+    response->ready = is_available_for_navigation();
 }
 
 void MAPFNavigator::control_loop()

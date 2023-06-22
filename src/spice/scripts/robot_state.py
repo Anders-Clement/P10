@@ -12,6 +12,7 @@ from spice_msgs.msg import PlannerType, QueuePoints, QueuePoint, TaskData
 from spice_msgs.srv import RegisterRobot, RobotTask, AllocWorkCell, RegisterWork, SetPlannerType, RobotReady
 from spice_mapf_msgs.action import NavigateMapf
 from spice_mapf_msgs.action._navigate_mapf import NavigateMapf_FeedbackMessage
+from spice_mapf_msgs.srv import IsNavigatorReady
 
 from work_tree import WorkTree
 from robot_state_manager_node import RobotStateManager, ROBOT_STATE, HeartBeatHandler
@@ -46,68 +47,37 @@ class StartUpState(RobotStateTemplate):
     def init(self):
         self.sm.clear_task_data()
         self.sm.get_logger().info('init StartUpState')
-        self.nav_stack_is_active = True
+        self.navigator_is_active = False
         self.registered_robot = False
-        self.set_planner_type_ready = True
-        self.set_planner_type = True
         self.timer = self.sm.create_timer(1, self.try_initialize)
 
         self.register_robot_client = self.sm.create_client(RegisterRobot, '/register_robot')
-        self.navigation_is_active_client = self.sm.create_client(Trigger, 'lifecycle_manager_navigation/is_active')
-
+        self.navigator_is_active_client = self.sm.create_client(IsNavigatorReady, 'is_navigator_ready')
         self.register_future = None
-        self.nav_stack_is_active_future = None
-        self.set_planner_future = None
+        self.navigator_is_active_future = None
 
         # ensure no heartbeat in this state
         self.sm.heartbeat.deactivate()
 
     def try_initialize(self):
-        if not self.nav_stack_is_active:
-            self.check_nav2_stack_status()
+        if not self.navigator_is_active:
+            self.check_navigator_status()
         elif not self.registered_robot:
             self.register_robot()
-        elif not self.set_planner_type_ready:
-            self.wait_for_planner_type_service()
-        elif not self.set_planner_type:
-            self.set_planner()
         else: # nav_stack is good, and we are registered
             self.sm.change_state(ROBOT_STATE.READY_FOR_JOB)
 
-    def set_planner(self):
-        if self.set_planner_future is not None:
-            return
-        set_planner_type_request = SetPlannerType.Request()
-        set_planner_type_request.planner_type = PlannerType(type=PlannerType.PLANNER_STRAIGHT_LINE)
-        self.set_planner_future = self.sm.change_planner_type_client.call_async(set_planner_type_request)
-        self.set_planner_future.add_done_callback(self.set_planner_cb)
-
-    def set_planner_cb(self, future: Future):
-        result = future.result()
-        if result.success:
-            self.set_planner_type = True
-        else:
-            self.sm.get_logger().warn('Failed to set planner type during startup, retrying...')
-            self.set_planner_future = None
-            self.set_planner()
-
-    def check_nav2_stack_status(self):
-        self.sm.get_logger().info('wait for service: lifecycle_manager_navigation/is_active')
-        while not self.navigation_is_active_client.wait_for_service(10):
-            self.sm.get_logger().info('timeout on wait for service: lifecycle_manager_navigation/is_active')
+    def check_navigator_status(self):
+        while not self.navigator_is_active_client.wait_for_service(10):
+            self.sm.get_logger().info('timeout on wait for service: is_navigator_ready')
         
-        self.nav_stack_is_active_future = self.navigation_is_active_client.call_async(Trigger.Request())
-        self.nav_stack_is_active_future.add_done_callback(self.nav_stack_is_active_cb)
+        self.navigator_is_active_future = self.navigator_is_active_client.call_async(IsNavigatorReady.Request())
+        self.navigator_is_active_future.add_done_callback(self.navigator_is_active_cb)
 
-    def nav_stack_is_active_cb(self, future: Future):
-        result: Trigger.Response = future.result()
-        if result.success:
-            self.nav_stack_is_active = True
-
-    def wait_for_planner_type_service(self):
-        self.set_planner_type_ready = self.sm.change_planner_type_client.wait_for_service(10.0)
-        if not self.set_planner_type_ready:
-            self.sm.get_logger().info('timeout on wait for service: set_planner_type')
+    def navigator_is_active_cb(self, future: Future):
+        result: IsNavigatorReady.Response = future.result()
+        if result.ready:
+            self.navigator_is_active = True
 
     def register_robot(self):
         if self.register_future is not None:
@@ -133,12 +103,12 @@ class StartUpState(RobotStateTemplate):
         if self.register_future:
             if not self.register_future.cancelled():
                 self.register_future.cancel()
-        if self.nav_stack_is_active_future:
-            if not self.nav_stack_is_active_future.cancelled():
-                self.nav_stack_is_active_future.cancel()
+        if self.navigator_is_active_future:
+            if not self.navigator_is_active_future.cancelled():
+                self.navigator_is_active_future.cancel()
         self.timer.destroy()
         self.register_robot_client.destroy()
-        self.navigation_is_active_client.destroy()
+        self.navigator_is_active_client.destroy()
 
 
 class ReadyForJobState(RobotStateTemplate):
@@ -853,6 +823,9 @@ class ErrorState(RobotStateTemplate):
         self.sm.state_data_pub.publish(self.msg)
         
         self.sm.clear_task_data()
+
+        if self.sm.work_cell_heartbeat is not None:
+            self.sm.work_cell_heartbeat.deactivate()
         
     def deinit(self):
         self.recovery_timer.cancel()
