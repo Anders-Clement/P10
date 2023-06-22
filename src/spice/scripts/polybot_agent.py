@@ -100,7 +100,6 @@ class PolybotBaseNode(Node):
         )
         self.cmd_vel_sub = self.create_subscription(Twist, 'cmd_vel', self.cmd_vel_cb, qos_best_effort)
         self.tf_publisher = self.create_publisher(TFMessage, 'tf', 1)
-        self.odom_publisher = self.create_publisher(Odometry, 'odom', 1)
         self.declare_parameter('serial_port', '/dev/ttyACM0')
         port = self.get_parameter('serial_port').value
         self.get_logger().info(f'Connecting to serial port: {port}')
@@ -122,21 +121,6 @@ class PolybotBaseNode(Node):
         transform.transform.rotation.w = q[3]
         tf_msg.transforms.append(transform)
         self.tf_publisher.publish(tf_msg)
-
-        odom_msg = Odometry()
-        now = self.get_clock().now()
-        odom_msg.header.stamp = now.to_msg()
-        odom_msg.twist.twist.linear.x = message.wheel_lin_vel
-        odom_msg.twist.twist.angular.z = message.imu_yaw_rate
-        odom_msg.pose.pose.position.x = message.odom_x_pos
-        odom_msg.pose.pose.position.y = message.odom_y_pos
-        q = quaternion_from_euler(0,0, message.odom_yaw)
-        odom_msg.pose.pose.orientation.x = q[0]
-        odom_msg.pose.pose.orientation.y = q[1]
-        odom_msg.pose.pose.orientation.z = q[2]
-        odom_msg.pose.pose.orientation.w = q[3]
-        
-        self.odom_publisher.publish(odom_msg)
 
     def cmd_vel_cb(self, msg: Twist):
         self.arduino.send_cmd_vel(msg)
