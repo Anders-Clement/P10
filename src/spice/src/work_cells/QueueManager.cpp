@@ -177,6 +177,7 @@ void QueueManager::publish_queue_points()
 
 
 void QueueManager::fill_queue_points(){
+
     for(auto queue_point_empty = m_queue_points.begin(); queue_point_empty != m_queue_points.end(); queue_point_empty++){
         if(!queue_point_empty->occupied){
             // RCLCPP_WARN(m_nodehandle.get_logger(), "free queue point is %d", queue_point_empty->id);
@@ -185,15 +186,16 @@ void QueueManager::fill_queue_points(){
                 if(queue_point_occ->occupied)
                 {
                     if(queue_point_occ->robot_is_at_queue_point){
-                        RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point is [%d]", queue_point_occ->id);
+                        // RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point is [%d]", queue_point_occ->id);
                         queue_point_empty->queued_robot = queue_point_occ->queued_robot;
                         queue_point_empty->robot_is_at_queue_point = false;
                         queue_point_empty->occupied = true;
                         queue_point_occ->occupied = false;
                         queue_point_occ->robot_is_at_queue_point = false;
                         queue_point_occ->queued_robot = spice_msgs::msg::Id{};
-                        RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point has robot [%s] and empty queue point has robot [%s]", queue_point_occ->queued_robot.id.c_str(), queue_point_empty->queued_robot.id.c_str());
-
+                        // RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point has robot [%s] and empty queue point has robot [%s]", queue_point_occ->queued_robot.id.c_str(), queue_point_empty->queued_robot.id.c_str());
+                        update_enqueued_lists();
+                        publish_queue_points();
                         return;
                     }
                     else{
@@ -203,7 +205,11 @@ void QueueManager::fill_queue_points(){
             }
         }
     }
-    
+    update_enqueued_lists();
+    publish_queue_points();
+}
+
+void QueueManager::update_enqueued_lists(){
     //update enqueued robot list
     for(auto enqueued_robot = m_work_cell_state_machine->m_enqueued_robots.begin(); enqueued_robot != m_work_cell_state_machine->m_enqueued_robots.end(); enqueued_robot++){
         for(auto queue_point = m_queue_points.begin(); queue_point != m_queue_points.end(); queue_point++){
@@ -214,5 +220,4 @@ void QueueManager::fill_queue_points(){
             }
         }
     }
-    publish_queue_points();
 }

@@ -149,7 +149,7 @@ void WorkCellStateMachine::on_register_work(
 
     if(!queue_point_opt || prepare_move)
     {
-        RCLCPP_INFO(m_nodehandle.get_logger(), "Failed to register work to robot [%s] due to no space in queue", request->robot_id.id.c_str());
+        RCLCPP_INFO(m_nodehandle.get_logger(), "[%s]Failed to register work to robot [%s] due to no space in queue", this->m_work_cell_name.c_str(), request->robot_id.id.c_str());
         response->work_is_enqueued = false;
         return;
     }
@@ -203,7 +203,7 @@ void WorkCellStateMachine::on_robot_ready_in_queue(
             return;
         }
     }
-    RCLCPP_WARN(get_logger(), "On_robot_ready_in_queue got request for unknown robot");
+    RCLCPP_WARN(get_logger(), "[%s]On_robot_ready_in_queue got request for unknown robot [%s]", this->m_work_cell_name.c_str(), request->robot_id.id.c_str());
     response->success = true; // return true anyways, just ignore the call // return false if we do now know the robot
 }
 

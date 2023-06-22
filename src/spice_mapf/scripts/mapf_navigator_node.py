@@ -204,7 +204,7 @@ class MAPFNavigator(Node):
                     return
 
                 if self.current_nav_step_goal != robot_pose:
-                    self.get_logger().info(f'Got new pose from path: {robot_pose.position.x},{robot_pose.position.y}')
+                    # self.get_logger().info(f'Got new pose from path: {"{:.2f}".format(robot_pose.position.x)},{"{:.2f}".format(robot_pose.position.y)}')
                     if self.at_step_goal():
                         self.current_nav_step_goal = robot_pose
                     else:
@@ -249,7 +249,7 @@ class MAPFNavigatorActionServer():
         if self.navigator.is_available_for_navigation() and self.current_nav_goal is None:
             return GoalResponse.ACCEPT
         else:
-            self.nodehandle.get_logger().info(f'Rejecting goal [x:{goal_request.goal_pose.pose.position.x}, y:{goal_request.goal_pose.pose.position.y}], already navigating, or have not joined planner yet')
+            self.nodehandle.get_logger().info(f'Rejecting goal [x:{round(goal_request.goal_pose.pose.position.x, 2)}, y:{round(goal_request.goal_pose.pose.position.y, 2)}], already navigating, or have not joined planner yet')
             return GoalResponse.REJECT            
     
     def navigate_mapf_cb(self, goal_handle: ServerGoalHandle):
@@ -283,8 +283,8 @@ class MAPFNavigatorActionServer():
                 break
 
         self.nodehandle.get_logger().info(
-            f'Requested goal: [{self.current_nav_goal.position.x}, {self.current_nav_goal.position.y}], '
-                + f'going to: [{result.goal_position.x}, {result.goal_position.x}], '
+            f'Requested goal: [{"{:.2f}".format(self.current_nav_goal.position.x)}, {"{:.2f}".format(self.current_nav_goal.position.y)}], '
+                + f'going to: [{"{:.2f}".format(result.goal_position.x)}, {"{:.2f}".format(result.goal_position.y)}], '
                 + f'robot is starting at: [{"{:.2f}".format(self.navigator.current_transform.transform.translation.x)}, {"{:.2f}".format(self.navigator.current_transform.transform.translation.y)}]')
         self.current_nav_goal.position = result.goal_position
         rate = self.nodehandle.create_rate(3, self.nodehandle.get_clock())

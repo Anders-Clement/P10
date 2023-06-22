@@ -392,12 +392,12 @@ class EnqueuedState(RobotStateTemplate):
                     current_work_cell_info.queue_pose.pose.orientation.z = queue_point.queue_transform.rotation.z
                     current_work_cell_info.queue_pose.pose.orientation.w = queue_point.queue_transform.rotation.w
 
-                self.robot_is_at_queue_point = False
-                # self.update_nav_goal()
-                if self.goal_handle is not None:
-                    self.got_queue_points = True
-                else:
-                    self.navigate_to_queue_point()
+                    self.robot_is_at_queue_point = False
+                    # self.update_nav_goal()
+                    if self.goal_handle is not None:
+                        self.got_queue_points = True
+                    else:
+                        self.navigate_to_queue_point()
                 
                 
                 #self.num_navigation_erorrs -= 1
@@ -426,7 +426,7 @@ class EnqueuedState(RobotStateTemplate):
     def nav_goal_response_cb(self, future: Future):
         self.goal_handle: ClientGoalHandle = future.result()
         if not self.goal_handle.accepted:
-            self.sm.get_logger().error('Nav 2 goal was rejected, aborting task. Going to ERROR')
+            self.sm.get_logger().error('Nav2 goal was rejected, aborting task. Going to ERROR')
             self.sm.change_state(ROBOT_STATE.ERROR)
         self.nav_goal_done_future: Future = self.goal_handle.get_result_async()
         self.nav_goal_done_future.add_done_callback(self.sm.on_nav_done)
@@ -503,7 +503,7 @@ class EnqueuedState(RobotStateTemplate):
             self.sm.get_logger().warn('call_robot_cb, but robot is already called')
             return response
         
-        self.sm.get_logger().info(self.sm.id.id+  ' call_robot_cb') 
+        # self.sm.get_logger().info(self.sm.id.id+  ' call_robot_cb') 
         response.success = True
         self.robot_is_called = True
         #self.nav2queue_timer.cancel()
@@ -800,7 +800,7 @@ class ProcessExitWorkCellState(RobotStateTemplate):
     def nav_goal_response_cb(self, future: Future):
         goal_handle: ClientGoalHandle = future.result()
         if not goal_handle.accepted:
-            self.sm.get_logger().warn('Nav 2 goal was rejected, aborting exit work cell, going to error')
+            self.sm.get_logger().warn('Nav2 goal was rejected, aborting exit work cell, going to error')
             self.sm.change_state(ROBOT_STATE.ERROR)
         
         self.nav_goal_done_future: Future = goal_handle.get_result_async()
