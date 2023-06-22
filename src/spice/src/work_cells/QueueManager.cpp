@@ -16,8 +16,7 @@ QueueManager::QueueManager(rclcpp::Node& nodehandle, std::string work_cell_name,
     m_enqueued_pub = m_nodehandle.create_publisher<spice_msgs::msg::QueueOccupancy>(
         "/workstations_occupancy",
         rclcpp::QoS(rclcpp::QoSInitialization(qos_profile_TL.history, 10), qos_profile_TL)
-    );
-    
+    );  
 }
 
 void QueueManager::initialize_points(int num_points, double time)
@@ -58,28 +57,61 @@ void QueueManager::initialize_points(int num_points, double time)
 
 std::optional<QueuePoint*> QueueManager::get_queue_point()
 {
-    for(auto it = m_queue_points.begin(); it != m_queue_points.end(); it++)
+    QueuePoint* assigned_queue_point = nullptr;
+    for(auto it = m_queue_points.rbegin(); it != m_queue_points.rend(); it++)
     {
         if(!it->occupied)
         {
-            it->occupied = true;
-
-            if (m_occupied_queue_counter < m_queue_id_counter)
-            {
-                m_occupied_queue_counter++;
-                spice_msgs::msg::QueueOccupancy msg;
-                msg.id.id = m_work_cell_name;
-                msg.enqueued = m_occupied_queue_counter;
-                m_enqueued_pub->publish(msg);
-            }
-            else{
-                RCLCPP_ERROR(m_nodehandle.get_logger(), "Error in keeping track of occupied queues");
-            }
-
-            return {&*it};
+            assigned_queue_point = &*it;
+        }
+        else
+        {
+            break;
         }
     }
-    return {};
+    if(assigned_queue_point == nullptr)
+    {
+        return {};
+    }
+    else
+    {
+        if (m_occupied_queue_counter < m_queue_id_counter)
+        {
+            m_occupied_queue_counter++;
+            spice_msgs::msg::QueueOccupancy msg;
+            msg.id.id = m_work_cell_name;
+            msg.enqueued = m_occupied_queue_counter;
+            m_enqueued_pub->publish(msg);
+        }
+        else{
+            RCLCPP_ERROR(m_nodehandle.get_logger(), "Error in keeping track of occupied queues");
+        }
+        
+        assigned_queue_point->occupied = true;
+        return {assigned_queue_point};
+    }
+    // for(auto it = m_queue_points.begin(); it != m_queue_points.end(); it++)
+    // {
+    //     if(!it->occupied)
+    //     {
+    //         it->occupied = true;
+
+    //         if (m_occupied_queue_counter < m_queue_id_counter)
+    //         {
+    //             m_occupied_queue_counter++;
+    //             spice_msgs::msg::QueueOccupancy msg;
+    //             msg.id.id = m_work_cell_name;
+    //             msg.enqueued = m_occupied_queue_counter;
+    //             m_enqueued_pub->publish(msg);
+    //         }
+    //         else{
+    //             RCLCPP_ERROR(m_nodehandle.get_logger(), "Error in keeping track of occupied queues");
+    //         }
+
+    //         return {&*it};
+    //     }
+    // }
+    // return {};
 }
 
 void QueueManager::free_queue_point(QueuePoint* queuepoint)
@@ -89,6 +121,8 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
         if(it->id == queuepoint->id)
         {   
             it->occupied = false;
+            it->robot_is_at_queue_point = false;
+            it->queued_robot = spice_msgs::msg::Id{};
 
             if (m_occupied_queue_counter != 0 && m_occupied_queue_counter <= m_queue_id_counter)
             {
@@ -103,7 +137,6 @@ void QueueManager::free_queue_point(QueuePoint* queuepoint)
             }
             
             // RCLCPP_WARN(m_nodehandle.get_logger(), "freeing queue point");
-            it->queued_robot = spice_msgs::msg::Id{};
             break;
         }
     }
@@ -144,33 +177,47 @@ void QueueManager::publish_queue_points()
 
 
 void QueueManager::fill_queue_points(){
+
     for(auto queue_point_empty = m_queue_points.begin(); queue_point_empty != m_queue_points.end(); queue_point_empty++){
         if(!queue_point_empty->occupied){
             // RCLCPP_WARN(m_nodehandle.get_logger(), "free queue point is %d", queue_point_empty->id);
             auto queue_point_occ = queue_point_empty;
             for(queue_point_occ; queue_point_occ != m_queue_points.end(); queue_point_occ++){
-                if(queue_point_occ->occupied){
-                    RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point is [%d]", queue_point_occ->id);
-                    queue_point_empty->queued_robot = queue_point_occ->queued_robot;
-                    queue_point_empty->occupied = true;
-                    queue_point_occ->occupied = false;
-                    queue_point_occ->queued_robot = spice_msgs::msg::Id{};
-                    RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point has robot [%s] and empty queue point has robot [%s]", queue_point_occ->queued_robot.id.c_str(), queue_point_empty->queued_robot.id.c_str());
-
-                    break;
+                if(queue_point_occ->occupied)
+                {
+                    if(queue_point_occ->robot_is_at_queue_point){
+                        // RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point is [%d]", queue_point_occ->id);
+                        queue_point_empty->queued_robot = queue_point_occ->queued_robot;
+                        queue_point_empty->robot_is_at_queue_point = false;
+                        queue_point_empty->occupied = true;
+                        queue_point_occ->occupied = false;
+                        queue_point_occ->robot_is_at_queue_point = false;
+                        queue_point_occ->queued_robot = spice_msgs::msg::Id{};
+                        // RCLCPP_WARN(m_nodehandle.get_logger(), "occ queue point has robot [%s] and empty queue point has robot [%s]", queue_point_occ->queued_robot.id.c_str(), queue_point_empty->queued_robot.id.c_str());
+                        update_enqueued_lists();
+                        publish_queue_points();
+                        return;
+                    }
+                    else{
+                        break;
+                    }
                 }
             }
         }
     }
-    
+    update_enqueued_lists();
+    publish_queue_points();
+}
+
+void QueueManager::update_enqueued_lists(){
     //update enqueued robot list
     for(auto enqueued_robot = m_work_cell_state_machine->m_enqueued_robots.begin(); enqueued_robot != m_work_cell_state_machine->m_enqueued_robots.end(); enqueued_robot++){
         for(auto queue_point = m_queue_points.begin(); queue_point != m_queue_points.end(); queue_point++){
             if(enqueued_robot->robot_id.id == queue_point->queued_robot.id){
                 enqueued_robot->queue_point = &*queue_point;
+                enqueued_robot->ready_in_queue = queue_point->robot_is_at_queue_point;
                 break;
             }
         }
     }
-    publish_queue_points();
 }

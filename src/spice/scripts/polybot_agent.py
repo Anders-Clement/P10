@@ -112,7 +112,7 @@ class PolybotBaseNode(Node):
         transform = TransformStamped()
         transform.header.stamp = self.get_clock().now().to_msg()
         transform.header.frame_id = 'odom'
-        transform.child_frame_id = 'base_footprint'
+        transform.child_frame_id = 'base_link'
         transform.transform.translation.x = message.odom_x_pos
         transform.transform.translation.y = message.odom_y_pos
         transform.transform.rotation.x = q[0]

@@ -24,6 +24,7 @@ set(msg_files
 set(srv_files
   "srv/JoinPlanner.srv"
   "srv/RequestGoal.srv"
+  "srv/IsNavigatorReady.srv"
 )
 
 set(action_files

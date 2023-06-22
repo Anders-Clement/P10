@@ -48,12 +48,12 @@ class MapfPlanner(Node):
 
         self.join_planner_service = self.create_service(spice_mapf_srvs.JoinPlanner, "/join_planner", self.join_planner_cb)
         self.request_goal_service = self.create_service(spice_mapf_srvs.RequestGoal, "/request_goal", self.request_goal_cb)
-        self.paths_publisher = self.create_publisher(spice_mapf_msgs.RobotPoses, "/mapf_paths", 10)
-        self.debug_paths_publisher = self.create_publisher(MarkerArray, "/planned_paths", 10)
+        self.paths_publisher = self.create_publisher(spice_mapf_msgs.RobotPoses, "/mapf_paths", 2)
+        self.debug_paths_publisher = self.create_publisher(MarkerArray, "/planned_paths", 1)
         qos_best_effort = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
             history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1
+            depth=25
         )
         self.robot_pos_subscriber = self.create_subscription(spice_mapf_msgs.RobotPose, "/robot_pos", self.robot_pos_cb, qos_best_effort)
         self.sub_carrier_timeout = self.create_subscription(String,'/carrier_timeout', self.remove_robot_cb,10)
@@ -62,6 +62,7 @@ class MapfPlanner(Node):
         for agent in self.agents:
             if agent.id == msg.id:
                 agent.current_pos = self.map.world_to_map_float(msg.position)
+                agent.current_heading = msg.heading
                 return
 
         # self.get_logger().warn(f'Got robot_loc from agent: {msg.id.id}, but it has not joined the planner yet')
@@ -281,8 +282,11 @@ class MapfPlanner(Node):
         return True
     
     def add_agent(self, loc: tuple[int,int], robot_pose: spice_mapf_msgs.RobotPose, is_simulated=False):
-        self.get_logger().info(f"Adding agent at position: {loc}, world: {self.map.map_to_world(loc)}, is_simulated: {is_simulated}")
+        self.get_logger().info(f"Adding agent at position: {round(loc[0],2)},{round(loc[1],2)}, world: {round(self.map.map_to_world(loc)[0], 2)},{round(self.map.map_to_world(loc)[1], 2)} is_simulated: {is_simulated}")
         self.agents.append(Agent(loc, robot_pose.heading, robot_pose.id, is_simulated))
+        Colors = ['yellow', 'blue', 'orange', 'pink', 'magenta', 'black', 'brown', 'lime']
+        color = Colors[len(self.agents) % len(Colors)]
+        self.agents[-1].color = color
 
     def add_random_agent(self):
         num_tries = 0

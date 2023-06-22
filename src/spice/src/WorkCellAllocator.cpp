@@ -135,7 +135,7 @@ private:
       }
     }
     if (!workcellType.id.empty()){
-      RCLCPP_INFO(this->get_logger(), "Allocating WS [%s] with queue [%d] and distance [%f] to robot [%s]", workcellType.id.c_str(), minEnqueued, round(minDist), request->robot_id.id.c_str()); 
+      RCLCPP_INFO(this->get_logger(), "Allocating WS [%s] with queue [%d] and distance [%.2f] to robot [%s]", workcellType.id.c_str(), minEnqueued, round(minDist), request->robot_id.id.c_str()); 
       allocated_occupancy_dict.at(workcellType.id) += 1;
     }
     else{
