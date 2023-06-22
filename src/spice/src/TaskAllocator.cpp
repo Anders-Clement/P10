@@ -255,7 +255,7 @@ public:
         GetReadyRobot();
 
         timerReadyBots_ = this->create_wall_timer(
-            10s, std::bind(&TaskAllocator::GetReadyRobot, this));
+            1s, std::bind(&TaskAllocator::GetReadyRobot, this));
     }
 
     void GetReadyRobot()
