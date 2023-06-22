@@ -282,7 +282,7 @@ class MapfPlanner(Node):
         return True
     
     def add_agent(self, loc: tuple[int,int], robot_pose: spice_mapf_msgs.RobotPose, is_simulated=False):
-        self.get_logger().info(f"Adding agent at position: {loc}, world: {self.map.map_to_world(loc)}, is_simulated: {is_simulated}")
+        self.get_logger().info(f"Adding agent at position: {round(loc[0],2)},{round(loc[1],2)}, world: {round(self.map.map_to_world(loc)[0], 2)},{round(self.map.map_to_world(loc)[1], 2)} is_simulated: {is_simulated}")
         self.agents.append(Agent(loc, robot_pose.heading, robot_pose.id, is_simulated))
         Colors = ['yellow', 'blue', 'orange', 'pink', 'magenta', 'black', 'brown', 'lime']
         color = Colors[len(self.agents) % len(Colors)]
