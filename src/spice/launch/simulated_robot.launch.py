@@ -6,7 +6,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-DEFAULT_MAP_NAME = 'other_maps/13x13SimMap.yaml' # change to the name.yaml of the default map here
+DEFAULT_MAP_NAME = 'A4_new_65.yaml' # change to the name.yaml of the default map here
 
 def generate_launch_description():
 

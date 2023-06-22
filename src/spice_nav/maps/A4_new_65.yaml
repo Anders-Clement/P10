@@ -1,6 +1,6 @@
-image: A4_new.pgm
+image: A4_new_65.pgm
 mode: trinary
-resolution: 0.05
+resolution: 0.65
 origin: [0, 0, 0]
 negate: 0
 occupied_thresh: 0.65
