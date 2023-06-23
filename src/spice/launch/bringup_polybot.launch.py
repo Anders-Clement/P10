@@ -55,9 +55,9 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(rplidar2_launch_path)
         ),
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource(description_launch_path)
-        # ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(description_launch_path)
+        ),
         Node(
             package='spice',
             executable='polybot_agent.py',
