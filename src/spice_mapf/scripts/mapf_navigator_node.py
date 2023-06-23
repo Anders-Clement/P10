@@ -60,7 +60,6 @@ class MAPFNavigator(Node):
         self.current_transform = None
         self.current_nav_step_goal: spice_mapf_msgs.RobotPose = None
         self.next_nav_step_goal: spice_mapf_msgs.RobotPose = None
-        self.has_published_feedback = False
 
         self.joined_planner = False
         self.join_planner_future = None
@@ -180,7 +179,7 @@ class MAPFNavigator(Node):
 
     def get_robot_transform(self) -> bool:
         try:
-            from_frame_rel = "base_link"
+            from_frame_rel = self.id.id + "_base_link"
             to_frame_rel = "map"
             self.current_transform = self.tf_buffer.lookup_transform(to_frame_rel, from_frame_rel, Time())
             return True
@@ -194,22 +193,17 @@ class MAPFNavigator(Node):
         for robot_pose in poses:
             if robot_pose.id == self.id:
                 if robot_pose.rejoin:
-                    self.join_planner_timer.reset()
                     self.try_join_planner()
-                    self.join_planner_future = None
-                    self.planner_type_is_set = False
-                    self.planner_type_future = None
                     self.navigation_action_server.current_nav_goal = None
                     self.next_nav_step_goal = None
                     return
 
                 if self.current_nav_step_goal != robot_pose:
-                    self.get_logger().info(f'Got new pose from path: {robot_pose.position.x},{robot_pose.position.y}')
+                    # self.get_logger().info(f'Got new pose from path: {"{:.2f}".format(robot_pose.position.x)},{"{:.2f}".format(robot_pose.position.y)}')
                     if self.at_step_goal():
                         self.current_nav_step_goal = robot_pose
                     else:
                         self.next_nav_step_goal = robot_pose
-                    self.has_published_feedback = False
                 return
     
 
@@ -222,38 +216,29 @@ class MAPFNavigatorActionServer():
                                                  spice_mapf_actions.NavigateMapf,
                                                  "navigate_mapf",
                                                  execute_callback=self.navigate_mapf_cb,
-                                                 goal_callback=self.navigate_mapf_goal_cb
+                                                 goal_callback=self.navigate_mapf_goal_cb,
+                                                 result_timeout=10
                                                  )
         self.current_nav_goal = None
 
     def req_goal(self, request_goal, goal_handle):
         request_goal_future = self.request_goal_client.call_async(request_goal)
-        rate = self.nodehandle.create_rate(10, self.nodehandle.get_clock())
-        TIMEOUT = 5.0
-        # self.nodehandle.get_logger().info(f'Requesting goal')
-        start_time = self.nodehandle.get_clock().now()
+        self.nodehandle.get_logger().info(f'Requesting goal')
         while not request_goal_future.done():
-            rate.sleep()
-            wait_time = self.nodehandle.get_clock().now() - start_time
-            if wait_time.to_msg().sec > TIMEOUT:
-                self.nodehandle.get_logger().warn(f'Timeout on request_goal')
-                self.current_nav_goal = None
-                goal_handle.abort()
-                return None            
-            
+            time.sleep(0.1)
         result: spice_mapf_srvs.RequestGoal.Response = request_goal_future.result()
         return result
 
     def navigate_mapf_goal_cb(self, goal_request: spice_mapf_actions.NavigateMapf.Goal):
-        # self.nodehandle.get_logger().info(f'Received goal request: [x:{goal_request.goal_pose.pose.position.x}, y:{goal_request.goal_pose.pose.position.y}]')
+        self.nodehandle.get_logger().info(f'Received goal request: [x:{goal_request.goal_pose.pose.position.x}, y:{goal_request.goal_pose.pose.position.y}]')
         if self.navigator.is_available_for_navigation() and self.current_nav_goal is None:
             return GoalResponse.ACCEPT
         else:
-            self.nodehandle.get_logger().info(f'Rejecting goal [x:{goal_request.goal_pose.pose.position.x}, y:{goal_request.goal_pose.pose.position.y}], already navigating, or have not joined planner yet')
+            self.nodehandle.get_logger().info(f'Rejecting goal [x:{round(goal_request.goal_pose.pose.position.x, 2)}, y:{round(goal_request.goal_pose.pose.position.y, 2)}], already navigating, or have not joined planner yet')
             return GoalResponse.REJECT            
     
     def navigate_mapf_cb(self, goal_handle: ServerGoalHandle):
-        # self.nodehandle.get_logger().info(f'Executing request')
+        self.nodehandle.get_logger().info(f'Executing request')
             
         goal: spice_mapf_actions.NavigateMapf.Goal = goal_handle.request
         self.current_nav_goal = spice_mapf_msgs.RobotPose()
@@ -283,11 +268,11 @@ class MAPFNavigatorActionServer():
                 break
 
         self.nodehandle.get_logger().info(
-            f'Requested goal: [{self.current_nav_goal.position.x}, {self.current_nav_goal.position.y}], '
-                + f'going to: [{result.goal_position.x}, {result.goal_position.x}], '
+            f'Requested goal: [{"{:.2f}".format(self.current_nav_goal.position.x)}, {"{:.2f}".format(self.current_nav_goal.position.y)}], '
+                + f'going to: [{"{:.2f}".format(result.goal_position.x)}, {"{:.2f}".format(result.goal_position.y)}], '
                 + f'robot is starting at: [{"{:.2f}".format(self.navigator.current_transform.transform.translation.x)}, {"{:.2f}".format(self.navigator.current_transform.transform.translation.y)}]')
         self.current_nav_goal.position = result.goal_position
-        rate = self.nodehandle.create_rate(5, self.nodehandle.get_clock())
+        rate = self.nodehandle.create_rate(3, self.nodehandle.get_clock())
 
         # wait until goal is reached
         while not self.at_goal():

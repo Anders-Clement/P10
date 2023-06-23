@@ -6,7 +6,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-DEFAULT_MAP_NAME = 'low_res/A4_new_nav.yaml' # change to the name.yaml of the default map here
+DEFAULT_MAP_NAME = 'A4_new.yaml' # change to the name.yaml of the default map here
 
 def generate_launch_description():
 
@@ -38,10 +38,10 @@ def generate_launch_description():
     return LaunchDescription([ 
         Node(
             package='spice_mapf',
-            executable='mapf_navigator_node.py',
+            executable='mapf_navigator_node_cpp',
             name='mapf_navigator_node',
             namespace=namespace,
-            remappings=[("/tf", "tf"), ("/tf_static", "tf_static")]
+            #remappings=[("/tf", "tf"), ("/tf_static", "tf_static")]
         ),
         Node
         (

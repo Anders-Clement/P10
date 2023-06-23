@@ -19,6 +19,7 @@ struct QueuePoint
     int id;
     spice_msgs::msg::Id queued_robot;
     bool occupied = false;
+    bool robot_is_at_queue_point;
     double lastTime;
 
     QueuePoint(geometry_msgs::msg::Transform _transform, int _id, double _time) : transform(_transform), id(_id), lastTime(_time) {};
@@ -35,6 +36,7 @@ public:
     std::vector<geometry_msgs::msg::Transform> get_queue_point_transforms();
     void publish_queue_points();
     void fill_queue_points();
+    void update_enqueued_lists();
 
     std::list<QueuePoint> m_queue_points;
     WorkCellStateMachine* m_work_cell_state_machine;

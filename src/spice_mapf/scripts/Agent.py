@@ -9,6 +9,7 @@ class Agent:
         self.start_loc = start_loc
         self.current_loc = start_loc
         self.current_pos = self.current_loc
+        self.current_heading = Quaternion()
         self.next_loc = start_loc
         self.next_heading = heading
         self.target_goal = None

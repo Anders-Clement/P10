@@ -29,8 +29,29 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+include_directories(
+  include
+)
+
+add_executable(mapf_navigator_node_cpp src/mapf_navigator_node.cpp)
+ament_target_dependencies(
+    mapf_navigator_node_cpp
+    geometry_msgs
+    rclcpp
+    tf2
+    tf2_ros
+    tf2_msgs
+    tf2_geometry_msgs
+    spice_msgs
+    spice_mapf_msgs
+)
+
 # python modules
 ament_python_install_package(${PROJECT_NAME})
+
+install(TARGETS
+    mapf_navigator_node_cpp
+    DESTINATION lib/${PROJECT_NAME})
 
 # python nodes
 install(PROGRAMS

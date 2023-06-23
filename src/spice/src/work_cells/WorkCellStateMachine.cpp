@@ -144,12 +144,18 @@ void WorkCellStateMachine::on_register_work(
 {
     // RCLCPP_INFO(m_nodehandle.get_logger(), "On register work from %s", request->robot_id.id.c_str());
     // TODO: do we want to implement simulated checks for work compatibility, queue length etc?
+    if(prepare_move){
 
+        RCLCPP_INFO(m_nodehandle.get_logger(), "Failed to register work to robot [%s] due to workstation preparing to move", request->robot_id.id.c_str());
+        response->work_is_enqueued = false;
+        return;
+    }
+       
     auto queue_point_opt = m_queue_manager->get_queue_point();
 
-    if(!queue_point_opt || prepare_move)
+    if(!queue_point_opt)
     {
-        RCLCPP_INFO(m_nodehandle.get_logger(), "Failed to register work to robot [%s] due to no space in queue", request->robot_id.id.c_str());
+        RCLCPP_INFO(m_nodehandle.get_logger(), "[%s]Failed to register work to robot [%s] due to no space in queue", this->m_work_cell_name.c_str(), request->robot_id.id.c_str());
         response->work_is_enqueued = false;
         return;
     }
@@ -195,12 +201,16 @@ void WorkCellStateMachine::on_robot_ready_in_queue(
         if(robot.robot_id.id == request->robot_id.id)
         {
             robot.ready_in_queue = true;
+            robot.queue_point->robot_is_at_queue_point = true;
             response->success = true;
+
+            // try to update queue points
+            m_queue_manager->fill_queue_points();
             return;
         }
     }
-    RCLCPP_WARN(get_logger(), "On_robot_ready_in_queue got request for unknown robot");
-    response->success = false; // return false if we do now know the robot
+    RCLCPP_WARN(get_logger(), "[%s]On_robot_ready_in_queue got request for unknown robot [%s]", this->m_work_cell_name.c_str(), request->robot_id.id.c_str());
+    response->success = true; // return true anyways, just ignore the call // return false if we do now know the robot
 }
 
 void WorkCellStateMachine::on_robot_ready_for_processing(
@@ -263,7 +273,7 @@ void WorkCellStateMachine::check_robot_heartbeat_cb()
     // check robot in cell (or in its way into the cell)
     // TODO: consider adding a service call between cell and carrier once exited
     // Here, we omit heartbeat when carrier robot is exiting, due to lack of this last synchronization
-    if(m_current_robot_work && m_current_state != WORK_CELL_STATE::ROBOT_EXITING)
+    if(m_current_robot_work)
     {
         auto timeout_period = (current_time-m_current_robot_work->last_heartbeat_time).seconds();
         if(timeout_period > ROBOT_HEARTBEAT_TIMEOUT_PERIOD)

@@ -9,7 +9,7 @@ from launch_ros.substitutions import FindPackageShare
 from launch.actions import GroupAction
 from launch_ros.actions import PushRosNamespace
 
-DEFAULT_MAP_NAME = 'low_res/A4_nav.yaml' # change to the name.yaml of the default map here
+DEFAULT_MAP_NAME = 'A4_new.yaml' # change to the name.yaml of the default map here
 
 def generate_launch_description():
     namespace = os.environ.get('ROBOT_NAMESPACE')
@@ -55,9 +55,9 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(rplidar2_launch_path)
         ),
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(description_launch_path)
-        ),
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(description_launch_path)
+        # ),
         Node(
             package='spice',
             executable='polybot_agent.py',

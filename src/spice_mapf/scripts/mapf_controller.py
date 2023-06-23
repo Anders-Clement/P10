@@ -23,17 +23,17 @@ class MAPFController():
         self.nodehandle.declare_parameter('goal_tolerance', 0.1)
 
     def compute_cmd_vel(self, robot_transform: TransformStamped, goal_pose: PoseStamped) -> Twist | None:
-        self.min_linear_vel = self.nodehandle.get_parameter('min_linear_vel').get_parameter_value().double_value
-        self.max_linear_vel = self.nodehandle.get_parameter('max_linear_vel').get_parameter_value().double_value
-        self.min_angular_vel = self.nodehandle.get_parameter('min_angular_vel').get_parameter_value().double_value
-        self.max_angular_vel = self.nodehandle.get_parameter('max_angular_vel').get_parameter_value().double_value
-        self.gamma_max = self.nodehandle.get_parameter('gamma_max').get_parameter_value().double_value
-        self.kp_omega = self.nodehandle.get_parameter('kp_omega').get_parameter_value().double_value
-        self.kp_linear_vel = self.nodehandle.get_parameter('kp_linear_vel').get_parameter_value().double_value
-        self.goal_tolerance = self.nodehandle.get_parameter('goal_tolerance').get_parameter_value().double_value
+        min_linear_vel = self.nodehandle.get_parameter('min_linear_vel').get_parameter_value().double_value
+        max_linear_vel = self.nodehandle.get_parameter('max_linear_vel').get_parameter_value().double_value
+        min_angular_vel = self.nodehandle.get_parameter('min_angular_vel').get_parameter_value().double_value
+        max_angular_vel = self.nodehandle.get_parameter('max_angular_vel').get_parameter_value().double_value
+        gamma_max = self.nodehandle.get_parameter('gamma_max').get_parameter_value().double_value
+        kp_omega = self.nodehandle.get_parameter('kp_omega').get_parameter_value().double_value
+        kp_linear_vel = self.nodehandle.get_parameter('kp_linear_vel').get_parameter_value().double_value
+        goal_tolerance = self.nodehandle.get_parameter('goal_tolerance').get_parameter_value().double_value
 
         try:
-            transform = self.tf_buffer.lookup_transform("base_link",
+            transform = self.tf_buffer.lookup_transform(self.nodehandle.id.id + "_base_link",
                                                         "map",
                                                         Time())
             goal_in_base_link = tf2_geometry_msgs.do_transform_pose(goal_pose.pose, transform)
@@ -49,7 +49,7 @@ class MAPFController():
         goal_dist = math.sqrt(x_diff**2 + y_diff**2)
         py_clip = lambda x, lower, upper: lower if x < lower else upper if x > upper else x
         # at the goal, turn to face it:
-        if goal_dist < self.goal_tolerance:
+        if goal_dist < goal_tolerance:
             q = goal_pose.pose.orientation
             q = [q.w, q.x, q.y, q.z]
             goal_rpy = tf_transformations.euler_from_quaternion(q)
@@ -66,29 +66,29 @@ class MAPFController():
             b = goal_yaw
             if a < b:
                 if b-a <= PI: # positive
-                    omega = py_clip(b-a, 0, self.max_angular_vel)
+                    omega = py_clip(b-a, 0, max_angular_vel)
                 else: # negative
-                    omega = py_clip(-(b-a), -self.max_angular_vel, 0)
+                    omega = py_clip(-(b-a), -max_angular_vel, 0)
             else:
                 if a-b <= PI: # negative
-                    omega = py_clip(-(a-b), -self.max_angular_vel, 0)
+                    omega = py_clip(-(a-b), -max_angular_vel, 0)
                 else: # positive
-                    omega = py_clip(a-b, 0, self.max_angular_vel)
+                    omega = py_clip(a-b, 0, max_angular_vel)
 
-            if abs(omega) < self.gamma_max: # we are at correct orientation
+            if abs(omega) < gamma_max: # we are at correct orientation
                 omega = 0.0 
             twist_msg.linear.x = 0.0
-            twist_msg.angular.z = omega*self.kp_omega
+            twist_msg.angular.z = omega*kp_omega
             return twist_msg
 
         else: # navigate towards the goal
         
             angular_error = math.atan2(goal_in_base_link.position.y, goal_in_base_link.position.x)
             # is facing the goal, within gamma_max
-            if goal_in_base_link.position.x > 0 and abs(angular_error) < self.gamma_max:
+            if goal_in_base_link.position.x > 0 and abs(angular_error) < gamma_max:
                 # proportional control
-                omega = self.kp_omega * angular_error
-                velocity = py_clip(goal_dist * self.kp_linear_vel, self.min_linear_vel, self.max_linear_vel)
+                omega = kp_omega * angular_error
+                velocity = py_clip(goal_dist * kp_linear_vel, min_linear_vel, max_linear_vel)
 
                 twist_msg.linear.x = velocity
                 twist_msg.angular.z = omega
@@ -99,9 +99,9 @@ class MAPFController():
                     omega = angular_error
                 else:
                     if goal_in_base_link.position.y > 0:
-                        omega = self.max_angular_vel
+                        omega = max_angular_vel
                     else:
-                        omega = -self.max_angular_vel
+                        omega = -max_angular_vel
 
                 twist_msg.linear.x = 0.0
                 twist_msg.angular.z = omega
