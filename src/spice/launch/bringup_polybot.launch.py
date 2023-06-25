@@ -73,12 +73,12 @@ def generate_launch_description():
     
     return LaunchDescription([ 
         ns_bringup,
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource(
-        #      os.path.join(
-        #          get_package_share_directory('spice_nav'),
-        #          'launch/polybot_rsm_mapf.launch.py')
-        #     )
-        # )
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+             os.path.join(
+                 get_package_share_directory('spice_nav'),
+                 'launch/polybot_rsm_mapf.launch.py')
+            )
+        )
 
     ])
