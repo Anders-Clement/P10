@@ -15,7 +15,9 @@ if __name__ == "__main__":
         exit(0)
     num_robots = int(args.number_of_robots)
     for i in range(num_robots):
-        cmd = ["ros2", "launch", "spice", "simulated_robot.launch.py", "nr:="+str(i)]
+        x = 1.3 + (i % 15)*0.65
+        y = 1.3
+        cmd = ["ros2", "launch", "spice", "simulated_robot.launch.py", "nr:="+str(i), f'x:={x:.5f}', f"y:={y:.5f}"]
         subprocess.Popen(cmd)
         time.sleep(5)
         

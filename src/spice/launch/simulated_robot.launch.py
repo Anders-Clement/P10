@@ -14,6 +14,14 @@ def generate_launch_description():
         name = 'nr',
         description='The PolyBot\'s number'
     ),
+    DeclareLaunchArgument(
+        name = 'x',
+        description='The PolyBot\'s x position'
+    ),
+    DeclareLaunchArgument(
+        name = 'y',
+        description='The PolyBot\'s y position'
+    ),
 
     namespace = ['polybot', LaunchConfiguration("nr")]
 
@@ -38,8 +46,8 @@ def generate_launch_description():
             name='simulated_polybot_agent',
             namespace=namespace,
             parameters=[
-                {'initial_x': 4.0},
-                {'initial_y': 4.0},
+                {'initial_x': LaunchConfiguration('x')},
+                {'initial_y': LaunchConfiguration('y')},
                 {'initial_theta': 0.0}
             ]        
         ),
