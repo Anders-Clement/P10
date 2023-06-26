@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import subprocess
 import time
 import argparse
@@ -15,6 +17,8 @@ if __name__ == "__main__":
     for i in range(num_robots):
         cmd = ["ros2", "launch", "spice", "simulated_robot.launch.py", "nr:="+str(i)]
         subprocess.Popen(cmd)
+        time.sleep(5)
+        
     while True:
         time.sleep(0.1)
 

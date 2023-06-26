@@ -12,12 +12,13 @@ class PositionGenerator
 public:
     PositionGenerator(uint32_t height, uint32_t width, float scale, std::string map_name) :
     m_num_positions_generated(0), m_height(height), m_width(width), m_scale(scale), m_map_name(map_name) {}
+
     geometry_msgs::msg::Transform generate_position()
     {
         geometry_msgs::msg::Transform transform;
         uint32_t x_pos = m_num_positions_generated % m_width;
-        transform.translation.x = m_scale * x_pos;
-        transform.translation.y = m_scale * ((m_num_positions_generated / m_width) % m_height);
+        transform.translation.x = m_scale * x_pos  + 2.6;
+        transform.translation.y = m_scale * ((m_num_positions_generated / m_width) % m_height) + 2.6; 
         transform.translation.z = 0; 
         m_num_positions_generated++;
         return transform;        
@@ -473,8 +474,125 @@ public:
         
         //std::string work_cell_name, rclcpp::Node& node_handle, 
         //geometry_msgs::msg::Transform transform, spice_msgs::msg::RobotType::_type_type robot_type
-        PositionGenerator generator(3, 3, 2, MAP_NAME);
-        work_cell_state_machines = {
+        if(MAP_NAME == "other_maps/largeSimMap.yaml")
+        {
+            PositionGenerator generator(4, 4, 2.6, MAP_NAME);
+            work_cell_state_machines = {
+            {"fuses_cell",
+            std::make_shared<WorkCellStateMachine>(
+                "fuses_cell", 
+                *this,
+                generator.generate_position(), 
+                spice_msgs::msg::RobotType::WORK_CELL_FUSES)},
+            {"drill_cell",
+            std::make_shared<WorkCellStateMachine>(
+                "drill_cell", 
+                *this,
+                generator.generate_position(),
+                spice_msgs::msg::RobotType::WORK_CELL_DRILL)},
+            {"lid_cell",
+            std::make_shared<WorkCellStateMachine>(
+                "lid_cell", 
+                *this,
+                generator.generate_position(), 
+                spice_msgs::msg::RobotType::WORK_CELL_TOP)},
+            {"back_cover_cell",
+            std::make_shared<WorkCellStateMachine>(
+                "back_cover_cell", 
+                *this,
+                generator.generate_position(),
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)},
+            {"fuses_cell_2",
+            std::make_shared<WorkCellStateMachine>(
+                "fuses_cell_2", 
+                *this,
+                generator.generate_position(), 
+                spice_msgs::msg::RobotType::WORK_CELL_FUSES)},
+            {"drill_cell_2",
+            std::make_shared<WorkCellStateMachine>(
+                "drill_cell_2", 
+                *this,
+                generator.generate_position(),
+                spice_msgs::msg::RobotType::WORK_CELL_DRILL)},
+            {"lid_cell_2",
+            std::make_shared<WorkCellStateMachine>(
+                "lid_cell_2", 
+                *this,
+                generator.generate_position(), 
+                spice_msgs::msg::RobotType::WORK_CELL_TOP)},
+            {"back_cover_cell_2",
+            std::make_shared<WorkCellStateMachine>(
+                "back_cover_cell_2", 
+                *this,
+                generator.generate_position(),
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)},
+            {"fuses_cell_3",
+            std::make_shared<WorkCellStateMachine>(
+                "fuses_cell_3", 
+                *this,
+                generator.generate_position(), 
+                spice_msgs::msg::RobotType::WORK_CELL_FUSES)},
+            {"drill_cell_3",
+            std::make_shared<WorkCellStateMachine>(
+                "drill_cell_3", 
+                *this,
+                generator.generate_position(),
+                spice_msgs::msg::RobotType::WORK_CELL_DRILL)},
+            {"lid_cell_3",
+            std::make_shared<WorkCellStateMachine>(
+                "lid_cell_3", 
+                *this,
+                generator.generate_position(), 
+                spice_msgs::msg::RobotType::WORK_CELL_TOP)},
+            {"back_cover_cell_3",
+            std::make_shared<WorkCellStateMachine>(
+                "back_cover_cell_3", 
+                *this,
+                generator.generate_position(),
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)},
+            {"fuses_cell_4",
+            std::make_shared<WorkCellStateMachine>(
+                "fuses_cell_4", 
+                *this,
+                generator.generate_position(), 
+                spice_msgs::msg::RobotType::WORK_CELL_FUSES)},
+            {"drill_cell_4",
+            std::make_shared<WorkCellStateMachine>(
+                "drill_cell_4", 
+                *this,
+                generator.generate_position(),
+                spice_msgs::msg::RobotType::WORK_CELL_DRILL)},
+            {"lid_cell_4",
+            std::make_shared<WorkCellStateMachine>(
+                "lid_cell_4", 
+                *this,
+                generator.generate_position(), 
+                spice_msgs::msg::RobotType::WORK_CELL_TOP)},
+            {"back_cover_cell_4",
+            std::make_shared<WorkCellStateMachine>(
+                "back_cover_cell_4", 
+                *this,
+                generator.generate_position(),
+                spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)},
+                // ,
+            // {"lid_cell2",
+            // std::make_shared<WorkCellStateMachine>(
+            //     "lid_cell2", 
+            //     *this,
+            //     generator.work_cell_locations(), 
+            //     spice_msgs::msg::RobotType::WORK_CELL_TOP)},
+            // {"back_cover_cell2",
+            // std::make_shared<WorkCellStateMachine>(
+            //     "back_cover_cell2", 
+            //     *this,
+            //     generator.work_cell_locations(),
+            //     spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)}
+            };
+        }
+        else
+        {
+            PositionGenerator generator(3,3,1, MAP_NAME);
+            work_cell_state_machines = {
             {"fuses_cell",
             std::make_shared<WorkCellStateMachine>(
                 "fuses_cell", 
@@ -499,20 +617,9 @@ public:
                 *this,
                 generator.work_cell_locations(),
                 spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)}
-                // ,
-            // {"lid_cell2",
-            // std::make_shared<WorkCellStateMachine>(
-            //     "lid_cell2", 
-            //     *this,
-            //     generator.work_cell_locations(), 
-            //     spice_msgs::msg::RobotType::WORK_CELL_TOP)},
-            // {"back_cover_cell2",
-            // std::make_shared<WorkCellStateMachine>(
-            //     "back_cover_cell2", 
-            //     *this,
-            //     generator.work_cell_locations(),
-            //     spice_msgs::msg::RobotType::WORK_CELL_BACK_COVER)}
-        };
+            };
+        }
+        
 
         delete_wc_service = create_service<spice_msgs::srv::DeleteWorkCell>("delete_workcell", std::bind(&WorkCellSimulator::Remove_workcell, this,
                                 std::placeholders::_1, std::placeholders::_2));
