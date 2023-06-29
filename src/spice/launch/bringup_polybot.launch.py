@@ -47,7 +47,7 @@ def generate_launch_description():
     )
     description_launch_path = PathJoinSubstitution(
         [FindPackageShare('linorobot2_description'), 'launch', 'description.launch.py']
-    )    
+    )
 
     ns_bringup=GroupAction(actions=[
         
@@ -55,9 +55,10 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(rplidar2_launch_path)
         ),
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource(description_launch_path)
-        # ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(description_launch_path)
+        ),
+        
         Node(
             package='spice',
             executable='polybot_agent.py',
@@ -71,5 +72,13 @@ def generate_launch_description():
     )
     
     return LaunchDescription([ 
-        ns_bringup
+        ns_bringup,
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+             os.path.join(
+                 get_package_share_directory('spice_nav'),
+                 'launch/polybot_rsm_mapf.launch.py')
+            )
+        )
+
     ])
